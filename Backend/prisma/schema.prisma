@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User role enum (Role Based Access Control)
+enum Role {
+  SUPER_ADMIN
+  ADMIN_PARKING
+  OPERATOR
+  AUDITOR
+  CLIENT
+}
+
+// User model for authentication
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         Role      @default(OPERATOR)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  vehicles     Vehicle[]
+  contracts    Contract[]
+  attendance   Attendance[]
+  payments     Payment[]
+  reports      Report[]
+}
+
+// Parking Lot configuration
+model Parking {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  capacity  Int
+  // Standard hourly rate (default fallback)
+  baseRate  Float    @default(0) 
+  
+  // Relations
+  tariffs   Tariff[]
+  tickets   Ticket[]
+  contracts Contract[]
+}
+
+// Tariffs per vehicle type
+model Tariff {
+  id          String   @id @default(uuid())
+  parkingId   String
+  parking     Parking  @relation(fields: [parkingId], references: [id])
+  vehicleType String   // CAR, MOTORCYCLE, VAN, etc.
+  baseRate    Float    // Initial cost
+  hourlyRate  Float    // Cost per hour
+  dayRate     Float?   // Cost per full day
+  
+  @@unique([parkingId, vehicleType])
+}
+
+// Vehicle registry
+model Vehicle {
+  id        String   @id @default(uuid())
+  plate     String   @unique
+  type      String   // CAR, MOTORCYCLE
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id])
+  tickets   Ticket[]
+}
+
+// Entry ticket
+model Ticket {
+  id          String   @id @default(uuid())
+  ticketCode  String   @unique // Barcode/QR content
+  parkingId   String
+  parking     Parking  @relation(fields: [parkingId], references: [id])
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  entryTime   DateTime @default(now())
+  
+  status      String   @default("ACTIVE") // ACTIVE, PAID, CLOSED
+  qrUrl       String?
+
+  // Relations
+  exit        Exit?
+}
+
+// Exit transaction
+model Exit {
+  id              String   @id @default(uuid())
+  ticketId        String   @unique
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  exitTime        DateTime @default(now())
+  durationMinutes Int
+  totalAmount     Float
+  
+  paymentId       String?  @unique
+  payment         Payment? @relation(fields: [paymentId], references: [id])
+}
+
+// Payment transaction
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Float
+  method    String   // CASH, CARD, ONLINE
+  status    String   // PENDING, COMPLETED, FAILED
+  userId    String?  // Who made the payment (if registered)
+  user      User?    @relation(fields: [userId], references: [id])
+  exit      Exit?
+  createdAt DateTime @default(now())
+}
+
+// Monthly Contracts
+model Contract {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  parkingId String
+  parking   Parking  @relation(fields: [parkingId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  status    String   // ACTIVE, EXPIRED
+}
+
+// Employee Attendance
+model Attendance {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  checkIn   DateTime
+  checkOut  DateTime?
+}
+
+// Reports metadata
+model Report {
+  id          String   @id @default(uuid())
+  generatedBy String
+  user        User     @relation(fields: [generatedBy], references: [id])
+  type        String   // DAILY, MONTHLY
+  url         String
+  createdAt   DateTime @default(now())
+}

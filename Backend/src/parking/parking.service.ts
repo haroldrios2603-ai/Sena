@@ -130,13 +130,24 @@ export class ParkingService {
         const hours = Math.ceil(durationMinutes / 60);
         const totalAmount = baseRate + (hours > 0 ? (hours - 1) * hourlyRate : 0);
 
-        // Crear registro de salida
+        // Crear registro de pago primero
+        const payment = await this.prisma.payment.create({
+            data: {
+                amount: totalAmount,
+                method: 'CASH', // Default for now
+                status: 'COMPLETED',
+                createdAt: exitTime,
+            }
+        });
+
+        // Crear registro de salida vinculado al pago
         const exit = await this.prisma.exit.create({
             data: {
                 ticketId: ticket.id,
                 exitTime,
                 durationMinutes,
                 totalAmount,
+                paymentId: payment.id,
             }
         });
 
@@ -149,7 +160,17 @@ export class ParkingService {
         return {
             ticket,
             exit,
+            payment,
             message: 'Salida registrada con éxito'
         };
+    }
+
+    /**
+     * Elimina una tarifa específica de un parqueadero.
+     */
+    async deleteTariff(id: string) {
+        return this.prisma.tariff.delete({
+            where: { id }
+        });
     }
 }

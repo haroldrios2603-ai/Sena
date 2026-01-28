@@ -30,19 +30,37 @@ export class ParkingController {
     }
 
     /**
-     * Obtiene todos los parqueaderos registrados en el sistema.
+     * Registra un nuevo parqueadero. (RF 1.1)
      */
-    @Get()
-    async getAllParkings() {
-        return this.parkingService.findAll();
+    @Post()
+    async createParking(@Body() data: { name: string; address: string; capacity: number; baseRate: number }) {
+        return this.parkingService.createParking(data);
     }
 
     /**
-     * Obtiene los detalles de un parqueadero por su ID.
-     * @param id Identificador único del parqueadero.
+     * Configura o actualiza la tarifa para un tipo de vehículo. (RF 1.2)
+     */
+    @Post(':id/tariffs')
+    async setTariff(
+        @Param('id') id: string,
+        @Body() data: { vehicleType: string; baseRate: number; hourlyRate: number }
+    ) {
+        return this.parkingService.setTariff(id, data.vehicleType, data.baseRate, data.hourlyRate);
+    }
+
+    /**
+     * Obtiene el detalle de un parqueadero específico.
      */
     @Get(':id')
-    async getParkingById(@Param('id') id: string) {
+    async findOne(@Param('id') id: string) {
         return this.parkingService.findOne(id);
+    }
+
+    /**
+     * Obtiene la lista de todos los parqueaderos.
+     */
+    @Get()
+    async findAll() {
+        return this.parkingService.findAll();
     }
 }

@@ -34,13 +34,15 @@ export class AuthService {
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(password, salt);
 
-        // Crear usuario
+        // Crear usuario (incluye updatedAt requerido por el esquema)
+        const now = new Date();
         const user = await this.prisma.user.create({
             data: {
                 email,
                 passwordHash,
                 fullName,
                 role: role || Role.OPERATOR,
+                updatedAt: now,
             },
         });
 

@@ -1,23 +1,14 @@
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 
-/**
- * Componente para proteger rutas que requieren autenticación.
- * Redirige al login si no hay un usuario autenticado.
- */
-const ProtectedRoute = () => {
-    const { user, loading } = useAuth();
+const ProtectedRoute = ({ children }: { children?: ReactNode }) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
-    if (loading) {
-        return <div className="loading-spinner">Cargando...</div>;
-    }
-
-    if (!user) {
-        return <Navigate to="/login" replace />;
-    }
-
-    return <Outlet />;
+  return children;
 };
 
 export default ProtectedRoute;

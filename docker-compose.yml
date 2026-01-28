@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
-    container_name: rmparking-db
+    container_name: rmparking-db-v2
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -12,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_v2:/var/lib/postgresql/data
     networks:
       - rmparking-net
     healthcheck:
@@ -23,7 +21,7 @@ services:
 
   adminer:
     image: adminer
-    container_name: rmparking-adminer
+    container_name: rmparking-adminer-v2
     restart: always
     ports:
       - "8080:8080"
@@ -36,9 +34,9 @@ services:
 
   backend:
     build:
-      context: ./Backend
+      context: ./RmParking/Backend
       dockerfile: Dockerfile
-    container_name: rmparking-backend
+    container_name: rmparking-backend-v2
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
@@ -56,14 +54,14 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./Backend:/app
+      - ./RmParking/Backend:/app
       - /app/node_modules
 
   frontend:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
-    container_name: rmparking-frontend
+    container_name: rmparking-frontend-v2
     restart: unless-stopped
     ports:
       - "5173:5173"
@@ -76,7 +74,7 @@ services:
       - /app/node_modules
 
 volumes:
-  postgres_data:
+  postgres_data_v2:
 
 
 networks:

@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ParkingManagement from './pages/ParkingManagement';
 import './App.css';
 
 /**
@@ -20,6 +21,7 @@ function App() {
           {/* Rutas Protegidas */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/parkings" element={<ParkingManagement />} />
           </Route>
 
           {/* Redirección por defecto */}

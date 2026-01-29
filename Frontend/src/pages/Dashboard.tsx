@@ -1,0 +1,455 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { isAxiosError } from 'axios';
+import { useAuth } from '../context/useAuth';
+import api from '../api';
+import { LogOut, Car, ArrowRightLeft, Clock, DollarSign, CheckCircle } from 'lucide-react';
+
+type VehicleType = 'CAR' | 'MOTORCYCLE';
+
+type Tariff = {
+    vehicleType: VehicleType;
+    baseRate: number;
+    hourlyRate: number;
+};
+
+type Parking = {
+    id: string;
+    name: string;
+    address?: string;
+    capacity?: number;
+    baseRate?: number;
+    tariffs?: Tariff[];
+};
+
+type Vehicle = {
+    id: string;
+    plate: string;
+    type: VehicleType;
+};
+
+type Ticket = {
+    id: string;
+    ticketCode: string;
+    status: 'ACTIVE' | 'CLOSED';
+    entryTime: string;
+    parking?: Parking;
+    vehicle: Vehicle;
+};
+
+type ExitRecord = {
+    id: string;
+    exitTime: string;
+    durationMinutes: number;
+    totalAmount: number;
+};
+
+type ExitResponse = {
+    ticket: Ticket;
+    exit: ExitRecord;
+    message: string;
+};
+
+type MessageState = {
+    text: string;
+    type: 'success' | 'error' | '';
+};
+
+type ApiErrorResponse = {
+    message?: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (isAxiosError<ApiErrorResponse>(error)) {
+        return error.response?.data?.message ?? fallback;
+    }
+    return fallback;
+};
+
+const currencyFormatter = new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+});
+
+/**
+ * Componente Dashboard renovado con mayor jerarquía visual.
+ * Presenta KPIs operativos, formularios, y contexto de actividad reciente.
+ */
+const Dashboard = () => {
+    const { user, logout } = useAuth();
+    const [plateEntry, setPlateEntry] = useState('');
+    const [plateExit, setPlateExit] = useState('');
+    const [vehicleTypeEntry, setVehicleTypeEntry] = useState<VehicleType>('CAR');
+    const [parkings, setParkings] = useState<Parking[]>([]);
+    const [selectedParkingId, setSelectedParkingId] = useState('');
+    const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
+    const [lastExit, setLastExit] = useState<ExitResponse | null>(null);
+    const [loadingParkings, setLoadingParkings] = useState(true);
+
+    useEffect(() => {
+        const fetchParkings = async () => {
+            setLoadingParkings(true);
+            try {
+                const res = await api.get<Parking[]>('/parking');
+                setParkings(res.data);
+                if (res.data.length > 0) {
+                    setSelectedParkingId(res.data[0].id);
+                }
+            } catch (err: unknown) {
+                console.error('Error fetching parkings', err);
+                setMessage({
+                    text: getErrorMessage(err, 'No se pudo cargar la lista de parqueaderos'),
+                    type: 'error',
+                });
+            } finally {
+                setLoadingParkings(false);
+            }
+        };
+        fetchParkings();
+    }, []);
+
+    const formatCurrency = (value: number) => currencyFormatter.format(Math.max(0, value));
+
+    const kpiSummary = useMemo(() => {
+        const totalSites = parkings.length;
+        const totalCapacity = parkings.reduce(
+            (acc, parking) => acc + (parking.capacity || 0),
+            0,
+        );
+        const avgBaseRate = totalSites > 0
+            ? parkings.reduce((acc, parking) => acc + (parking.baseRate || 0), 0) / totalSites
+            : 0;
+        const lastAmount = lastExit?.exit?.totalAmount ?? null;
+
+        return {
+            totalSites,
+            totalCapacity,
+            avgBaseRate,
+            lastAmount,
+        };
+    }, [parkings, lastExit]);
+
+    const handleEntry = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage({ text: '', type: '' });
+
+        if (!selectedParkingId) {
+            setMessage({ text: 'Seleccione un parqueadero antes de registrar', type: 'error' });
+            return;
+        }
+
+        try {
+            await api.post('/parking/entry', {
+                placa: plateEntry,
+                vehicleType: vehicleTypeEntry,
+                parkingId: selectedParkingId,
+            });
+            setMessage({
+                text: `Ingreso registrado para la placa ${plateEntry}`,
+                type: 'success',
+            });
+            setPlateEntry('');
+        } catch (err: unknown) {
+            setMessage({
+                text: getErrorMessage(err, 'Error al registrar el ingreso'),
+                type: 'error',
+            });
+        }
+    };
+
+    const handleExit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage({ text: '', type: '' });
+        setLastExit(null);
+
+        try {
+            const res = await api.post<ExitResponse>('/parking/exit', { placa: plateExit });
+            setMessage({ text: 'Salida procesada con éxito', type: 'success' });
+            setLastExit(res.data);
+            setPlateExit('');
+        } catch (err: unknown) {
+            setMessage({
+                text: getErrorMessage(err, 'Error al registrar la salida'),
+                type: 'error',
+            });
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-100 flex flex-col">
+            <header className="bg-slate-900 text-white shadow-xl">
+                <div className="dashboard-shell flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <span className="pill bg-white/10 text-white">Panel operativo</span>
+                        <h1 className="text-3xl font-semibold mt-2">RM Parking · Centro de Control</h1>
+                        <p className="text-slate-300 max-w-2xl">
+                            Supervisa el flujo de vehículos, controla el aforo y visualiza cobros en un tablero cohesivo.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <p className="text-xs uppercase text-slate-400">Operario</p>
+                            <p className="text-lg font-semibold">{user?.fullName || 'Sesión no identificada'}</p>
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="h-12 w-12 rounded-2xl border border-white/20 flex items-center justify-center hover:bg-white/10 transition"
+                        >
+                            <LogOut size={20} />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="dashboard-shell flex-1 space-y-10">
+                <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <article className="panel-card">
+                        <span className="pill"><ArrowRightLeft size={16} /> Operación</span>
+                        <p className="kpi-value mt-4">{kpiSummary.totalSites}</p>
+                        <p className="text-sm text-slate-500">Parqueaderos habilitados</p>
+                    </article>
+                    <article className="panel-card">
+                        <span className="pill"><Car size={16} /> Capacidad</span>
+                        <p className="kpi-value mt-4">{kpiSummary.totalCapacity}</p>
+                        <p className="text-sm text-slate-500">Cupos totales configurados</p>
+                    </article>
+                    <article className="panel-card">
+                        <span className="pill"><DollarSign size={16} /> Tarifa base</span>
+                        <p className="kpi-value mt-4">
+                            {kpiSummary.avgBaseRate > 0 ? formatCurrency(kpiSummary.avgBaseRate) : 'Sin datos'}
+                        </p>
+                        <p className="text-sm text-slate-500">Promedio por parqueadero</p>
+                    </article>
+                    <article className="panel-card">
+                        <span className="pill"><Clock size={16} /> Último cobro</span>
+                        <p className="kpi-value mt-4">
+                            {kpiSummary.lastAmount !== null ? formatCurrency(kpiSummary.lastAmount) : 'Aún sin registros'}
+                        </p>
+                        <p className="text-sm text-slate-500">Actualizado al último egreso</p>
+                    </article>
+                </section>
+
+                {message.text && (
+                    <div
+                        className={`rounded-2xl border p-4 flex items-start gap-3 ${
+                            message.type === 'success'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                : 'border-rose-200 bg-rose-50 text-rose-900'
+                        }`}
+                    >
+                        {message.type === 'success' && <CheckCircle size={20} className="mt-0.5" />}
+                        <span className="text-sm font-medium leading-relaxed">{message.text}</span>
+                    </div>
+                )}
+
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="panel-card">
+                        <div className="panel-card__header">
+                            <div>
+                                <span className="pill"><Car size={16} /> Entrada</span>
+                                <h2 className="panel-card__title mt-2">Registrar ingreso</h2>
+                            </div>
+                            <span className="text-xs text-slate-400">Última placa: {plateEntry || 'N/A'}</span>
+                        </div>
+                        <form onSubmit={handleEntry} className="space-y-5">
+                            <div>
+                                <label className="form-label">Placa del vehículo</label>
+                                <input
+                                    type="text"
+                                    value={plateEntry}
+                                    onChange={(e) => setPlateEntry(e.target.value.toUpperCase())}
+                                    className="input-field uppercase tracking-widest"
+                                    placeholder="ABC123"
+                                      maxLength={8}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Tipo de vehículo</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {(['CAR', 'MOTORCYCLE'] as const).map((type) => (
+                                        <label
+                                            key={type}
+                                            className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
+                                                vehicleTypeEntry === type
+                                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                                                    : 'border-slate-200 text-slate-500'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                value={type}
+                                                checked={vehicleTypeEntry === type}
+                                                onChange={() => setVehicleTypeEntry(type)}
+                                                className="sr-only"
+                                            />
+                                            {type === 'CAR' ? 'Carro' : 'Moto'}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="form-label">Parqueadero</label>
+                                <select
+                                    value={selectedParkingId}
+                                    onChange={(e) => setSelectedParkingId(e.target.value)}
+                                    className="input-field appearance-none"
+                                    required
+                                >
+                                    {parkings.map((parking) => (
+                                        <option key={parking.id} value={parking.id}>
+                                            {parking.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {!parkings.length && (
+                                    <p className="text-xs text-rose-500 mt-2">No hay parqueaderos configurados.</p>
+                                )}
+                            </div>
+                            <button type="submit" className="btn-primary">Registrar entrada</button>
+                        </form>
+                    </div>
+
+                    <div className="panel-card">
+                        <div className="panel-card__header">
+                            <div>
+                                <span className="pill"><Clock size={16} /> Salida</span>
+                                <h2 className="panel-card__title mt-2">Registrar salida</h2>
+                            </div>
+                        </div>
+                        <form onSubmit={handleExit} className="space-y-5">
+                            <div>
+                                <label className="form-label">Placa</label>
+                                <input
+                                    type="text"
+                                    value={plateExit}
+                                    onChange={(e) => setPlateExit(e.target.value.toUpperCase())}
+                                    className="input-field uppercase tracking-widest"
+                                    placeholder="ABC123"
+                                      maxLength={8}
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="btn-primary bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                            >
+                                Registrar salida
+                            </button>
+                        </form>
+
+                        {lastExit ? (
+                            <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-3">
+                                <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+                                    <DollarSign size={18} /> Resumen de cobro
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm text-emerald-900">
+                                    <span>Placa</span>
+                                    <span className="font-semibold text-right">
+                                        {lastExit.ticket?.vehicle?.plate || 'N/D'}
+                                    </span>
+                                    <span>Duración</span>
+                                    <span className="font-semibold text-right">
+                                        {lastExit.exit?.durationMinutes} min
+                                    </span>
+                                    <span>Monto total</span>
+                                    <span className="font-bold text-right">
+                                        {formatCurrency(lastExit.exit?.totalAmount || 0)}
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="mt-6 text-sm text-slate-400">
+                                El resumen aparecerá tras el próximo egreso.
+                            </p>
+                        )}
+                    </div>
+                </section>
+
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="panel-card">
+                        <div className="panel-card__header">
+                            <h2 className="panel-card__title">Parqueaderos configurados</h2>
+                            <span className="pill">{parkings.length} activos</span>
+                        </div>
+                        {loadingParkings ? (
+                            <p className="text-sm text-slate-400">Cargando información...</p>
+                        ) : parkings.length ? (
+                            <ul className="space-y-4">
+                                {parkings.map((parking) => (
+                                    <li
+                                        key={parking.id}
+                                        className="border border-slate-100 rounded-xl p-4 flex flex-col gap-2"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-semibold text-slate-900">{parking.name}</p>
+                                            <span className="pill">
+                                                {parking.capacity ?? 'Sin dato'} cupos
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-slate-500">
+                                            {parking.address || 'Sin dirección registrada'}
+                                        </p>
+                                        <p className="text-xs text-slate-400 uppercase">
+                                            Tarifa base {parking.baseRate ? formatCurrency(parking.baseRate) : 'por definir'}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+                                Configure al menos un parqueadero para habilitar el registro de movimientos.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="panel-card">
+                        <div className="panel-card__header">
+                            <h2 className="panel-card__title">Actividad reciente</h2>
+                            <span className="pill">Tiempo real</span>
+                        </div>
+                        {lastExit ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-500">Ticket</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {lastExit.ticket?.ticketCode || 'N/D'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-500">Vehículo</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {lastExit.ticket?.vehicle?.plate || 'N/D'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-500">Parqueadero</span>
+                                    <span className="font-semibold text-slate-900">
+                                        {lastExit.ticket?.parking?.name || 'N/D'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs uppercase text-slate-500">Cobro</p>
+                                        <p className="text-2xl font-semibold text-slate-900">
+                                            {formatCurrency(lastExit.exit?.totalAmount || 0)}
+                                        </p>
+                                    </div>
+                                    <span className="pill">
+                                        <Clock size={16} /> {lastExit.exit?.durationMinutes} min
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-400">
+                                Aún no se registran egresos en esta sesión. Utilice el formulario de salida para ver el detalle aquí.
+                            </p>
+                        )}
+                    </div>
+                </section>
+            </main>
+        </div>
+    );
+};
+
+export default Dashboard;

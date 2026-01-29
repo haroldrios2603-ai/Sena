@@ -1,0 +1,11 @@
+{
+    "name": "rm-parking-qa",
+    "version": "1.0.0",
+    "description": "QA tests for RM Parking",
+    "scripts": {
+        "test": "playwright test"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.49.0"
+    }
+}

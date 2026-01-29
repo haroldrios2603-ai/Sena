@@ -1,0 +1,72 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    # Validar que existe package.json antes de intentar instalar
+    - name: Check Backend file existence
+      id: check_files
+      uses: andstor/file-existence-action@v2
+      with:
+        files: "Backend/package.json"
+        
+    - name: Install Dependencies
+      if: steps.check_files.outputs.files_exists == 'true'
+      working-directory: ./Backend
+      run: npm ci
+      
+    - name: Build
+      if: steps.check_files.outputs.files_exists == 'true'
+      working-directory: ./Backend
+      run: npm run build --if-present
+
+    - name: Test
+      if: steps.check_files.outputs.files_exists == 'true'
+      working-directory: ./Backend
+      run: npm test --if-present
+
+  frontend-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    # Validar que existe package.json antes de intentar instalar
+    - name: Check Frontend file existence
+      id: check_files
+      uses: andstor/file-existence-action@v2
+      with:
+        files: "Frontend/package.json"
+        
+    - name: Install Dependencies
+      if: steps.check_files.outputs.files_exists == 'true'
+      working-directory: ./Frontend
+      run: npm ci
+      
+    - name: Build
+      if: steps.check_files.outputs.files_exists == 'true'
+      working-directory: ./Frontend
+      run: npm run build --if-present
+
+    - name: Test
+      if: steps.check_files.outputs.files_exists == 'true'
+      working-directory: ./Frontend
+      run: npm test --if-present

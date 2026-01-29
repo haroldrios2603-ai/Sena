@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	body {
+		@apply bg-slate-100 text-slate-900 antialiased;
+	}
+
+	::selection {
+		@apply bg-indigo-500 text-white;
+	}
+}
+
+@layer components {
+	.dashboard-shell {
+		@apply max-w-6xl mx-auto w-full px-4 py-10 lg:px-0;
+	}
+
+	.panel-card {
+		@apply bg-white rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/60 p-6;
+	}
+
+	.panel-card__header {
+		@apply flex items-center justify-between pb-4;
+	}
+
+	.panel-card__title {
+		@apply text-lg font-semibold text-slate-900;
+	}
+
+	.input-field {
+		@apply w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow;
+	}
+
+	.form-label {
+		@apply block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2;
+	}
+
+	.btn-primary {
+		@apply inline-flex items-center justify-center gap-2 w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl transition-colors hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+	}
+
+	.btn-outline {
+		@apply inline-flex items-center justify-center gap-2 w-full border border-slate-200 text-slate-900 font-semibold py-3 rounded-xl hover:border-slate-300;
+	}
+
+	.pill {
+		@apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium;
+	}
+
+	.kpi-value {
+		@apply text-3xl font-semibold text-slate-900;
+	}
+
+	.kpi-label {
+		@apply text-xs uppercase tracking-wide text-slate-500;
+	}
+}

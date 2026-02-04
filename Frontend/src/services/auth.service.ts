@@ -41,6 +41,22 @@ const authService = {
      */
     getProfile: async () => {
         return api.get('/auth/me');
+    },
+
+    /**
+     * Solicitar código para recuperación de contraseña.
+     * ES: Envía al backend el correo destino para que genere y remita el código de confirmación.
+     */
+    requestPasswordReset: async (email: string) => {
+        return api.post('/auth/password/request', { email });
+    },
+
+    /**
+     * Confirmar código y registrar la nueva contraseña.
+     * ES: Envía código, correo y nueva contraseña al backend; pendiente de implementación real del endpoint.
+     */
+    confirmPasswordReset: async (email: string, code: string, newPassword: string) => {
+        return api.post('/auth/password/reset', { email, code, newPassword });
     }
 };
 

@@ -2,7 +2,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../context/useAuth';
 import api from '../api';
-import { LogOut, Car, ArrowRightLeft, Clock, DollarSign, CheckCircle } from 'lucide-react';
+import {
+    LogOut,
+    Car,
+    ArrowRightLeft,
+    Clock,
+    DollarSign,
+    CheckCircle,
+    Shield,
+    CreditCard,
+} from 'lucide-react';
+import UserManagementPanel from '../components/admin/UserManagementPanel';
+import ClientManagementPanel from '../components/admin/ClientManagementPanel';
 
 type VehicleType = 'CAR' | 'MOTORCYCLE';
 
@@ -58,6 +69,8 @@ type ApiErrorResponse = {
     message?: string;
 };
 
+type DashboardView = 'operations' | 'users' | 'clients';
+
 const getErrorMessage = (error: unknown, fallback: string) => {
     if (isAxiosError<ApiErrorResponse>(error)) {
         return error.response?.data?.message ?? fallback;
@@ -85,6 +98,45 @@ const Dashboard = () => {
     const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
     const [lastExit, setLastExit] = useState<ExitResponse | null>(null);
     const [loadingParkings, setLoadingParkings] = useState(true);
+    const [activeView, setActiveView] = useState<DashboardView>('operations');
+
+    const role = user?.role;
+    const canManageUsers = role === 'SUPER_ADMIN';
+    const canManageClients = role === 'SUPER_ADMIN' || role === 'ADMIN_PARKING';
+
+    const availableViews = useMemo(() => {
+        const views: DashboardView[] = ['operations'];
+        if (canManageUsers) views.push('users');
+        if (canManageClients) views.push('clients');
+        return views;
+    }, [canManageClients, canManageUsers]);
+
+    useEffect(() => {
+        if (!availableViews.includes(activeView)) {
+            setActiveView(availableViews[0] ?? 'operations');
+        }
+    }, [activeView, availableViews]);
+
+    const viewMeta: Record<DashboardView, { label: string; description: string; icon: React.ReactNode; accent: string }> = {
+        operations: {
+            label: 'Operación diaria',
+            description: 'Registro de tickets, aforo y cobros',
+            icon: <ArrowRightLeft size={16} />,
+            accent: 'text-slate-900',
+        },
+        users: {
+            label: 'Usuarios',
+            description: 'Roles, accesos y estados',
+            icon: <Shield size={16} />,
+            accent: 'text-indigo-700',
+        },
+        clients: {
+            label: 'Clientes',
+            description: 'Contratos mensuales y alertas',
+            icon: <CreditCard size={16} />,
+            accent: 'text-emerald-700',
+        },
+    };
 
     useEffect(() => {
         const fetchParkings = async () => {
@@ -201,252 +253,293 @@ const Dashboard = () => {
                 </div>
             </header>
 
-            <main className="dashboard-shell flex-1 space-y-10">
-                <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <article className="panel-card">
-                        <span className="pill"><ArrowRightLeft size={16} /> Operación</span>
-                        <p className="kpi-value mt-4">{kpiSummary.totalSites}</p>
-                        <p className="text-sm text-slate-500">Parqueaderos habilitados</p>
-                    </article>
-                    <article className="panel-card">
-                        <span className="pill"><Car size={16} /> Capacidad</span>
-                        <p className="kpi-value mt-4">{kpiSummary.totalCapacity}</p>
-                        <p className="text-sm text-slate-500">Cupos totales configurados</p>
-                    </article>
-                    <article className="panel-card">
-                        <span className="pill"><DollarSign size={16} /> Tarifa base</span>
-                        <p className="kpi-value mt-4">
-                            {kpiSummary.avgBaseRate > 0 ? formatCurrency(kpiSummary.avgBaseRate) : 'Sin datos'}
-                        </p>
-                        <p className="text-sm text-slate-500">Promedio por parqueadero</p>
-                    </article>
-                    <article className="panel-card">
-                        <span className="pill"><Clock size={16} /> Último cobro</span>
-                        <p className="kpi-value mt-4">
-                            {kpiSummary.lastAmount !== null ? formatCurrency(kpiSummary.lastAmount) : 'Aún sin registros'}
-                        </p>
-                        <p className="text-sm text-slate-500">Actualizado al último egreso</p>
-                    </article>
-                </section>
-
-                {message.text && (
-                    <div
-                        className={`rounded-2xl border p-4 flex items-start gap-3 ${
-                            message.type === 'success'
-                                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                                : 'border-rose-200 bg-rose-50 text-rose-900'
-                        }`}
-                    >
-                        {message.type === 'success' && <CheckCircle size={20} className="mt-0.5" />}
-                        <span className="text-sm font-medium leading-relaxed">{message.text}</span>
-                    </div>
-                )}
-
-                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="panel-card">
-                        <div className="panel-card__header">
-                            <div>
-                                <span className="pill"><Car size={16} /> Entrada</span>
-                                <h2 className="panel-card__title mt-2">Registrar ingreso</h2>
-                            </div>
-                            <span className="text-xs text-slate-400">Última placa: {plateEntry || 'N/A'}</span>
-                        </div>
-                        <form onSubmit={handleEntry} className="space-y-5">
-                            <div>
-                                <label className="form-label">Placa del vehículo</label>
-                                <input
-                                    type="text"
-                                    value={plateEntry}
-                                    onChange={(e) => setPlateEntry(e.target.value.toUpperCase())}
-                                    className="input-field uppercase tracking-widest"
-                                    placeholder="ABC123"
-                                      maxLength={8}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="form-label">Tipo de vehículo</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {(['CAR', 'MOTORCYCLE'] as const).map((type) => (
-                                        <label
-                                            key={type}
-                                            className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
-                                                vehicleTypeEntry === type
-                                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
-                                                    : 'border-slate-200 text-slate-500'
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                value={type}
-                                                checked={vehicleTypeEntry === type}
-                                                onChange={() => setVehicleTypeEntry(type)}
-                                                className="sr-only"
-                                            />
-                                            {type === 'CAR' ? 'Carro' : 'Moto'}
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="form-label">Parqueadero</label>
-                                <select
-                                    value={selectedParkingId}
-                                    onChange={(e) => setSelectedParkingId(e.target.value)}
-                                    className="input-field appearance-none"
-                                    required
+            <nav className="border-b border-transparent bg-white/60 backdrop-blur">
+                <div className="dashboard-shell overflow-x-auto py-4">
+                    <div className="flex gap-3 min-w-full lg:min-w-0">
+                        {availableViews.map((view) => {
+                            const meta = viewMeta[view];
+                            const isActive = activeView === view;
+                            return (
+                                <button
+                                    key={view}
+                                    type="button"
+                                    onClick={() => setActiveView(view)}
+                                    className={`min-w-[220px] rounded-2xl border px-5 py-4 text-left transition ${
+                                        isActive
+                                            ? 'bg-white shadow-xl border-white/60'
+                                            : 'bg-slate-100 border-transparent text-slate-500'
+                                    }`}
                                 >
-                                    {parkings.map((parking) => (
-                                        <option key={parking.id} value={parking.id}>
-                                            {parking.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {!parkings.length && (
-                                    <p className="text-xs text-rose-500 mt-2">No hay parqueaderos configurados.</p>
-                                )}
-                            </div>
-                            <button type="submit" className="btn-primary">Registrar entrada</button>
-                        </form>
+                                    <div className={`flex items-center gap-2 text-sm font-semibold ${isActive ? meta.accent : 'text-slate-500'}`}>
+                                        {meta.icon}
+                                        {meta.label}
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1 max-w-[220px]">
+                                        {meta.description}
+                                    </p>
+                                </button>
+                            );
+                        })}
                     </div>
+                </div>
+            </nav>
 
-                    <div className="panel-card">
-                        <div className="panel-card__header">
-                            <div>
-                                <span className="pill"><Clock size={16} /> Salida</span>
-                                <h2 className="panel-card__title mt-2">Registrar salida</h2>
-                            </div>
-                        </div>
-                        <form onSubmit={handleExit} className="space-y-5">
-                            <div>
-                                <label className="form-label">Placa</label>
-                                <input
-                                    type="text"
-                                    value={plateExit}
-                                    onChange={(e) => setPlateExit(e.target.value.toUpperCase())}
-                                    className="input-field uppercase tracking-widest"
-                                    placeholder="ABC123"
-                                      maxLength={8}
-                                    required
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                className="btn-primary bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+            <main className="dashboard-shell flex-1 space-y-10">
+                {activeView === 'operations' && (
+                    <>
+                        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                            <article className="panel-card">
+                                <span className="pill"><ArrowRightLeft size={16} /> Operación</span>
+                                <p className="kpi-value mt-4">{kpiSummary.totalSites}</p>
+                                <p className="text-sm text-slate-500">Parqueaderos habilitados</p>
+                            </article>
+                            <article className="panel-card">
+                                <span className="pill"><Car size={16} /> Capacidad</span>
+                                <p className="kpi-value mt-4">{kpiSummary.totalCapacity}</p>
+                                <p className="text-sm text-slate-500">Cupos totales configurados</p>
+                            </article>
+                            <article className="panel-card">
+                                <span className="pill"><DollarSign size={16} /> Tarifa base</span>
+                                <p className="kpi-value mt-4">
+                                    {kpiSummary.avgBaseRate > 0 ? formatCurrency(kpiSummary.avgBaseRate) : 'Sin datos'}
+                                </p>
+                                <p className="text-sm text-slate-500">Promedio por parqueadero</p>
+                            </article>
+                            <article className="panel-card">
+                                <span className="pill"><Clock size={16} /> Último cobro</span>
+                                <p className="kpi-value mt-4">
+                                    {kpiSummary.lastAmount !== null ? formatCurrency(kpiSummary.lastAmount) : 'Aún sin registros'}
+                                </p>
+                                <p className="text-sm text-slate-500">Actualizado al último egreso</p>
+                            </article>
+                        </section>
+
+                        {message.text && (
+                            <div
+                                className={`rounded-2xl border p-4 flex items-start gap-3 ${
+                                    message.type === 'success'
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                        : 'border-rose-200 bg-rose-50 text-rose-900'
+                                }`}
                             >
-                                Registrar salida
-                            </button>
-                        </form>
-
-                        {lastExit ? (
-                            <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-3">
-                                <div className="flex items-center gap-2 text-emerald-700 font-semibold">
-                                    <DollarSign size={18} /> Resumen de cobro
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm text-emerald-900">
-                                    <span>Placa</span>
-                                    <span className="font-semibold text-right">
-                                        {lastExit.ticket?.vehicle?.plate || 'N/D'}
-                                    </span>
-                                    <span>Duración</span>
-                                    <span className="font-semibold text-right">
-                                        {lastExit.exit?.durationMinutes} min
-                                    </span>
-                                    <span>Monto total</span>
-                                    <span className="font-bold text-right">
-                                        {formatCurrency(lastExit.exit?.totalAmount || 0)}
-                                    </span>
-                                </div>
+                                {message.type === 'success' && <CheckCircle size={20} className="mt-0.5" />}
+                                <span className="text-sm font-medium leading-relaxed">{message.text}</span>
                             </div>
-                        ) : (
-                            <p className="mt-6 text-sm text-slate-400">
-                                El resumen aparecerá tras el próximo egreso.
-                            </p>
                         )}
-                    </div>
-                </section>
 
-                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="panel-card">
-                        <div className="panel-card__header">
-                            <h2 className="panel-card__title">Parqueaderos configurados</h2>
-                            <span className="pill">{parkings.length} activos</span>
-                        </div>
-                        {loadingParkings ? (
-                            <p className="text-sm text-slate-400">Cargando información...</p>
-                        ) : parkings.length ? (
-                            <ul className="space-y-4">
-                                {parkings.map((parking) => (
-                                    <li
-                                        key={parking.id}
-                                        className="border border-slate-100 rounded-xl p-4 flex flex-col gap-2"
+                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="panel-card">
+                                <div className="panel-card__header">
+                                    <div>
+                                        <span className="pill"><Car size={16} /> Entrada</span>
+                                        <h2 className="panel-card__title mt-2">Registrar ingreso</h2>
+                                    </div>
+                                    <span className="text-xs text-slate-400">Última placa: {plateEntry || 'N/A'}</span>
+                                </div>
+                                <form onSubmit={handleEntry} className="space-y-5">
+                                    <div>
+                                        <label className="form-label">Placa del vehículo</label>
+                                        <input
+                                            type="text"
+                                            value={plateEntry}
+                                            onChange={(e) => setPlateEntry(e.target.value.toUpperCase())}
+                                            className="input-field uppercase tracking-widest"
+                                            placeholder="ABC123"
+                                            maxLength={8}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Tipo de vehículo</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {(['CAR', 'MOTORCYCLE'] as const).map((type) => (
+                                                <label
+                                                    key={type}
+                                                    className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
+                                                        vehicleTypeEntry === type
+                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                                                            : 'border-slate-200 text-slate-500'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        value={type}
+                                                        checked={vehicleTypeEntry === type}
+                                                        onChange={() => setVehicleTypeEntry(type)}
+                                                        className="sr-only"
+                                                    />
+                                                    {type === 'CAR' ? 'Carro' : 'Moto'}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Parqueadero</label>
+                                        <select
+                                            value={selectedParkingId}
+                                            onChange={(e) => setSelectedParkingId(e.target.value)}
+                                            className="input-field appearance-none"
+                                            required
+                                        >
+                                            {parkings.map((parking) => (
+                                                <option key={parking.id} value={parking.id}>
+                                                    {parking.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {!parkings.length && (
+                                            <p className="text-xs text-rose-500 mt-2">No hay parqueaderos configurados.</p>
+                                        )}
+                                    </div>
+                                    <button type="submit" className="btn-primary">Registrar entrada</button>
+                                </form>
+                            </div>
+
+                            <div className="panel-card">
+                                <div className="panel-card__header">
+                                    <div>
+                                        <span className="pill"><Clock size={16} /> Salida</span>
+                                        <h2 className="panel-card__title mt-2">Registrar salida</h2>
+                                    </div>
+                                </div>
+                                <form onSubmit={handleExit} className="space-y-5">
+                                    <div>
+                                        <label className="form-label">Placa</label>
+                                        <input
+                                            type="text"
+                                            value={plateExit}
+                                            onChange={(e) => setPlateExit(e.target.value.toUpperCase())}
+                                            className="input-field uppercase tracking-widest"
+                                            placeholder="ABC123"
+                                            maxLength={8}
+                                            required
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="btn-primary bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <p className="font-semibold text-slate-900">{parking.name}</p>
-                                            <span className="pill">
-                                                {parking.capacity ?? 'Sin dato'} cupos
+                                        Registrar salida
+                                    </button>
+                                </form>
+
+                                {lastExit ? (
+                                    <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+                                            <DollarSign size={18} /> Resumen de cobro
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-sm text-emerald-900">
+                                            <span>Placa</span>
+                                            <span className="font-semibold text-right">
+                                                {lastExit.ticket?.vehicle?.plate || 'N/D'}
+                                            </span>
+                                            <span>Duración</span>
+                                            <span className="font-semibold text-right">
+                                                {lastExit.exit?.durationMinutes} min
+                                            </span>
+                                            <span>Monto total</span>
+                                            <span className="font-bold text-right">
+                                                {formatCurrency(lastExit.exit?.totalAmount || 0)}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-slate-500">
-                                            {parking.address || 'Sin dirección registrada'}
-                                        </p>
-                                        <p className="text-xs text-slate-400 uppercase">
-                                            Tarifa base {parking.baseRate ? formatCurrency(parking.baseRate) : 'por definir'}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-                                Configure al menos un parqueadero para habilitar el registro de movimientos.
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="panel-card">
-                        <div className="panel-card__header">
-                            <h2 className="panel-card__title">Actividad reciente</h2>
-                            <span className="pill">Tiempo real</span>
-                        </div>
-                        {lastExit ? (
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-500">Ticket</span>
-                                    <span className="font-semibold text-slate-900">
-                                        {lastExit.ticket?.ticketCode || 'N/D'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-500">Vehículo</span>
-                                    <span className="font-semibold text-slate-900">
-                                        {lastExit.ticket?.vehicle?.plate || 'N/D'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-500">Parqueadero</span>
-                                    <span className="font-semibold text-slate-900">
-                                        {lastExit.ticket?.parking?.name || 'N/D'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs uppercase text-slate-500">Cobro</p>
-                                        <p className="text-2xl font-semibold text-slate-900">
-                                            {formatCurrency(lastExit.exit?.totalAmount || 0)}
-                                        </p>
                                     </div>
-                                    <span className="pill">
-                                        <Clock size={16} /> {lastExit.exit?.durationMinutes} min
-                                    </span>
-                                </div>
+                                ) : (
+                                    <p className="mt-6 text-sm text-slate-400">
+                                        El resumen aparecerá tras el próximo egreso.
+                                    </p>
+                                )}
                             </div>
-                        ) : (
-                            <p className="text-sm text-slate-400">
-                                Aún no se registran egresos en esta sesión. Utilice el formulario de salida para ver el detalle aquí.
-                            </p>
-                        )}
-                    </div>
-                </section>
+                        </section>
+
+                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="panel-card">
+                                <div className="panel-card__header">
+                                    <h2 className="panel-card__title">Parqueaderos configurados</h2>
+                                    <span className="pill">{parkings.length} activos</span>
+                                </div>
+                                {loadingParkings ? (
+                                    <p className="text-sm text-slate-400">Cargando información...</p>
+                                ) : parkings.length ? (
+                                    <ul className="space-y-4">
+                                        {parkings.map((parking) => (
+                                            <li
+                                                key={parking.id}
+                                                className="border border-slate-100 rounded-xl p-4 flex flex-col gap-2"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <p className="font-semibold text-slate-900">{parking.name}</p>
+                                                    <span className="pill">
+                                                        {parking.capacity ?? 'Sin dato'} cupos
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-slate-500">
+                                                    {parking.address || 'Sin dirección registrada'}
+                                                </p>
+                                                <p className="text-xs text-slate-400 uppercase">
+                                                    Tarifa base {parking.baseRate ? formatCurrency(parking.baseRate) : 'por definir'}
+                                                </p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+                                        Configure al menos un parqueadero para habilitar el registro de movimientos.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="panel-card">
+                                <div className="panel-card__header">
+                                    <h2 className="panel-card__title">Actividad reciente</h2>
+                                    <span className="pill">Tiempo real</span>
+                                </div>
+                                {lastExit ? (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-500">Ticket</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {lastExit.ticket?.ticketCode || 'N/D'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-500">Vehículo</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {lastExit.ticket?.vehicle?.plate || 'N/D'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-500">Parqueadero</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {lastExit.ticket?.parking?.name || 'N/D'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs uppercase text-slate-500">Cobro</p>
+                                                <p className="text-2xl font-semibold text-slate-900">
+                                                    {formatCurrency(lastExit.exit?.totalAmount || 0)}
+                                                </p>
+                                            </div>
+                                            <span className="pill">
+                                                <Clock size={16} /> {lastExit.exit?.durationMinutes} min
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-400">
+                                        Aún no se registran egresos en esta sesión. Utilice el formulario de salida para ver el detalle aquí.
+                                    </p>
+                                )}
+                            </div>
+                        </section>
+                    </>
+                )}
+
+                {activeView === 'users' && canManageUsers && <UserManagementPanel />}
+
+                {activeView === 'clients' && canManageClients && (
+                    <ClientManagementPanel parkings={parkings} loadingParkings={loadingParkings} />
+                )}
             </main>
         </div>
     );

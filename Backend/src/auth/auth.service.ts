@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
@@ -9,6 +10,8 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { PasswordRequestDto } from './dto/password-request.dto';
+import { PasswordResetDto } from './dto/password-reset.dto';
 
 /**
  * Servicio responsable de la lógica de Autenticación.
@@ -16,6 +19,11 @@ import * as bcrypt from 'bcrypt';
  */
 @Injectable()
 export class AuthService {
+  /**
+   * Minutos de vigencia del código de recuperación.
+   */
+  private readonly recoveryExpirationMinutes = 15;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -130,5 +138,112 @@ export class AuthService {
     }
 
     return { message: 'Sesión cerrada y asistencia actualizada' };
+  }
+
+  /**
+   * Genera un código de recuperación y lo registra en la base de datos.
+   * ES: Endpoint consumido por el Frontend para iniciar la recuperación.
+   */
+  async requestPasswordReset(passwordRequestDto: PasswordRequestDto) {
+    const { email } = passwordRequestDto;
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      // ES: Se retorna mensaje genérico para no revelar existencia de usuarios.
+      return {
+        message:
+          'Si el correo está registrado recibirás un código de recuperación en los próximos minutos.',
+      };
+    }
+
+    const code = this.generateRecoveryCode();
+    const tokenHash = await bcrypt.hash(code, await bcrypt.genSalt());
+    const expiresAt = new Date(
+      Date.now() + this.recoveryExpirationMinutes * 60 * 1000,
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      // ES: Invalidar códigos vigentes previos.
+      await tx.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      });
+
+      await tx.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          email: user.email,
+          tokenHash,
+          expiresAt,
+        },
+      });
+    });
+
+    // TODO: Integrar servicio de correo/SMS; por ahora se registra en logs para pruebas.
+    console.log(
+      `Código de recuperación para ${email}: ${code} (válido ${this.recoveryExpirationMinutes} minutos)`,
+    );
+
+    return {
+      message:
+        'Hemos enviado un código de recuperación. Revisa tu bandeja de entrada y continúa el proceso.',
+    };
+  }
+
+  /**
+   * Valida el código recibido y actualiza la contraseña del usuario.
+   */
+  async confirmPasswordReset(passwordResetDto: PasswordResetDto) {
+    const { email, code, newPassword } = passwordResetDto;
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      throw new BadRequestException('Código inválido o expirado');
+    }
+
+    const token = await this.prisma.passwordResetToken.findFirst({
+      where: { userId: user.id, usedAt: null },
+      orderBy: { expiresAt: 'desc' },
+    });
+
+    if (!token || token.expiresAt < new Date()) {
+      throw new BadRequestException('Código inválido o expirado');
+    }
+
+    const isValidCode = await bcrypt.compare(code, token.tokenHash);
+
+    if (!isValidCode) {
+      throw new BadRequestException('Código inválido o expirado');
+    }
+
+    const salt = await bcrypt.genSalt();
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: token.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return { message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' };
+  }
+
+  /**
+   * Genera un código alfanumérico de 6 caracteres para la recuperación.
+   */
+  private generateRecoveryCode() {
+    const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i += 1) {
+      code += charset[Math.floor(Math.random() * charset.length)];
+    }
+    return code;
   }
 }

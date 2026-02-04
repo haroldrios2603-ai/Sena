@@ -37,8 +37,9 @@ model User {
    attendance   Attendance[]
    payments     Payment[]
    reports      Report[]
+  resetTokens  PasswordResetToken[]
 
-   // Índices para mejor rendimiento
+  // Índices para mejor rendimiento
    @@index([email])
    @@index([role])
 }
@@ -142,7 +143,17 @@ model Contract {
   parking   Parking  @relation(fields: [parkingId], references: [id])
   startDate DateTime
   endDate   DateTime
-  status    String   // ACTIVE, EXPIRED
+  status    String   // ACTIVE, EXPIRED, EXPIRING_SOON, PAYMENT_PENDING
+  planName  String   @default("Mensualidad")
+  monthlyFee Float   @default(0)
+  isRecurring Boolean @default(true)
+  lastPaymentDate DateTime?
+  nextPaymentDate DateTime?
+
+  alerts    ContractAlert[]
+
+  @@index([status])
+  @@index([endDate])
 }
 
 // Employee Attendance
@@ -162,4 +173,36 @@ model Report {
   type        String   // DAILY, MONTHLY
   url         String
   createdAt   DateTime @default(now())
+}
+
+// Password reset tokens para recuperación de contraseña
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  email     String
+  tokenHash String   // Hash del código enviado al correo
+  expiresAt DateTime // Fecha de expiración del código
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+// Alertas ligadas a contratos de mensualidad
+model ContractAlert {
+  id         String   @id @default(uuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+  alertType  String   // EXPIRING_SOON, EXPIRED, PAYMENT_PENDING
+  message    String
+  status     String   @default("PENDING") // PENDING, RESOLVED
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+
+  @@index([contractId])
+  @@index([status])
+  @@unique([contractId, alertType])
 }

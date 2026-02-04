@@ -40,3 +40,5 @@ Thumbs.db
 .agent/
 brain/
 *.log
+QA/playwright-report/
+QA/test-results/

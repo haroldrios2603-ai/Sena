@@ -10,6 +10,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { PasswordRequestDto } from './dto/password-request.dto';
+import { PasswordResetDto } from './dto/password-reset.dto';
 
 /**
  * Controlador para manejar peticiones de autenticación.
@@ -53,5 +55,21 @@ export class AuthController {
   @Post('logout')
   async logout(@Request() req: { user: { userId: string } }) {
     return this.authService.logout(req.user.userId);
+  }
+
+  /**
+   * Endpoint público para solicitar código de recuperación.
+   */
+  @Post('password/request')
+  async requestPassword(@Body() passwordRequestDto: PasswordRequestDto) {
+    return this.authService.requestPasswordReset(passwordRequestDto);
+  }
+
+  /**
+   * Endpoint público para confirmar código y registrar nueva contraseña.
+   */
+  @Post('password/reset')
+  async resetPassword(@Body() passwordResetDto: PasswordResetDto) {
+    return this.authService.confirmPasswordReset(passwordResetDto);
   }
 }

@@ -34,11 +34,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exceptionResponse !== null
       ) {
         const res = exceptionResponse as Record<string, unknown>;
-        const resMessage =
-          typeof res['message'] === 'string' ? res['message'] : undefined;
+        const resMessage = res['message'];
         const resError =
           typeof res['error'] === 'string' ? res['error'] : undefined;
-        message = resMessage || message;
+        if (typeof resMessage === 'string') {
+          message = resMessage;
+        } else if (Array.isArray(resMessage) && resMessage.length > 0) {
+          message = resMessage.join(', ');
+        }
         error = resError || error;
       }
     } else if (exception instanceof Error) {

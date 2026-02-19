@@ -47,6 +47,14 @@ export class ParkingController {
    * Obtiene los detalles de un parqueadero por su ID.
    * @param id Identificador único del parqueadero.
    */
+  /**
+   * Retorna el resumen de vehículos con ingreso activo y egresos registrados.
+   */
+  @Get('tickets/resumen')
+  async obtenerResumenTickets() {
+    return this.parkingService.obtenerResumenTickets();
+  }
+
   @Get(':id')
   async getParkingById(@Param('id') id: string) {
     return this.parkingService.findOne(id);

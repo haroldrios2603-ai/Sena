@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../context/useAuth';
 import api from '../api';
@@ -60,6 +60,13 @@ type ExitResponse = {
     message: string;
 };
 
+type TicketConSalida = Ticket & { exit?: ExitRecord | null };
+
+type ResumenTicketsResponse = {
+    activos: Ticket[];
+    cerrados: TicketConSalida[];
+};
+
 type MessageState = {
     text: string;
     type: 'success' | 'error' | '';
@@ -99,6 +106,12 @@ const Dashboard = () => {
     const [lastExit, setLastExit] = useState<ExitResponse | null>(null);
     const [loadingParkings, setLoadingParkings] = useState(true);
     const [activeView, setActiveView] = useState<DashboardView>('operations');
+    const [ticketsActivos, setTicketsActivos] = useState<Ticket[]>([]);
+    const [ticketsCerrados, setTicketsCerrados] = useState<TicketConSalida[]>([]);
+    const [filtroPlaca, setFiltroPlaca] = useState('');
+    const [filtroBusqueda, setFiltroBusqueda] = useState('');
+
+    const clearMessage = () => setMessage({ text: '', type: '' });
 
     const role = user?.role;
     const canManageUsers = role === 'SUPER_ADMIN';
@@ -138,6 +151,20 @@ const Dashboard = () => {
         },
     };
 
+    const cargarResumenTickets = useCallback(async () => {
+        try {
+            const res = await api.get<ResumenTicketsResponse>('/parking/tickets/resumen');
+            setTicketsActivos(res.data.activos);
+            setTicketsCerrados(res.data.cerrados);
+        } catch (err: unknown) {
+            console.error('Error al cargar resumen de tickets', err);
+            setMessage({
+                text: getErrorMessage(err, 'No se pudo cargar el resumen de vehículos'),
+                type: 'error',
+            });
+        }
+    }, []);
+
     useEffect(() => {
         const fetchParkings = async () => {
             setLoadingParkings(true);
@@ -158,9 +185,30 @@ const Dashboard = () => {
             }
         };
         fetchParkings();
-    }, []);
+        cargarResumenTickets();
+    }, [cargarResumenTickets]);
+
+    const fechaFormatter = useMemo(() => new Intl.DateTimeFormat('es-CO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }), []);
 
     const formatCurrency = (value: number) => currencyFormatter.format(Math.max(0, value));
+    const formatDateTime = (value: string) => fechaFormatter.format(new Date(value));
+    const formatElapsedTime = (value: string) => {
+        const diffMinutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / (1000 * 60)));
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        const minutes = diffMinutes % 60;
+        const segments: string[] = [];
+        if (days) segments.push(`${days}d`);
+        if (hours) segments.push(`${hours}h`);
+        if (minutes || (!days && !hours)) segments.push(`${minutes}m`);
+        return segments.join(' ') || '0m';
+    };
 
     const kpiSummary = useMemo(() => {
         const totalSites = parkings.length;
@@ -181,9 +229,31 @@ const Dashboard = () => {
         };
     }, [parkings, lastExit]);
 
+    const aplicarFiltroPlaca = () => setFiltroPlaca(filtroBusqueda.trim());
+    const limpiarFiltroPlaca = () => {
+        setFiltroBusqueda('');
+        setFiltroPlaca('');
+    };
+
+    const filtroNormalizado = filtroPlaca.trim().toUpperCase();
+
+    const ticketsActivosFiltrados = useMemo(() => {
+        if (!filtroNormalizado) return ticketsActivos;
+        return ticketsActivos.filter((ticket) =>
+            ticket.vehicle?.plate.toUpperCase().includes(filtroNormalizado)
+        );
+    }, [ticketsActivos, filtroNormalizado]);
+
+    const ticketsCerradosFiltrados = useMemo(() => {
+        if (!filtroNormalizado) return ticketsCerrados;
+        return ticketsCerrados.filter((ticket) =>
+            ticket.vehicle?.plate.toUpperCase().includes(filtroNormalizado)
+        );
+    }, [ticketsCerrados, filtroNormalizado]);
+
     const handleEntry = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage({ text: '', type: '' });
+        clearMessage();
 
         if (!selectedParkingId) {
             setMessage({ text: 'Seleccione un parqueadero antes de registrar', type: 'error' });
@@ -201,6 +271,7 @@ const Dashboard = () => {
                 type: 'success',
             });
             setPlateEntry('');
+            await cargarResumenTickets();
         } catch (err: unknown) {
             setMessage({
                 text: getErrorMessage(err, 'Error al registrar el ingreso'),
@@ -211,7 +282,7 @@ const Dashboard = () => {
 
     const handleExit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage({ text: '', type: '' });
+        clearMessage();
         setLastExit(null);
 
         try {
@@ -219,6 +290,7 @@ const Dashboard = () => {
             setMessage({ text: 'Salida procesada con éxito', type: 'success' });
             setLastExit(res.data);
             setPlateExit('');
+            await cargarResumenTickets();
         } catch (err: unknown) {
             setMessage({
                 text: getErrorMessage(err, 'Error al registrar la salida'),
@@ -342,7 +414,10 @@ const Dashboard = () => {
                                         <input
                                             type="text"
                                             value={plateEntry}
-                                            onChange={(e) => setPlateEntry(e.target.value.toUpperCase())}
+                                            onChange={(e) => {
+                                                clearMessage();
+                                                setPlateEntry(e.target.value.toUpperCase());
+                                            }}
                                             className="input-field uppercase tracking-widest"
                                             placeholder="ABC123"
                                             maxLength={8}
@@ -408,7 +483,10 @@ const Dashboard = () => {
                                         <input
                                             type="text"
                                             value={plateExit}
-                                            onChange={(e) => setPlateExit(e.target.value.toUpperCase())}
+                                            onChange={(e) => {
+                                                clearMessage();
+                                                setPlateExit(e.target.value.toUpperCase());
+                                            }}
                                             className="input-field uppercase tracking-widest"
                                             placeholder="ABC123"
                                             maxLength={8}
@@ -448,6 +526,102 @@ const Dashboard = () => {
                                         El resumen aparecerá tras el próximo egreso.
                                     </p>
                                 )}
+                            </div>
+                        </section>
+
+                        <section className="panel-card space-y-6">
+                            <div className="panel-card__header">
+                                <div>
+                                    <span className="pill"><Car size={16} /> Seguimiento</span>
+                                    <h2 className="panel-card__title mt-2">Estado de vehículos</h2>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="form-label">Buscar por placa</label>
+                                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                    <input
+                                        type="text"
+                                        value={filtroBusqueda}
+                                        onChange={(e) => setFiltroBusqueda(e.target.value.toUpperCase())}
+                                        className="input-field uppercase tracking-widest"
+                                        placeholder="Filtra por placa"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={aplicarFiltroPlaca}
+                                            className="btn-primary whitespace-nowrap"
+                                        >
+                                            Buscar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={limpiarFiltroPlaca}
+                                            className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                                        >
+                                            Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="border border-slate-100 rounded-2xl p-4 bg-white/80">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-slate-900">Vehículos en el parqueadero</h3>
+                                        <span className="pill">{ticketsActivosFiltrados.length}</span>
+                                    </div>
+                                    {ticketsActivosFiltrados.length ? (
+                                        <ul className="mt-4 space-y-3">
+                                            {ticketsActivosFiltrados.map((ticket) => (
+                                                <li
+                                                    key={ticket.id}
+                                                    className="rounded-xl border border-slate-100 p-3 text-sm text-slate-700"
+                                                >
+                                                    <div className="flex items-center justify-between font-semibold text-slate-900">
+                                                        <span>{ticket.vehicle?.plate}</span>
+                                                        <span>{formatElapsedTime(ticket.entryTime)}</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-1">
+                                                        Ingreso: {formatDateTime(ticket.entryTime)}
+                                                    </p>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="mt-4 text-sm text-slate-400">No hay vehículos activos que coincidan con el filtro.</p>
+                                    )}
+                                </div>
+                                <div className="border border-slate-100 rounded-2xl p-4 bg-white/80">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-slate-900">Vehículos con salida</h3>
+                                        <span className="pill">{ticketsCerradosFiltrados.length}</span>
+                                    </div>
+                                    {ticketsCerradosFiltrados.length ? (
+                                        <ul className="mt-4 space-y-3">
+                                            {ticketsCerradosFiltrados.map((ticket) => (
+                                                <li
+                                                    key={ticket.id}
+                                                    className="rounded-xl border border-slate-100 p-3 text-sm text-slate-700"
+                                                >
+                                                    <div className="flex items-center justify-between font-semibold text-slate-900">
+                                                        <span>{ticket.vehicle?.plate}</span>
+                                                        <span>{ticket.exit ? formatDateTime(ticket.exit.exitTime) : 'Sin hora'}</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-1">
+                                                        Ingreso: {formatDateTime(ticket.entryTime)}
+                                                    </p>
+                                                    {ticket.exit && (
+                                                        <p className="text-xs text-slate-500">
+                                                            Salida: {formatDateTime(ticket.exit.exitTime)}
+                                                        </p>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="mt-4 text-sm text-slate-400">No hay registros cerrados que coincidan con el filtro.</p>
+                                    )}
+                                </div>
                             </div>
                         </section>
 

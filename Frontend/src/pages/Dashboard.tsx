@@ -110,6 +110,27 @@ const Dashboard = () => {
     const [lastExit, setLastExit] = useState<ExitResponse | null>(null);
     const [loadingParkings, setLoadingParkings] = useState(true);
     const [activeView, setActiveView] = useState<DashboardView>('operations');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [ticketsActivos, setTicketsActivos] = useState<Ticket[]>([]);
+    const [ticketsCerrados, setTicketsCerrados] = useState<TicketConSalida[]>([]);
+    const [filtroBusqueda, setFiltroBusqueda] = useState('');
+    const [filtroPlaca, setFiltroPlaca] = useState('');
+
+    const clearMessage = useCallback(() => setMessage({ text: '', type: '' }), []);
+
+    const cargarResumenTickets = useCallback(async () => {
+        try {
+            const response = await api.get<ResumenTicketsResponse>('/parking/tickets/resumen');
+            setTicketsActivos(response.data.activos ?? []);
+            setTicketsCerrados(response.data.cerrados ?? []);
+        } catch (err: unknown) {
+            console.error('Error fetching ticket summary', err);
+            setMessage({
+                text: getErrorMessage(err, 'No se pudo cargar el resumen de tickets'),
+                type: 'error',
+            });
+        }
+    }, []);
 
     const role = user?.role;
     const canManageUsers = role === 'SUPER_ADMIN';
@@ -160,6 +181,12 @@ const Dashboard = () => {
             accent: 'text-emerald-700',
         },
     };
+
+    const menuItems = availableViews.map((view) => ({
+        key: view,
+        view,
+        ...viewMeta[view],
+    }));
 
     useEffect(() => {
         const fetchParkings = async () => {

@@ -325,9 +325,9 @@ const UserManagementPanel = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {users.map((user) => {
-                                        const roleOptions =
+                                        const roleOptions: Role[] =
                                             user.role === 'CLIENT'
-                                                ? [...assignableRoles, 'CLIENT']
+                                                ? [...assignableRoles, 'CLIENT' as Role]
                                                 : assignableRoles;
                                         return (
                                         <tr key={user.id} className="align-middle">

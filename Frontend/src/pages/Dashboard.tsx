@@ -11,6 +11,10 @@ import {
     CheckCircle,
     Shield,
     CreditCard,
+    Menu,
+    X,
+    ChevronDown,
+    ChevronLeft,
 } from 'lucide-react';
 import UserManagementPanel from '../components/admin/UserManagementPanel';
 import ClientManagementPanel from '../components/admin/ClientManagementPanel';
@@ -99,6 +103,7 @@ const Dashboard = () => {
     const [lastExit, setLastExit] = useState<ExitResponse | null>(null);
     const [loadingParkings, setLoadingParkings] = useState(true);
     const [activeView, setActiveView] = useState<DashboardView>('operations');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const role = user?.role;
     const canManageUsers = role === 'SUPER_ADMIN';
@@ -116,6 +121,18 @@ const Dashboard = () => {
             setActiveView(availableViews[0] ?? 'operations');
         }
     }, [activeView, availableViews]);
+
+    useEffect(() => {
+        // ES: Permitimos cerrar el menú con la tecla ESC para mejorar la accesibilidad.
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setSidebarOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const viewMeta: Record<DashboardView, { label: string; description: string; icon: React.ReactNode; accent: string }> = {
         operations: {
@@ -137,6 +154,12 @@ const Dashboard = () => {
             accent: 'text-emerald-700',
         },
     };
+
+    const menuItems = availableViews.map((view) => ({
+        key: view,
+        view,
+        ...viewMeta[view],
+    }));
 
     useEffect(() => {
         const fetchParkings = async () => {
@@ -228,10 +251,90 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col">
-            <header className="bg-slate-900 text-white shadow-xl">
-                <div className="dashboard-shell flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-h-screen bg-slate-100 flex">
+            {sidebarOpen && (
+                <button
+                    type="button"
+                    className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm"
+                    aria-label="Cerrar menú"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+            <aside
+                className={`fixed left-0 top-0 z-40 flex h-full w-72 flex-col border-r border-slate-800 bg-slate-900 text-white transition-transform duration-300 sm:w-80 ${
+                    sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+            >
+                <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
                     <div>
+                        <p className="text-xs uppercase tracking-wide text-slate-400">RM Parking</p>
+                        <p className="text-lg font-semibold text-white">Centro de Control</p>
+                    </div>
+                    <button
+                        type="button"
+                        className="rounded-full border border-white/10 p-2 text-white/70 hover:text-white"
+                        aria-label="Colapsar menú"
+                        onClick={() => setSidebarOpen(false)}
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-6">
+                    {/* ES: Menú lateral encargado de cambiar las vistas principales sin afectar el contenido existente. */}
+                    <ul className="space-y-4">
+                        {menuItems.map((item) => {
+                            const isActive = activeView === item.view;
+                            return (
+                                <li key={item.key}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setActiveView(item.view);
+                                            setSidebarOpen(false);
+                                        }}
+                                        className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                                            isActive
+                                                ? 'border-white/10 bg-white/10 text-white'
+                                                : 'border-white/5 text-slate-300 hover:border-white/10 hover:bg-slate-800/80'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 font-semibold">
+                                                {item.icon}
+                                                {item.label}
+                                            </div>
+                                            <ChevronDown
+                                                size={16}
+                                                className={`transform transition ${isActive ? 'rotate-180' : 'rotate-0'}`}
+                                            />
+                                        </div>
+                                        {isActive && (
+                                            <p className="mt-2 text-xs text-slate-400">{item.description}</p>
+                                        )}
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+                <div className="border-t border-slate-800 px-6 py-5 text-xs text-slate-400">
+                    {/* ES: Pie informativo para mantener coherencia visual en el menú lateral. */}
+                    Versión operativa · {new Date().getFullYear()}
+                </div>
+            </aside>
+            <div className="flex-1 flex flex-col">
+                <header className="bg-slate-900 text-white shadow-xl">
+                <div className="dashboard-shell flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <button
+                                type="button"
+                                className="mb-4 inline-flex items-center gap-2 rounded-2xl border border-white/20 px-3 py-2 text-sm font-semibold text-white"
+                                aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+                                onClick={() => setSidebarOpen((prev) => !prev)}
+                            >
+                                {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
+                                Menú
+                            </button>
                         <span className="pill bg-white/10 text-white">Panel operativo</span>
                         <h1 className="text-3xl font-semibold mt-2">RM Parking · Centro de Control</h1>
                         <p className="text-slate-300 max-w-2xl">
@@ -251,40 +354,9 @@ const Dashboard = () => {
                         </button>
                     </div>
                 </div>
-            </header>
+                </header>
 
-            <nav className="border-b border-transparent bg-white/60 backdrop-blur">
-                <div className="dashboard-shell overflow-x-auto py-4">
-                    <div className="flex gap-3 min-w-full lg:min-w-0">
-                        {availableViews.map((view) => {
-                            const meta = viewMeta[view];
-                            const isActive = activeView === view;
-                            return (
-                                <button
-                                    key={view}
-                                    type="button"
-                                    onClick={() => setActiveView(view)}
-                                    className={`min-w-[220px] rounded-2xl border px-5 py-4 text-left transition ${
-                                        isActive
-                                            ? 'bg-white shadow-xl border-white/60'
-                                            : 'bg-slate-100 border-transparent text-slate-500'
-                                    }`}
-                                >
-                                    <div className={`flex items-center gap-2 text-sm font-semibold ${isActive ? meta.accent : 'text-slate-500'}`}>
-                                        {meta.icon}
-                                        {meta.label}
-                                    </div>
-                                    <p className="text-xs text-slate-500 mt-1 max-w-[220px]">
-                                        {meta.description}
-                                    </p>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </nav>
-
-            <main className="dashboard-shell flex-1 space-y-10">
+                <main className="dashboard-shell flex-1 space-y-10">
                 {activeView === 'operations' && (
                     <>
                         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -542,6 +614,8 @@ const Dashboard = () => {
                 )}
             </main>
         </div>
+        {/* ES: Cierre del contenedor principal que agrupa menú lateral y contenido. */}
+    </div>
     );
 };
 

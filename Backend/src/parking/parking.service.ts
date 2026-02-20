@@ -167,4 +167,34 @@ export class ParkingService {
       message: 'Salida registrada con éxito',
     };
   }
+
+  /**
+   * Obtiene un resumen de tickets activos y cerrados para el dashboard operativo.
+   */
+  async obtenerResumenTickets() {
+    const [ticketsActivos, ticketsCerrados] = await Promise.all([
+      this.prisma.ticket.findMany({
+        where: { status: 'ACTIVE' },
+        orderBy: { entryTime: 'desc' },
+        include: {
+          vehicle: true,
+          parking: true,
+        },
+      }),
+      this.prisma.ticket.findMany({
+        where: { status: 'CLOSED' },
+        orderBy: { entryTime: 'desc' },
+        include: {
+          vehicle: true,
+          parking: true,
+          exit: true,
+        },
+      }),
+    ]);
+
+    return {
+      activos: ticketsActivos,
+      cerrados: ticketsCerrados,
+    };
+  }
 }

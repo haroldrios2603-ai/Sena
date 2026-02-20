@@ -33,6 +33,10 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
 };
 
+const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/;
+const PASSWORD_POLICY_MESSAGE =
+    'La contraseña debe contener mayúsculas, minúsculas, números y un carácter especial';
+
 const UserManagementPanel = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,6 +54,8 @@ const UserManagementPanel = () => {
     const isMounted = useRef(true);
 
     useEffect(() => {
+        // ES: React 18 re-monta componentes en desarrollo; aseguramos que el flag esté alineado con el ciclo actual.
+        isMounted.current = true;
         return () => {
             // ES: Sincronizamos un flag para evitar setState luego de desmontar y prevenir fugas de memoria.
             isMounted.current = false;
@@ -86,7 +92,7 @@ const UserManagementPanel = () => {
             }
         } finally {
             if (isMounted.current) {
-                // ES: El indicador de carga también se altera únicamente si la vista continúa montada.
+                // ES: El indicador de carga se cierra con cada intento de sincronización.
                 setLoading(false);
             }
         }
@@ -96,11 +102,26 @@ const UserManagementPanel = () => {
         loadUsers();
     }, [loadUsers]);
 
+    const isPasswordValid = useMemo(() => PASSWORD_POLICY.test(formData.password), [formData.password]);
+    const isFormReady = useMemo(() => {
+        return (
+            formData.fullName.trim().length >= 2 &&
+            formData.email.trim().length > 0 &&
+            formData.password.length >= 8
+        );
+    }, [formData.fullName, formData.email, formData.password]);
+    const canSubmit = isFormReady && isPasswordValid;
+
     const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setMessage({ text: '', type: '' });
         if (creating) {
             // ES: Evitamos envíos duplicados que saturen el backend cuando el botón se presiona varias veces.
+            return;
+        }
+        if (!isPasswordValid) {
+            // ES: La validación local evita viajes innecesarios al backend y aclara el requisito.
+            setMessage({ text: PASSWORD_POLICY_MESSAGE, type: 'error' });
             return;
         }
         setCreating(true);
@@ -113,9 +134,30 @@ const UserManagementPanel = () => {
                 role: formData.role,
             };
             await usersService.createUser(payload);
-            setMessage({ text: 'Usuario creado exitosamente', type: 'success' });
             setFormData({ fullName: '', email: '', password: '', role: 'OPERATOR' });
-            await loadUsers();
+
+            const shouldResetRoleFilter = roleFilter !== 'ALL' && roleFilter !== payload.role;
+            const shouldResetStatusFilter = statusFilter === 'INACTIVE';
+
+            if (shouldResetRoleFilter) {
+                // ES: Se restablece el filtro para que el nuevo usuario sea visible inmediatamente.
+                setRoleFilter('ALL');
+            }
+            if (shouldResetStatusFilter) {
+                // ES: Todos los usuarios nuevos nacen activos; al mostrar solo inactivos no aparecerían.
+                setStatusFilter('ALL');
+            }
+
+            if (shouldResetRoleFilter || shouldResetStatusFilter) {
+                setMessage({
+                    text: 'Usuario creado. Ajusté los filtros para mostrarlo en la tabla.',
+                    type: 'success',
+                });
+                // ES: El useEffect que depende de los filtros recargará la lista automáticamente.
+            } else {
+                setMessage({ text: 'Usuario creado exitosamente', type: 'success' });
+                await loadUsers();
+            }
         } catch (error) {
             setMessage({
                 text: getErrorMessage(error, 'Error al crear el usuario'),
@@ -230,13 +272,19 @@ const UserManagementPanel = () => {
                         <label className="form-label">Contraseña temporal</label>
                         <input
                             type="password"
-                            className="input-field"
+                            className={`input-field ${formData.password && !isPasswordValid ? '!border-rose-400' : ''}`}
                             placeholder="Mínimo 8 caracteres, usa símbolos"
                             value={formData.password}
                             onChange={(event) => setFormData({ ...formData, password: event.target.value })}
                             required
                             minLength={8}
+                            aria-invalid={Boolean(formData.password && !isPasswordValid)}
                         />
+                        <p
+                            className={`mt-1 text-xs ${isPasswordValid ? 'text-emerald-600' : 'text-rose-600'}`}
+                        >
+                            {isPasswordValid ? 'Contraseña válida' : PASSWORD_POLICY_MESSAGE}
+                        </p>
                     </div>
                     <div>
                         <label className="form-label">Rol asignado</label>
@@ -253,7 +301,7 @@ const UserManagementPanel = () => {
                             ))}
                         </select>
                     </div>
-                    <button type="submit" className="btn-primary" disabled={creating}>
+                    <button type="submit" className="btn-primary" disabled={creating || !canSubmit}>
                         {creating ? (
                             <span className="flex items-center gap-2">
                                 <Loader2 className="animate-spin" size={16} /> Guardando

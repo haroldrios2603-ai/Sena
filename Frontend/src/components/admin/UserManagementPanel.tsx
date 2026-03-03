@@ -375,7 +375,7 @@ const UserManagementPanel = () => {
                                     {users.map((user) => {
                                         const roleOptions: Role[] =
                                             user.role === 'CLIENT'
-                                                ? [...assignableRoles, 'CLIENT']
+                                                ? [...assignableRoles, 'CLIENT' as Role]
                                                 : assignableRoles;
                                         return (
                                         <tr key={user.id} className="align-middle">

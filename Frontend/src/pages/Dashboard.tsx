@@ -11,9 +11,11 @@ import {
     CheckCircle,
     Shield,
     CreditCard,
+    Settings,
 } from 'lucide-react';
 import UserManagementPanel from '../components/admin/UserManagementPanel';
 import ClientManagementPanel from '../components/admin/ClientManagementPanel';
+import ConfigPanel from '../components/admin/ConfigPanel';
 
 type VehicleType = 'CAR' | 'MOTORCYCLE';
 
@@ -76,7 +78,7 @@ type ApiErrorResponse = {
     message?: string;
 };
 
-type DashboardView = 'operations' | 'users' | 'clients';
+type DashboardView = 'operations' | 'config' | 'users' | 'clients';
 
 const getErrorMessage = (error: unknown, fallback: string) => {
     if (isAxiosError<ApiErrorResponse>(error)) {
@@ -115,14 +117,16 @@ const Dashboard = () => {
 
     const role = user?.role;
     const canManageUsers = role === 'SUPER_ADMIN';
+    const canManageSettings = canManageUsers;
     const canManageClients = role === 'SUPER_ADMIN' || role === 'ADMIN_PARKING';
 
     const availableViews = useMemo(() => {
         const views: DashboardView[] = ['operations'];
+        if (canManageSettings) views.push('config');
         if (canManageUsers) views.push('users');
         if (canManageClients) views.push('clients');
         return views;
-    }, [canManageClients, canManageUsers]);
+    }, [canManageClients, canManageSettings, canManageUsers]);
 
     useEffect(() => {
         if (!availableViews.includes(activeView)) {
@@ -136,6 +140,12 @@ const Dashboard = () => {
             description: 'Registro de tickets, aforo y cobros',
             icon: <ArrowRightLeft size={16} />,
             accent: 'text-slate-900',
+        },
+        config: {
+            label: 'Configuración',
+            description: 'Tarifas, sedes y políticas del sistema',
+            icon: <Settings size={16} />,
+            accent: 'text-amber-700',
         },
         users: {
             label: 'Usuarios',
@@ -708,6 +718,8 @@ const Dashboard = () => {
                         </section>
                     </>
                 )}
+
+                {activeView === 'config' && canManageSettings && <ConfigPanel />}
 
                 {activeView === 'users' && canManageUsers && <UserManagementPanel />}
 

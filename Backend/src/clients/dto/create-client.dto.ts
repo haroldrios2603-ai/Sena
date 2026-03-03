@@ -8,7 +8,7 @@ import {
   IsOptional,
   IsDateString,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Transform, TransformFnParams, Type } from 'class-transformer';
 
 /**
  * DTO para registrar clientes con mensualidad.
@@ -16,11 +16,15 @@ import { Transform, Type } from 'class-transformer';
 export class CreateClientDto {
   @IsString()
   @MinLength(2)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : '',
+  )
   fullName: string;
 
   @IsEmail({}, { message: 'Debes ingresar un correo válido' })
-  @Transform(({ value }) => value?.toLowerCase().trim())
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.toLowerCase().trim() : '',
+  )
   email: string;
 
   @IsUUID()

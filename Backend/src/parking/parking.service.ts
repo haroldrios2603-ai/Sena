@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
+import { CreateParkingDto } from './dto/create-parking.dto';
+import { UpdateParkingDto } from './dto/update-parking.dto';
+import { TarifaConfigDto } from './dto/tarifa-config.dto';
 
 /**
  * Servicio principal para la gestión de parqueaderos y operaciones de flujo.
@@ -12,19 +16,50 @@ export class ParkingService {
   /**
    * Registra un nuevo parqueadero en el sistema (RF 1.1).
    */
-  async createParking(data: {
-    name: string;
-    address: string;
-    capacity: number;
-    baseRate: number;
-  }) {
+  async createParking(data: CreateParkingDto) {
     return this.prisma.parking.create({
       data: {
-        name: data.name,
-        address: data.address,
-        capacity: data.capacity,
-        baseRate: data.baseRate,
+        name: data.nombre,
+        address: data.direccion,
+        capacity: data.capacidad,
+        baseRate: data.tarifaBase,
+        isActive: data.activo ?? true,
+        vehicleTypes: data.tiposVehiculo ?? ['CAR', 'MOTORCYCLE'],
+        operationHours: this.toJsonValue(data.horario ?? null),
       },
+      include: { tariffs: true },
+    });
+  }
+
+  /**
+   * Actualiza los datos generales de una sede existente.
+   */
+  async updateParking(parkingId: string, data: UpdateParkingDto) {
+    await this.ensureParkingExists(parkingId);
+    return this.prisma.parking.update({
+      where: { id: parkingId },
+      data: {
+        name: data.nombre,
+        address: data.direccion,
+        capacity: data.capacidad,
+        baseRate: data.tarifaBase,
+        isActive: typeof data.activo === 'boolean' ? data.activo : undefined,
+        vehicleTypes: data.tiposVehiculo,
+        operationHours: this.toJsonValue(data.horario),
+      },
+      include: { tariffs: true },
+    });
+  }
+
+  /**
+   * Habilita o deshabilita una sede completa.
+   */
+  async updateParkingStatus(parkingId: string, isActive: boolean) {
+    await this.ensureParkingExists(parkingId);
+    return this.prisma.parking.update({
+      where: { id: parkingId },
+      data: { isActive },
+      include: { tariffs: true },
     });
   }
 
@@ -40,29 +75,47 @@ export class ParkingService {
   /**
    * Configura o actualiza la tarifa para un tipo de vehículo (RF 1.2).
    */
-  async setTariff(
-    parkingId: string,
-    vehicleType: string,
-    baseRate: number,
-    hourlyRate: number,
-  ) {
+  async setTariff(parkingId: string, tarifa: TarifaConfigDto) {
     return this.prisma.tariff.upsert({
       where: {
         parkingId_vehicleType: {
           parkingId,
-          vehicleType,
+          vehicleType: tarifa.tipoVehiculo,
         },
       },
       update: {
-        baseRate,
-        hourlyRate,
+        baseRate: tarifa.tarifaBase,
+        hourlyRate: tarifa.tarifaHora,
+        dayRate: tarifa.tarifaDia,
+        nightRate: tarifa.tarifaNocturna,
+        nightStart: tarifa.horaInicioNocturna,
+        nightEnd: tarifa.horaFinNocturna,
+        flatRate: tarifa.tarifaPlana,
       },
       create: {
         parkingId,
-        vehicleType,
-        baseRate,
-        hourlyRate,
+        vehicleType: tarifa.tipoVehiculo,
+        baseRate: tarifa.tarifaBase,
+        hourlyRate: tarifa.tarifaHora,
+        dayRate: tarifa.tarifaDia,
+        nightRate: tarifa.tarifaNocturna,
+        nightStart: tarifa.horaInicioNocturna,
+        nightEnd: tarifa.horaFinNocturna,
+        flatRate: tarifa.tarifaPlana,
       },
+    });
+  }
+
+  /**
+   * Guarda un paquete de tarifas para múltiples sedes.
+   */
+  async bulkUpsertTariffs(parkingIds: string[], tarifas: TarifaConfigDto[]) {
+    const operaciones = parkingIds.flatMap((id) =>
+      tarifas.map((tarifa) => this.setTariff(id, tarifa)),
+    );
+    await Promise.all(operaciones);
+    return this.prisma.tariff.findMany({
+      where: { parkingId: { in: parkingIds } },
     });
   }
 
@@ -142,8 +195,12 @@ export class ParkingService {
     const baseRate = tariff ? tariff.baseRate : ticket.parking.baseRate;
     const hourlyRate = tariff ? tariff.hourlyRate : 0;
 
-    const hours = Math.ceil(durationMinutes / 60);
-    const totalAmount = baseRate + (hours > 0 ? (hours - 1) * hourlyRate : 0);
+    const totalAmount = this.calcularMonto(
+      tariff ?? null,
+      durationMinutes,
+      baseRate,
+      hourlyRate,
+    );
 
     // Crear registro de salida
     const exit = await this.prisma.exit.create({
@@ -196,5 +253,95 @@ export class ParkingService {
       activos: ticketsActivos,
       cerrados: ticketsCerrados,
     };
+  }
+
+  /**
+   * Garantiza que el parqueadero exista antes de mutar información.
+   */
+  private async ensureParkingExists(parkingId: string) {
+    const parking = await this.prisma.parking.findUnique({
+      where: { id: parkingId },
+    });
+    if (!parking) {
+      throw new NotFoundException('Parqueadero no encontrado');
+    }
+    return parking;
+  }
+
+  /**
+   * Calcula el cobro final combinando tarifas base, nocturnas, diarias o planas.
+   */
+  private calcularMonto(
+    tarifa: {
+      dayRate: number | null;
+      nightRate: number | null;
+      nightStart: string | null;
+      nightEnd: string | null;
+      flatRate: number | null;
+    } | null,
+    durationMinutes: number,
+    baseRate: number,
+    hourlyRate: number,
+  ) {
+    if (tarifa?.flatRate && tarifa.flatRate > 0) {
+      return tarifa.flatRate;
+    }
+
+    const ahora = new Date();
+    if (
+      tarifa?.nightRate &&
+      tarifa.nightStart &&
+      tarifa.nightEnd &&
+      this.estaEnHorarioNocturno(tarifa.nightStart, tarifa.nightEnd, ahora)
+    ) {
+      return tarifa.nightRate;
+    }
+
+    if (tarifa?.dayRate && durationMinutes >= 60 * 24) {
+      const dias = Math.ceil(durationMinutes / (60 * 24));
+      return dias * tarifa.dayRate;
+    }
+
+    const horasFacturables = Math.max(1, Math.ceil(durationMinutes / 60));
+    return baseRate + (horasFacturables - 1) * hourlyRate;
+  }
+
+  /**
+   * Evalúa si la hora actual cae dentro del rango nocturno configurado.
+   */
+  private estaEnHorarioNocturno(inicio: string, fin: string, fecha: Date) {
+    const inicioMinutos = this.convertirAHoraReferencia(inicio);
+    const finMinutos = this.convertirAHoraReferencia(fin);
+    const actualMinutos = fecha.getHours() * 60 + fecha.getMinutes();
+
+    if (inicioMinutos === null || finMinutos === null) {
+      return false;
+    }
+
+    if (inicioMinutos <= finMinutos) {
+      return actualMinutos >= inicioMinutos && actualMinutos < finMinutos;
+    }
+
+    return actualMinutos >= inicioMinutos || actualMinutos < finMinutos;
+  }
+
+  private convertirAHoraReferencia(valor: string) {
+    const [hora, minuto] = valor.split(':').map((n) => Number(n));
+    if (Number.isNaN(hora) || Number.isNaN(minuto)) {
+      return null;
+    }
+    return hora * 60 + minuto;
+  }
+
+  private toJsonValue<T>(
+    value: T | null | undefined,
+  ): Prisma.InputJsonValue | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return Prisma.JsonNull as any;
+    }
+    return value as unknown as Prisma.InputJsonValue;
   }
 }

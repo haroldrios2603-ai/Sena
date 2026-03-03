@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { PrismaService } from '../prisma.service';
+import { DatabaseModule } from '../database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
@@ -15,6 +15,7 @@ import { JwtStrategy } from './jwt.strategy';
  */
 @Module({
   imports: [
+    DatabaseModule,
     PassportModule,
     // ES: En producción se requiere JWT_SECRET. En desarrollo se permite un secreto por defecto.
     JwtModule.register({
@@ -25,7 +26,7 @@ import { JwtStrategy } from './jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PrismaService, JwtStrategy],
-  exports: [AuthService, PrismaService], // Export if needed by other modules
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}

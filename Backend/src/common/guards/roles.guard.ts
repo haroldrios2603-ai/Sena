@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
+import { Request } from 'express';
 
 /**
  * Guardián que valida si el usuario autenticado posee alguno de los roles requeridos.
@@ -25,10 +26,11 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as { role?: Role } | undefined;
+    type RequestWithUser = Request & { user?: { role?: Role } };
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const userRole = request.user?.role;
 
-    if (!user?.role || !requiredRoles.includes(user.role as Role)) {
+    if (!userRole || !requiredRoles.includes(userRole)) {
       throw new ForbiddenException(
         'No tienes permisos suficientes para ejecutar esta acción.',
       );

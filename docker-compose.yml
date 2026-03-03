@@ -57,9 +57,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/docs" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     volumes:
-      - ./Backend:/app
-      - /app/node_modules
+      - ./Backend/src:/app/src
+      - ./Backend/prisma:/app/prisma
 
   frontend:
     build:
@@ -76,8 +82,8 @@ services:
     networks:
       - rmparking-net
     volumes:
-      - ./Frontend:/app
-      - /app/node_modules
+      - ./Frontend/src:/app/src
+      - ./Frontend/public:/app/public
 
 volumes:
   postgres_data:

@@ -9,6 +9,10 @@ import { RegisterDto } from './dto/register.dto';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
+  genSalt: jest.fn().mockResolvedValue('test-salt'),
+  hash: jest
+    .fn()
+    .mockImplementation((value: string) => Promise.resolve(`hashed-${value}`)),
 }));
 
 describe('AuthService', () => {

@@ -9,7 +9,7 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import * as bcrypt from 'bcrypt';
-import { Role, User } from '@prisma/client';
+import { User } from '@prisma/client';
 
 /**
  * Servicio para administración de usuarios y asignación de roles.
@@ -108,8 +108,9 @@ export class UsersService {
   /**
    * Elimina campos sensibles antes de responder.
    */
-  private sanitizeUser(user: User) {
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
+  private sanitizeUser(user: User): Omit<User, 'passwordHash'> {
+    const safeUser: Partial<User> = { ...user };
+    delete safeUser.passwordHash;
+    return safeUser as Omit<User, 'passwordHash'>;
   }
 }

@@ -51,7 +51,10 @@ model Parking {
   address   String
   capacity  Int
   // Standard hourly rate (default fallback)
-  baseRate  Float    @default(0) 
+  baseRate  Float    @default(0)
+  isActive  Boolean  @default(true)
+  vehicleTypes Json?
+  operationHours Json?
   
   // Relations
   tariffs   Tariff[]
@@ -68,8 +71,29 @@ model Tariff {
   baseRate    Float    // Initial cost
   hourlyRate  Float    // Cost per hour
   dayRate     Float?   // Cost per full day
+  nightRate   Float?   // Tarifa plana nocturna
+  nightStart  String?  // Hora de inicio de tarifa nocturna HH:mm
+  nightEnd    String?  // Hora de fin de tarifa nocturna HH:mm
+  flatRate    Float?   // Tarifa plana para eventos especiales
   
   @@unique([parkingId, vehicleType])
+}
+
+model SystemConfig {
+  id                    String  @id
+  capacidadTotal        Int     @default(0)
+  capacidadPorTipo      Json?
+  horariosAtencion      Json?
+  minutosCortesia       Int     @default(0)
+  tarifasEspeciales     Json?
+  metodosPago           Json?
+  politicasFacturacion  Json?
+  mensajesOperativos    Json?
+  parametrosOperacion   Json?
+  seguridad             Json?
+  integraciones         Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 // Vehicle registry

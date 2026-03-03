@@ -1,8 +1,22 @@
-import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Param,
+  Patch,
+} from '@nestjs/common';
 import { ParkingService } from './parking.service';
 import { AuthGuard } from '@nestjs/passport';
 import { EntryDto } from './dto/entry.dto';
 import { ExitDto } from './dto/exit.dto';
+import { CreateParkingDto } from './dto/create-parking.dto';
+import { UpdateParkingDto } from './dto/update-parking.dto';
+import { UpdateParkingStatusDto } from './dto/update-parking-status.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 
 /**
  * Controlador encargado de gestionar las operaciones de parqueadero.
@@ -12,6 +26,39 @@ import { ExitDto } from './dto/exit.dto';
 @UseGuards(AuthGuard('jwt'))
 export class ParkingController {
   constructor(private readonly parkingService: ParkingService) {}
+
+  /**
+   * Crea una nueva sede operativa. Solo administradores pueden gestionarla.
+   */
+  @Post()
+  @UseGuards(RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  async createParking(@Body() data: CreateParkingDto) {
+    return this.parkingService.createParking(data);
+  }
+
+  /**
+   * Actualiza los datos generales de una sede.
+   */
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  async updateParking(@Param('id') id: string, @Body() data: UpdateParkingDto) {
+    return this.parkingService.updateParking(id, data);
+  }
+
+  /**
+   * Permite activar o suspender temporalmente un parqueadero.
+   */
+  @Patch(':id/estado')
+  @UseGuards(RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  async updateParkingStatus(
+    @Param('id') id: string,
+    @Body() data: UpdateParkingStatusDto,
+  ) {
+    return this.parkingService.updateParkingStatus(id, data.activo);
+  }
 
   /**
    * Registra el ingreso de un vehículo al sistema.

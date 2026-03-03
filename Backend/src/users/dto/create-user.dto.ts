@@ -6,7 +6,7 @@ import {
   Matches,
   IsEnum,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, TransformFnParams } from 'class-transformer';
 import { Role } from '@prisma/client';
 
 /**
@@ -19,14 +19,18 @@ export class CreateUserDto {
   @IsString()
   @MinLength(2)
   @MaxLength(100)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : '',
+  )
   fullName: string;
 
   /**
    * Correo corporativo único.
    */
   @IsEmail({}, { message: 'Debes ingresar un correo válido' })
-  @Transform(({ value }) => value?.toLowerCase().trim())
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.toLowerCase().trim() : '',
+  )
   email: string;
 
   /**

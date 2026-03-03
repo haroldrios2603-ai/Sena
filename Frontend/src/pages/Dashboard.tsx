@@ -11,14 +11,11 @@ import {
     CheckCircle,
     Shield,
     CreditCard,
-<<<<<<< HEAD
     Settings,
-=======
     Menu,
     X,
     ChevronDown,
     ChevronLeft,
->>>>>>> 5830e7534ca0c37913d8ffa7f3cafc9d5baf63ad
 } from 'lucide-react';
 import UserManagementPanel from '../components/admin/UserManagementPanel';
 import ClientManagementPanel from '../components/admin/ClientManagementPanel';

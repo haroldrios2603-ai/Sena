@@ -19,6 +19,9 @@ import { PasswordResetDto } from './dto/password-reset.dto';
  */
 @Injectable()
 export class AuthService {
+  validateToken(token: string) {
+    throw new Error('Method not implemented.');
+  }
   /**
    * Minutos de vigencia del código de recuperación.
    */

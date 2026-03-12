@@ -128,7 +128,7 @@ describe('AuthService', () => {
       expect(mockPrismaService.attendance.create).toHaveBeenCalled();
       type AttendanceCreateArg = { data: { userId: string; checkIn: Date } };
       const mockCreate = mockPrismaService.attendance
-        .create as unknown as jest.Mock<[AttendanceCreateArg], unknown>;
+        .create as jest.Mock<Promise<AttendanceCreateArg>, [AttendanceCreateArg]>;
       const callArg = mockCreate.mock.calls[0][0] as AttendanceCreateArg;
       expect(callArg.data.userId).toBe(user.id);
       expect(callArg.data.checkIn).toBeInstanceOf(Date);

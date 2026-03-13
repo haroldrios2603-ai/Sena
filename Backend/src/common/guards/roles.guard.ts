@@ -27,7 +27,9 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    const requiredScreenPermission = this.reflector.getAllAndOverride<string>(
+    const requiredScreenPermission = this.reflector.getAllAndOverride<
+      string | string[]
+    >(
       SCREEN_PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
@@ -58,22 +60,31 @@ export class RolesGuard implements CanActivate {
 
     if (requiredScreenPermission) {
       if (!userId || !userRole) {
-        throw new ForbiddenException('Usuario no autenticado para validar permisos.');
+        throw new ForbiddenException(
+          'Token invalido: faltan datos de usuario para validar permisos.',
+        );
       }
 
-      const canView = await this.permissionsService.canUserViewScreen(
-        userId,
-        userRole,
-        requiredScreenPermission,
+      const screenKeys = Array.isArray(requiredScreenPermission)
+        ? requiredScreenPermission
+        : [requiredScreenPermission];
+
+      const permissionChecks = await Promise.all(
+        screenKeys.map((screenKey) =>
+          this.permissionsService.canUserViewScreen(userId, userRole, screenKey),
+        ),
       );
+
+      const canView = permissionChecks.some(Boolean);
 
       if (!canView) {
         this.auditService.log({
           operation: AuditOperation.FORBIDDEN,
-          entity: requiredScreenPermission,
+          entity: screenKeys.join('|'),
           result: AuditResult.FAILURE,
           errorCode: '403',
           errorMessage: 'No tienes permisos para visualizar este módulo.',
+          metadata: { requiredScreenPermissions: screenKeys },
           context: this.auditService.buildContextFromRequest(request),
         });
         throw new ForbiddenException(

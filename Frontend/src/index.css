@@ -45,6 +45,30 @@
 		@apply inline-flex items-center justify-center gap-2 w-full border border-slate-200 text-slate-900 font-semibold py-3 rounded-xl hover:border-slate-300;
 	}
 
+	.btn {
+		@apply inline-flex items-center justify-center gap-2 w-full bg-slate-900 text-white font-semibold py-3 rounded-xl transition-all duration-200 hover:bg-slate-800 focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-60 disabled:cursor-not-allowed;
+	}
+
+	.btn-action {
+		@apply inline-flex items-center justify-center gap-2 w-auto px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-semibold transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed;
+	}
+
+	.btn-suspend {
+		@apply inline-flex items-center justify-center gap-2 w-auto px-4 py-2 rounded-xl border text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed;
+	}
+
+	.btn-suspend--danger {
+		@apply border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300;
+	}
+
+	.btn-suspend--success {
+		@apply border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300;
+	}
+
+	.btn-tariff-save {
+		@apply inline-flex items-center justify-center gap-2 w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 text-white text-sm font-semibold shadow-lg shadow-indigo-200 transition-all duration-200 hover:from-indigo-700 hover:to-sky-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed;
+	}
+
 	.pill {
 		@apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium;
 	}

@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { PasswordRequestDto } from './dto/password-request.dto';
 import { PasswordResetDto } from './dto/password-reset.dto';
 import { PermissionsService } from '../permissions/permissions.service';
+import { PasswordRecoveryNotifierService } from './password-recovery-notifier.service';
 
 /**
  * Servicio responsable de la lógica de Autenticación.
@@ -32,6 +33,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private readonly permissionsService: PermissionsService,
+    private readonly passwordRecoveryNotifier: PasswordRecoveryNotifierService,
   ) {}
 
   /**
@@ -197,10 +199,25 @@ export class AuthService {
       });
     });
 
-    // Pendiente: Integrar servicio de correo/SMS; por ahora se registra en logs para pruebas.
-    console.log(
-      `Código de recuperación para ${email}: ${code} (válido ${this.recoveryExpirationMinutes} minutos)`,
+    const emailSent = await this.passwordRecoveryNotifier.sendRecoveryCode(
+      email,
+      code,
+      this.recoveryExpirationMinutes,
     );
+
+    if (!emailSent) {
+      console.log(
+        `Codigo de recuperacion para ${email}: ${code} (valido ${this.recoveryExpirationMinutes} minutos)`,
+      );
+    }
+
+    if (!emailSent && process.env.NODE_ENV !== 'production') {
+      return {
+        message:
+          'Hemos generado un codigo de recuperacion para pruebas. Revisa el mensaje de soporte y continua el proceso.',
+        debugCode: code,
+      };
+    }
 
     return {
       message:
@@ -213,6 +230,7 @@ export class AuthService {
    */
   async confirmPasswordReset(passwordResetDto: PasswordResetDto) {
     const { email, code, newPassword } = passwordResetDto;
+    const normalizedCode = code.trim().toUpperCase();
 
     const user = await this.prisma.user.findUnique({ where: { email } });
 
@@ -229,7 +247,7 @@ export class AuthService {
       throw new BadRequestException('Código inválido o expirado');
     }
 
-    const isValidCode = await bcrypt.compare(code, token.tokenHash);
+    const isValidCode = await bcrypt.compare(normalizedCode, token.tokenHash);
 
     if (!isValidCode) {
       throw new BadRequestException('Código inválido o expirado');
@@ -243,8 +261,8 @@ export class AuthService {
         where: { id: user.id },
         data: { passwordHash },
       }),
-      this.prisma.passwordResetToken.update({
-        where: { id: token.id },
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
         data: { usedAt: new Date() },
       }),
     ]);

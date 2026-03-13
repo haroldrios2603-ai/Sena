@@ -10,6 +10,7 @@ import {
     Clock,
     DollarSign,
     CheckCircle,
+    Loader2,
     Shield,
     CreditCard,
     Settings,
@@ -24,6 +25,7 @@ import ConfigPanel from '../components/admin/ConfigPanel';
 import AuditLogs from './AuditLogs';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
+import { SETTINGS_UPDATED_EVENT } from '../utils/settingsRefresh';
 
 type VehicleType = 'CAR' | 'MOTORCYCLE';
 
@@ -133,6 +135,7 @@ const Dashboard = () => {
     const [ticketsCerrados, setTicketsCerrados] = useState<TicketConSalida[]>([]);
     const [filtroBusqueda, setFiltroBusqueda] = useState('');
     const [filtroPlaca, setFiltroPlaca] = useState('');
+    const [isSyncingSettings, setIsSyncingSettings] = useState(false);
 
     const clearMessage = useCallback(() => setMessage({ text: '', type: '' }), []);
 
@@ -269,6 +272,8 @@ const Dashboard = () => {
     }, [canViewAuditLogs, location.pathname]);
 
     useEffect(() => {
+        let isMounted = true;
+
         const fetchParkings = async () => {
             setLoadingParkings(true);
             try {
@@ -287,9 +292,44 @@ const Dashboard = () => {
                 setLoadingParkings(false);
             }
         };
-        fetchParkings();
-        cargarResumenTickets();
-    }, [cargarResumenTickets]);
+
+        const refreshOperationalData = async () => {
+            if (isMounted) {
+                setIsSyncingSettings(true);
+            }
+            try {
+                const tasks: Array<Promise<void>> = [];
+                if (canViewOperations || canManageClients || canManageSettings) {
+                    tasks.push(fetchParkings());
+                }
+                if (canViewOperations) {
+                    tasks.push(cargarResumenTickets());
+                }
+
+                if (tasks.length) {
+                    await Promise.all(tasks);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsSyncingSettings(false);
+                }
+            }
+        };
+
+        if (canViewOperations || canManageClients || canManageSettings) {
+            void fetchParkings();
+        }
+        if (canViewOperations) {
+            void cargarResumenTickets();
+        }
+
+        window.addEventListener(SETTINGS_UPDATED_EVENT, refreshOperationalData);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener(SETTINGS_UPDATED_EVENT, refreshOperationalData);
+        };
+    }, [canManageClients, canManageSettings, canViewOperations, cargarResumenTickets]);
 
     const fechaFormatter = useMemo(() => new Intl.DateTimeFormat('es-CO', {
         day: '2-digit',
@@ -531,6 +571,7 @@ const Dashboard = () => {
                                 <span className="pill"><Car size={16} /> Capacidad</span>
                                 <p className="kpi-value mt-4">{kpiSummary.totalCapacity}</p>
                                 <p className="text-sm text-slate-500">Cupos totales configurados</p>
+                                <p className="text-xs text-slate-400 mt-1">Origen: Configuracion / Capacidad operativa</p>
                             </article>
                             <article className="panel-card">
                                 <span className="pill"><DollarSign size={16} /> Tarifa base</span>
@@ -538,6 +579,7 @@ const Dashboard = () => {
                                     {kpiSummary.avgBaseRate > 0 ? formatCurrency(kpiSummary.avgBaseRate) : 'Sin datos'}
                                 </p>
                                 <p className="text-sm text-slate-500">Promedio por parqueadero</p>
+                                <p className="text-xs text-slate-400 mt-1">Origen: Configuracion / Tarifa base sede</p>
                             </article>
                             <article className="panel-card">
                                 <span className="pill"><Clock size={16} /> Último cobro</span>
@@ -547,6 +589,13 @@ const Dashboard = () => {
                                 <p className="text-sm text-slate-500">Actualizado al último egreso</p>
                             </article>
                         </section>
+
+                        {isSyncingSettings && (
+                            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3 text-sky-900 flex items-center gap-2">
+                                <Loader2 size={16} className="animate-spin" />
+                                <span className="text-sm font-medium">Actualizando datos con la nueva configuración...</span>
+                            </div>
+                        )}
 
                         {message.text && (
                             <div

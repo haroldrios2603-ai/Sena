@@ -239,6 +239,7 @@ describe('AuditService', () => {
       userId: 'u1',
       userEmail: 'a"@b.com',
       ipAddress: '127.0.0.1',
+      userAgent: 'Mozilla/5.0',
       operation: 'VIEW' as any,
       entity: 'users',
       recordId: 'r1',
@@ -248,14 +249,22 @@ describe('AuditService', () => {
       responseTimeMs: 10,
       errorCode: null,
       errorMessage: null,
+      requestParams: { query: { page: '1' } },
+      previousValues: { role: 'OPERATOR' },
+      newValues: { role: 'ADMIN_PARKING' },
+      metadata: { source: 'test' },
     };
     prismaMock.auditLog.findMany = jest.fn().mockResolvedValue([row]);
 
     const result = await service.exportLogs({ format: 'csv', limit: 1 });
 
     expect(result.contentType).toBe('text/csv');
+    expect(result.body).toContain('FechaHora,UsuarioCorreo,Operacion,Entidad,Resultado,ResumenEvento');
     expect(result.body).toContain('"a""1"');
     expect(result.body).toContain('"a""@b.com"');
+    expect(result.body).toContain('"Consulta de informacion sobre users por a""@b.com en /users, con resultado exitoso."');
+    expect(result.body).toContain('"{""query"":{""page"":""1""}}"');
+    expect(result.body.startsWith('\uFEFF')).toBe(true);
     expect(result.fileName).toContain('.csv');
   });
 

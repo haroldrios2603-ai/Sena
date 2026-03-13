@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -6,7 +7,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { RenewContractDto } from './dto/renew-contract.dto';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { ListContractsDto } from './dto/list-contracts.dto';
 
@@ -23,31 +24,36 @@ export class ClientsService {
    * Registra un cliente (role CLIENT) y crea su contrato mensual.
    */
   async createClientWithContract(createClientDto: CreateClientDto) {
-    const user = await this.upsertClientUser(createClientDto);
-
     const startDate = new Date(createClientDto.startDate);
     const endDate = new Date(createClientDto.endDate);
+    this.validateContractRange(startDate, endDate);
 
-    const contract = await this.prisma.contract.create({
-      data: {
-        userId: user.id,
-        parkingId: createClientDto.parkingId,
-        startDate,
-        endDate,
-        status: this.computeStatus(endDate),
-        planName: createClientDto.planName || 'Mensualidad',
-        monthlyFee: createClientDto.monthlyFee,
-        isRecurring: true,
-        lastPaymentDate: startDate,
-        nextPaymentDate: endDate,
-      },
-      include: {
-        user: true,
-        parking: true,
-      },
+    const { contract } = await this.prisma.$transaction(async (tx) => {
+      const user = await this.upsertClientUser(createClientDto, tx);
+
+      const createdContract = await tx.contract.create({
+        data: {
+          userId: user.id,
+          parkingId: createClientDto.parkingId,
+          startDate,
+          endDate,
+          status: this.computeStatus(endDate),
+          planName: createClientDto.planName || 'Mensualidad',
+          monthlyFee: createClientDto.monthlyFee,
+          isRecurring: true,
+          lastPaymentDate: startDate,
+          nextPaymentDate: endDate,
+        },
+        include: {
+          user: true,
+          parking: true,
+        },
+      });
+
+      await this.handleAlertsForContract(createdContract.id, endDate, tx);
+
+      return { user, contract: createdContract };
     });
-
-    await this.handleAlertsForContract(contract.id, endDate);
 
     return contract;
   }
@@ -103,31 +109,36 @@ export class ClientsService {
 
     const newEndDate = new Date(renewContractDto.newEndDate);
     const paymentDate = new Date(renewContractDto.paymentDate);
+    this.validateContractRange(contract.startDate, newEndDate);
 
-    const updated = await this.prisma.contract.update({
-      where: { id: contractId },
-      data: {
-        endDate: newEndDate,
-        status: this.computeStatus(newEndDate),
-        monthlyFee:
-          typeof renewContractDto.monthlyFee === 'number'
-            ? renewContractDto.monthlyFee
-            : contract.monthlyFee,
-        lastPaymentDate: paymentDate,
-        nextPaymentDate: newEndDate,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contract.update({
+        where: { id: contractId },
+        data: {
+          endDate: newEndDate,
+          status: this.computeStatus(newEndDate),
+          monthlyFee:
+            typeof renewContractDto.monthlyFee === 'number'
+              ? renewContractDto.monthlyFee
+              : contract.monthlyFee,
+          lastPaymentDate: paymentDate,
+          nextPaymentDate: newEndDate,
+        },
+      });
+
+      await this.handleAlertsForContract(contractId, newEndDate, tx);
+      return updated;
     });
-
-    await this.handleAlertsForContract(contractId, newEndDate);
-
-    return updated;
   }
 
   /**
    * Crea o actualiza el usuario con rol CLIENT.
    */
-  private async upsertClientUser(createClientDto: CreateClientDto) {
-    const existingUser = await this.prisma.user.findUnique({
+  private async upsertClientUser(
+    createClientDto: CreateClientDto,
+    tx: Prisma.TransactionClient,
+  ) {
+    const existingUser = await tx.user.findUnique({
       where: { email: createClientDto.email },
     });
 
@@ -138,7 +149,7 @@ export class ClientsService {
     }
 
     if (existingUser) {
-      return this.prisma.user.update({
+      return tx.user.update({
         where: { id: existingUser.id },
         data: {
           fullName: createClientDto.fullName,
@@ -150,7 +161,7 @@ export class ClientsService {
     const temporaryPassword = this.generateTemporalPassword();
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
-    return this.prisma.user.create({
+    return tx.user.create({
       data: {
         email: createClientDto.email,
         fullName: createClientDto.fullName,
@@ -225,16 +236,21 @@ export class ClientsService {
   /**
    * Genera o resuelve alertas según el estado del contrato.
    */
-  private async handleAlertsForContract(contractId: string, endDate: Date) {
+  private async handleAlertsForContract(
+    contractId: string,
+    endDate: Date,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
     const status = this.computeStatus(endDate);
 
-    await this.prisma.contract.update({
+    await db.contract.update({
       where: { id: contractId },
       data: { status },
     });
 
     if (status === 'ACTIVE') {
-      await this.prisma.contractAlert.updateMany({
+      await db.contractAlert.updateMany({
         where: { contractId, status: 'PENDING' },
         data: { status: 'RESOLVED', resolvedAt: new Date() },
       });
@@ -247,7 +263,7 @@ export class ClientsService {
         ? 'El contrato está vencido. Debe renovar el pago de la mensualidad.'
         : 'El contrato vencerá en breve. Recuerda contactar al cliente para renovar.';
 
-    await this.prisma.contractAlert.upsert({
+    await db.contractAlert.upsert({
       where: {
         contractId_alertType: {
           contractId,
@@ -265,6 +281,18 @@ export class ClientsService {
         message,
       },
     });
+  }
+
+  private validateContractRange(startDate: Date, endDate: Date) {
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new BadRequestException('Fechas de contrato inválidas');
+    }
+
+    if (endDate.getTime() <= startDate.getTime()) {
+      throw new BadRequestException(
+        'La fecha de finalización debe ser posterior a la fecha de inicio',
+      );
+    }
   }
 
   /**

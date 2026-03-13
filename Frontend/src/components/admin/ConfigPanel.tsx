@@ -18,6 +18,7 @@ import configService, {
     type TarifaConfigurada,
 } from '../../services/config.service';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
+import { announceSettingsUpdated } from '../../utils/settingsRefresh';
 
 interface MensajeEstado {
     texto: string;
@@ -506,6 +507,8 @@ const ConfigPanel = () => {
         try {
             await configService.actualizarConfiguracion(payloadConfiguracion);
             setMensaje({ texto: 'Configuración general guardada correctamente', tipo: 'success' });
+            await cargarConfiguracion();
+            announceSettingsUpdated();
         } catch (error) {
             setMensaje({ texto: mensajeError(error, 'Error al guardar la configuración'), tipo: 'error' });
         } finally {
@@ -539,6 +542,8 @@ const ConfigPanel = () => {
         try {
             await configService.actualizarTarifas(payload);
             setMensaje({ texto: 'Tarifas sincronizadas con éxito', tipo: 'success' });
+            await cargarConfiguracion();
+            announceSettingsUpdated();
         } catch (error) {
             setMensaje({ texto: mensajeError(error, 'No se pudieron guardar las tarifas'), tipo: 'error' });
         } finally {
@@ -562,6 +567,7 @@ const ConfigPanel = () => {
             setMensaje({ texto: 'Parqueadero creado', tipo: 'success' });
             setNuevoParqueadero({ ...nuevoParqueadero, nombre: '', direccion: '', capacidad: 0, tarifaBase: 0 });
             await cargarConfiguracion();
+            announceSettingsUpdated();
         } catch (error) {
             setMensaje({ texto: mensajeError(error, 'No se pudo crear el parqueadero'), tipo: 'error' });
         } finally {
@@ -586,6 +592,7 @@ const ConfigPanel = () => {
             await configService.actualizarParqueadero(id, payload);
             setMensaje({ texto: 'Parqueadero actualizado', tipo: 'success' });
             await cargarConfiguracion();
+            announceSettingsUpdated();
         } catch (error) {
             setMensaje({ texto: mensajeError(error, 'No se pudo actualizar la sede'), tipo: 'error' });
         } finally {
@@ -600,6 +607,7 @@ const ConfigPanel = () => {
             await configService.actualizarEstadoParqueadero(id, activo);
             setMensaje({ texto: 'Estado del parqueadero actualizado', tipo: 'success' });
             await cargarConfiguracion();
+            announceSettingsUpdated();
         } catch (error) {
             setMensaje({ texto: mensajeError(error, 'No se pudo cambiar el estado de la sede'), tipo: 'error' });
         } finally {
@@ -1187,12 +1195,12 @@ const ConfigPanel = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-3 justify-between">
-                    <button type="button" className="btn-outline !w-auto" onClick={agregarTarifa}>
+                    <button type="button" className="btn-action" onClick={agregarTarifa}>
                         <PlusCircle size={14} /> Agregar tipo
                     </button>
                     <button
                         type="submit"
-                        className="btn flex items-center gap-2"
+                        className="btn-tariff-save"
                         disabled={guardandoTarifas || (!aplicarTarifasEnTodos && !parqueaderoObjetivo)}
                     >
                         {guardandoTarifas && <Loader2 size={16} className="animate-spin" />} Guardar tarifas
@@ -1248,26 +1256,36 @@ const ConfigPanel = () => {
                                         }
                                         placeholder="Dirección"
                                     />
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        className="input-field"
-                                        value={edicion?.capacidad ?? 0}
-                                        onChange={(event) =>
-                                            actualizarEdicionParqueadero(parking.id, 'capacidad', event.target.value)
-                                        }
-                                        placeholder="Capacidad"
-                                    />
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        className="input-field"
-                                        value={edicion?.tarifaBase ?? 0}
-                                        onChange={(event) =>
-                                            actualizarEdicionParqueadero(parking.id, 'tarifaBase', event.target.value)
-                                        }
-                                        placeholder="Tarifa base"
-                                    />
+                                    <div>
+                                        <label className="text-xs text-slate-500">
+                                            Capacidad operativa (impacta KPI "Capacidad")
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className="input-field"
+                                            value={edicion?.capacidad ?? 0}
+                                            onChange={(event) =>
+                                                actualizarEdicionParqueadero(parking.id, 'capacidad', event.target.value)
+                                            }
+                                            placeholder="Capacidad"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-slate-500">
+                                            Tarifa base sede (impacta KPI "Tarifa base")
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className="input-field"
+                                            value={edicion?.tarifaBase ?? 0}
+                                            onChange={(event) =>
+                                                actualizarEdicionParqueadero(parking.id, 'tarifaBase', event.target.value)
+                                            }
+                                            placeholder="Tarifa base"
+                                        />
+                                    </div>
                                     <input
                                         type="text"
                                         className="input-field"
@@ -1300,7 +1318,7 @@ const ConfigPanel = () => {
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
-                                            className="btn-outline"
+                                            className="btn-action"
                                             onClick={() => guardarParqueadero(parking.id)}
                                             disabled={guardandoParqueadero}
                                         >
@@ -1308,7 +1326,7 @@ const ConfigPanel = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            className="btn-outline"
+                                            className={`btn-suspend ${parking.isActive ? 'btn-suspend--danger' : 'btn-suspend--success'}`}
                                             onClick={() => cambiarEstadoParqueadero(parking.id, !parking.isActive)}
                                             disabled={guardandoParqueadero}
                                         >
@@ -1343,24 +1361,34 @@ const ConfigPanel = () => {
                             onChange={(event) => setNuevoParqueadero({ ...nuevoParqueadero, direccion: event.target.value })}
                             required
                         />
-                        <input
-                            type="number"
-                            min={0}
-                            className="input-field"
-                            placeholder="Capacidad"
-                            value={nuevoParqueadero.capacidad}
-                            onChange={(event) => setNuevoParqueadero({ ...nuevoParqueadero, capacidad: Number(event.target.value) })}
-                            required
-                        />
-                        <input
-                            type="number"
-                            min={0}
-                            className="input-field"
-                            placeholder="Tarifa base"
-                            value={nuevoParqueadero.tarifaBase}
-                            onChange={(event) => setNuevoParqueadero({ ...nuevoParqueadero, tarifaBase: Number(event.target.value) })}
-                            required
-                        />
+                        <div>
+                            <label className="text-xs text-slate-500">
+                                Capacidad operativa (impacta KPI "Capacidad")
+                            </label>
+                            <input
+                                type="number"
+                                min={0}
+                                className="input-field"
+                                placeholder="Capacidad"
+                                value={nuevoParqueadero.capacidad}
+                                onChange={(event) => setNuevoParqueadero({ ...nuevoParqueadero, capacidad: Number(event.target.value) })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-slate-500">
+                                Tarifa base sede (impacta KPI "Tarifa base")
+                            </label>
+                            <input
+                                type="number"
+                                min={0}
+                                className="input-field"
+                                placeholder="Tarifa base"
+                                value={nuevoParqueadero.tarifaBase}
+                                onChange={(event) => setNuevoParqueadero({ ...nuevoParqueadero, tarifaBase: Number(event.target.value) })}
+                                required
+                            />
+                        </div>
                         <input
                             type="text"
                             className="input-field"

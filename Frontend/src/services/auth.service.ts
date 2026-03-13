@@ -1,5 +1,10 @@
 import api from '../api';
 
+type PasswordResetRequestResponse = {
+    message: string;
+    debugCode?: string;
+};
+
 /**
  * Servicio para manejar llamadas a la API de Autenticación.
  */
@@ -44,12 +49,12 @@ const authService = {
      * ES: Envía al backend el correo destino para que genere y remita el código de confirmación.
      */
     requestPasswordReset: async (email: string) => {
-        return api.post('/auth/password/request', { email });
+        return api.post<PasswordResetRequestResponse>('/auth/password/request', { email });
     },
 
     /**
      * Confirmar código y registrar la nueva contraseña.
-     * ES: Envía código, correo y nueva contraseña al backend; pendiente de implementación real del endpoint.
+     * ES: Envía código, correo y nueva contraseña al backend.
      */
     confirmPasswordReset: async (email: string, code: string, newPassword: string) => {
         return api.post('/auth/password/reset', { email, code, newPassword });

@@ -5,6 +5,7 @@ import { DatabaseModule } from '../database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { PasswordRecoveryNotifierService } from './password-recovery-notifier.service';
 
 /**
  * Module that encapsulates all Authentication components.
@@ -26,7 +27,7 @@ import { JwtStrategy } from './jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, PasswordRecoveryNotifierService],
   exports: [AuthService],
 })
 export class AuthModule {}

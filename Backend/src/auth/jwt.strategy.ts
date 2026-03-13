@@ -1,6 +1,7 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 
 /**
  * Estrategia para validar tokens JWT usando Passport.
@@ -31,7 +32,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   /**
    * Callback de validación. Retorna el objeto usuario adjunto a la petición.
    */
-  validate(payload: { sub: string; email: string; role: string }) {
+  validate(payload: { sub?: string; email?: string; role?: string }) {
+    if (!payload?.sub || !payload?.role) {
+      throw new UnauthorizedException(
+        'Token invalido: faltan datos de usuario para autorizacion.',
+      );
+    }
+
+    const allowedRoles = Object.values(Role);
+    if (!allowedRoles.includes(payload.role as Role)) {
+      throw new UnauthorizedException('Token invalido: rol no reconocido.');
+    }
+
     return { userId: payload.sub, email: payload.email, role: payload.role };
   }
 }

@@ -71,17 +71,23 @@ const Login = () => {
         setError('');
         setRecoveryMessage('');
 
-        if (!email) {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedEmail) {
             setError(t('login.sendRecoveryRequiresEmail'));
             return;
         }
 
         setIsSendingRecovery(true);
         try {
-            await authService.requestPasswordReset(email);
-            setRecoveryEmail(email);
+            const response = await authService.requestPasswordReset(normalizedEmail);
+            setRecoveryEmail(normalizedEmail);
             setIsRecoveryVisible(true);
-            setRecoveryMessage(t('login.recoveryCodeSent'));
+            const backendMessage = response.data.message || t('login.recoveryCodeSent');
+            const debugMessage = response.data.debugCode
+                ? ` Codigo de prueba: ${response.data.debugCode}`
+                : '';
+            setRecoveryMessage(`${backendMessage}${debugMessage}`);
         } catch (err) {
             setError(getErrorMessage(err, t('login.invalidCredentials')));
         } finally {
@@ -101,7 +107,11 @@ const Login = () => {
         setIsConfirmingRecovery(true);
         setError('');
         try {
-            await authService.confirmPasswordReset(recoveryEmail || email, recoveryCode, recoveryNewPassword);
+            await authService.confirmPasswordReset(
+                (recoveryEmail || email).trim().toLowerCase(),
+                recoveryCode.trim().toUpperCase(),
+                recoveryNewPassword,
+            );
             setRecoveryMessage(t('login.recoveryUpdated'));
             setRecoveryCode('');
             setRecoveryNewPassword('');

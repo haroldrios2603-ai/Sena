@@ -26,9 +26,7 @@ import { AuditService } from '../audit/audit.service';
  * Todas las rutas están protegidas por JWT.
  */
 @Controller('parking')
-@UseGuards(AuthGuard('jwt'))
-@UseGuards(RolesGuard)
-@RequireScreenPermission('operations-dashboard')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class ParkingController {
   constructor(
     private readonly parkingService: ParkingService,
@@ -39,8 +37,8 @@ export class ParkingController {
    * Crea una nueva sede operativa. Solo administradores pueden gestionarla.
    */
   @Post()
-  @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  @RequireScreenPermission('settings-config')
   async createParking(@Body() data: CreateParkingDto, @Request() req: any) {
     const created = await this.parkingService.createParking(data);
     this.auditService.log({
@@ -58,8 +56,8 @@ export class ParkingController {
    * Actualiza los datos generales de una sede.
    */
   @Patch(':id')
-  @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  @RequireScreenPermission('settings-config')
   async updateParking(
     @Param('id') id: string,
     @Body() data: UpdateParkingDto,
@@ -81,8 +79,8 @@ export class ParkingController {
    * Permite activar o suspender temporalmente un parqueadero.
    */
   @Patch(':id/estado')
-  @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  @RequireScreenPermission('settings-config')
   async updateParkingStatus(
     @Param('id') id: string,
     @Body() data: UpdateParkingStatusDto,
@@ -105,6 +103,7 @@ export class ParkingController {
    * @param data DTO con placa, tipo de vehículo e ID del parqueadero.
    */
   @Post('entry')
+  @RequireScreenPermission('operations-dashboard')
   async registerEntry(@Body() data: EntryDto, @Request() req: any) {
     const result = await this.parkingService.registerEntry(
       data.placa,
@@ -127,6 +126,7 @@ export class ParkingController {
    * @param data DTO con la placa del vehículo.
    */
   @Post('exit')
+  @RequireScreenPermission('operations-dashboard')
   async registerExit(@Body() data: ExitDto, @Request() req: any) {
     const result = await this.parkingService.registerExit(data.placa);
     this.auditService.log({
@@ -143,6 +143,11 @@ export class ParkingController {
    * Obtiene todos los parqueaderos registrados en el sistema.
    */
   @Get()
+  @RequireScreenPermission([
+    'operations-dashboard',
+    'clients-management',
+    'settings-config',
+  ])
   async getAllParkings(@Request() req: any) {
     const items = await this.parkingService.findAll();
     this.auditService.log({
@@ -163,6 +168,7 @@ export class ParkingController {
    * Retorna el resumen de vehículos con ingreso activo y egresos registrados.
    */
   @Get('tickets/resumen')
+  @RequireScreenPermission('operations-dashboard')
   async obtenerResumenTickets(@Request() req: any) {
     const result = await this.parkingService.obtenerResumenTickets();
     this.auditService.log({
@@ -179,6 +185,11 @@ export class ParkingController {
   }
 
   @Get(':id')
+  @RequireScreenPermission([
+    'operations-dashboard',
+    'clients-management',
+    'settings-config',
+  ])
   async getParkingById(@Param('id') id: string) {
     return this.parkingService.findOne(id);
   }

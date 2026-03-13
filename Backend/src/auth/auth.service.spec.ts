@@ -2,11 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { compare } from 'bcrypt';
 import { Role } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { PermissionsService } from '../permissions/permissions.service';
+import { PasswordRecoveryNotifierService } from './password-recovery-notifier.service';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -24,10 +29,17 @@ describe('AuthService', () => {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
     attendance: {
       create: jest.fn(),
     },
+    passwordResetToken: {
+      updateMany: jest.fn(),
+      create: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   const mockJwtService = {
@@ -40,6 +52,12 @@ describe('AuthService', () => {
       allowedScreenKeys: ['operations-dashboard'],
     }),
   };
+
+  const mockPasswordRecoveryNotifierService = {
+    sendRecoveryCode: jest.fn(),
+  };
+
+  const originalNodeEnv = process.env.NODE_ENV;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -57,10 +75,32 @@ describe('AuthService', () => {
           provide: PermissionsService,
           useValue: mockPermissionsService,
         },
+        {
+          provide: PasswordRecoveryNotifierService,
+          useValue: mockPasswordRecoveryNotifierService,
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+
+    jest.clearAllMocks();
+    process.env.NODE_ENV = 'test';
+    mockPrismaService.$transaction.mockImplementation((arg: unknown) => {
+      if (typeof arg === 'function') {
+        return (arg as (tx: typeof mockPrismaService) => Promise<unknown>)(
+          mockPrismaService,
+        );
+      }
+      if (Array.isArray(arg)) {
+        return Promise.all(arg);
+      }
+      return Promise.resolve(arg);
+    });
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   it('should be defined', () => {
@@ -177,6 +217,132 @@ describe('AuthService', () => {
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+  });
+
+  describe('requestPasswordReset', () => {
+    it('should return generic message when email does not exist', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.requestPasswordReset({
+        email: 'unknown@example.com',
+      });
+
+      expect(result).toEqual({
+        message:
+          'Si el correo está registrado recibirás un código de recuperación en los próximos minutos.',
+      });
+      expect(mockPrismaService.passwordResetToken.create).not.toHaveBeenCalled();
+      expect(
+        mockPasswordRecoveryNotifierService.sendRecoveryCode,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return debugCode in non-production when email transport is unavailable', async () => {
+      process.env.NODE_ENV = 'development';
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+      });
+      mockPasswordRecoveryNotifierService.sendRecoveryCode.mockResolvedValue(
+        false,
+      );
+
+      const result = await service.requestPasswordReset({
+        email: 'test@example.com',
+      });
+
+      expect(result.message).toContain('codigo de recuperacion');
+      expect(result).toHaveProperty('debugCode');
+      expect(mockPrismaService.passwordResetToken.updateMany).toHaveBeenCalled();
+      expect(mockPrismaService.passwordResetToken.create).toHaveBeenCalled();
+    });
+
+    it('should hide debugCode in production even when transport is unavailable', async () => {
+      process.env.NODE_ENV = 'production';
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+      });
+      mockPasswordRecoveryNotifierService.sendRecoveryCode.mockResolvedValue(
+        false,
+      );
+
+      const result = await service.requestPasswordReset({
+        email: 'test@example.com',
+      });
+
+      expect(result).toEqual({
+        message:
+          'Hemos enviado un código de recuperación. Revisa tu bandeja de entrada y continúa el proceso.',
+      });
+      expect(result).not.toHaveProperty('debugCode');
+    });
+  });
+
+  describe('confirmPasswordReset', () => {
+    it('should normalize lowercase code and update password', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+      });
+      mockPrismaService.passwordResetToken.findFirst.mockResolvedValue({
+        id: 'token-id',
+        userId: 'user-id',
+        tokenHash: 'hashed-ABC123',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        usedAt: null,
+      });
+      (compare as jest.Mock).mockImplementation(
+        (value: string, hashedValue: string) =>
+          Promise.resolve(hashedValue === `hashed-${value}`),
+      );
+      mockPrismaService.user.update.mockResolvedValue({ id: 'user-id' });
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const result = await service.confirmPasswordReset({
+        email: 'test@example.com',
+        code: 'abc123',
+        newPassword: 'NuevaClave1!',
+      });
+
+      expect(result).toEqual({
+        message:
+          'Contraseña actualizada correctamente. Ya puedes iniciar sesión.',
+      });
+      expect(compare).toHaveBeenCalledWith('ABC123', 'hashed-ABC123');
+      expect(mockPrismaService.user.update).toHaveBeenCalled();
+      expect(mockPrismaService.passwordResetToken.updateMany).toHaveBeenCalledWith(
+        {
+          where: { userId: 'user-id', usedAt: null },
+          data: { usedAt: expect.any(Date) },
+        },
+      );
+    });
+
+    it('should throw when code is invalid', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+        email: 'test@example.com',
+      });
+      mockPrismaService.passwordResetToken.findFirst.mockResolvedValue({
+        id: 'token-id',
+        userId: 'user-id',
+        tokenHash: 'hashed-ABC123',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        usedAt: null,
+      });
+      (compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.confirmPasswordReset({
+          email: 'test@example.com',
+          code: 'ZZZ999',
+          newPassword: 'NuevaClave1!',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

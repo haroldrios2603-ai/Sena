@@ -106,46 +106,58 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
     }
 
     const header = [
-      'id',
-      'timestamp',
-      'userId',
-      'userEmail',
-      'ipAddress',
-      'operation',
-      'entity',
-      'recordId',
-      'result',
-      'endpoint',
-      'method',
-      'responseTimeMs',
-      'errorCode',
-      'errorMessage',
+      'FechaHora',
+      'UsuarioCorreo',
+      'Operacion',
+      'Entidad',
+      'Resultado',
+      'ResumenEvento',
+      'CodigoError',
+      'MensajeError',
+      'Endpoint',
+      'Metodo',
+      'TiempoRespuestaMs',
+      'UsuarioId',
+      'IP',
+      'UserAgent',
+      'RegistroId',
+      'Id',
+      'ParametrosSolicitud',
+      'ValoresPrevios',
+      'ValoresNuevos',
+      'Metadatos',
     ];
 
     const lines = rows.map((row) =>
       [
-        row.id,
         row.timestamp.toISOString(),
-        row.userId ?? '',
-        row.userEmail ?? '',
-        row.ipAddress ?? '',
+        row.userEmail,
         row.operation,
         row.entity,
-        row.recordId ?? '',
         row.result,
-        row.endpoint ?? '',
-        row.method ?? '',
-        row.responseTimeMs ?? '',
-        row.errorCode ?? '',
-        row.errorMessage ?? '',
+        this.buildAuditSummary(row),
+        row.errorCode,
+        row.errorMessage,
+        row.endpoint,
+        row.method,
+        row.responseTimeMs,
+        row.userId,
+        row.ipAddress,
+        row.userAgent,
+        row.recordId,
+        row.id,
+        this.formatJsonForCsv(row.requestParams),
+        this.formatJsonForCsv(row.previousValues),
+        this.formatJsonForCsv(row.newValues),
+        this.formatJsonForCsv(row.metadata),
       ]
-        .map((field) => this.csvEscape(String(field)))
+        .map((field) => this.csvEscape(this.normalizeCsvValue(field)))
         .join(','),
     );
 
     return {
       contentType: 'text/csv',
-      body: [header.join(','), ...lines].join('\n'),
+      body: `\uFEFF${[header.join(','), ...lines].join('\r\n')}`,
       fileName: `audit-logs-${new Date().toISOString()}.csv`,
     };
   }
@@ -252,6 +264,75 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
   private csvEscape(value: string) {
     const escaped = value.replace(/"/g, '""');
     return `"${escaped}"`;
+  }
+
+  private normalizeCsvValue(value: unknown) {
+    if (value === null || typeof value === 'undefined') {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    return String(value);
+  }
+
+  private formatJsonForCsv(value: unknown) {
+    if (value === null || typeof value === 'undefined') {
+      return '';
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private buildAuditSummary(row: {
+    operation: AuditOperation;
+    entity: string;
+    result: AuditResult;
+    userEmail: string | null;
+    endpoint: string | null;
+    errorMessage: string | null;
+  }) {
+    const actor = row.userEmail?.trim() ? row.userEmail : 'sistema';
+    const endpoint = row.endpoint?.trim() ? ` en ${row.endpoint}` : '';
+    const operationPhrase = this.getOperationPhrase(row.operation);
+    const resultPhrase =
+      row.result === AuditResult.SUCCESS ? 'con resultado exitoso' : 'con resultado fallido';
+    const error = row.errorMessage?.trim() ? ` Error: ${row.errorMessage}` : '';
+
+    return `${operationPhrase} sobre ${row.entity} por ${actor}${endpoint}, ${resultPhrase}.${error}`;
+  }
+
+  private getOperationPhrase(operation: AuditOperation) {
+    switch (operation) {
+      case AuditOperation.CREATE:
+        return 'Creacion de registro';
+      case AuditOperation.UPDATE:
+        return 'Actualizacion de registro';
+      case AuditOperation.DELETE:
+        return 'Eliminacion de registro';
+      case AuditOperation.VIEW:
+        return 'Consulta de informacion';
+      case AuditOperation.LOGIN:
+        return 'Inicio de sesion';
+      case AuditOperation.LOGOUT:
+        return 'Cierre de sesion';
+      case AuditOperation.LOGIN_FAILED:
+        return 'Intento de inicio de sesion fallido';
+      case AuditOperation.FORBIDDEN:
+        return 'Intento de acceso denegado';
+      case AuditOperation.PASSWORD_CHANGE:
+        return 'Cambio de contrasena';
+      case AuditOperation.EXPORT:
+        return 'Exportacion de informacion';
+      default:
+        return 'Operacion de auditoria';
+    }
   }
 
   private scheduleRetentionCleanup() {

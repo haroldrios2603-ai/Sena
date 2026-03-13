@@ -16,7 +16,7 @@ import { AuditService } from '../audit/audit.service';
  */
 @Controller('settings')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles(Role.SUPER_ADMIN)
+@Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING, Role.OPERATOR)
 @RequireScreenPermission('settings-config')
 export class SettingsController {
   constructor(

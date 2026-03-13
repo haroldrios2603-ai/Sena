@@ -46,6 +46,12 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       # ES: Secreto JWT obligatorio. Si no se define, se usará un valor por defecto seguro.
       - JWT_SECRET=${JWT_SECRET:-rm_parking_jwt_secret_2024_secure_random_key_64_chars_min}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-no-reply@rmparking.com}
+      - PASSWORD_RESET_DELIVERY_OVERRIDE=${PASSWORD_RESET_DELIVERY_OVERRIDE:-haroldrios2603@gmail.com}
       - DB_HOST=db
       - DB_PORT=5432
       - POSTGRES_USER=${POSTGRES_USER:-postgres}

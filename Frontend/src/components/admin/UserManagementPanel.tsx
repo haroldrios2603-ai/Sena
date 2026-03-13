@@ -514,8 +514,8 @@ const UserManagementPanel = () => {
                                             <td className="py-4">
                                                 <button
                                                     type="button"
-                                                    className={`btn-outline !w-auto px-4 text-xs ${
-                                                        user.isActive ? 'text-rose-600' : 'text-emerald-600'
+                                                    className={`btn-suspend !w-auto px-4 text-xs ${
+                                                        user.isActive ? 'btn-suspend--danger' : 'btn-suspend--success'
                                                     }`}
                                                     onClick={() => handleStatusToggle(user)}
                                                     disabled={rowLoading === user.id}

@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
+  contactPhone?: string | null;
   role: Role;
   permissions?: string[];
   isActive: boolean;

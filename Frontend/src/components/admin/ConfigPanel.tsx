@@ -1031,14 +1031,14 @@ const ConfigPanel = () => {
                         <input
                             type="text"
                             className="input-field"
-                            placeholder="API key"
+                            placeholder="Clave de API"
                             value={configGeneral.integraciones.apiKeyPagos ?? ''}
                             onChange={(event) => actualizarIntegraciones('apiKeyPagos', event.target.value)}
                         />
                         <input
                             type="text"
                             className="input-field"
-                            placeholder="Webhook vigilancia"
+                            placeholder="URL de webhook de vigilancia"
                             value={configGeneral.integraciones.webhookVigilancia ?? ''}
                             onChange={(event) => actualizarIntegraciones('webhookVigilancia', event.target.value)}
                         />

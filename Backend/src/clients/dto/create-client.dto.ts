@@ -27,6 +27,13 @@ export class CreateClientDto {
   )
   email: string;
 
+  @IsString()
+  @MinLength(7)
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : '',
+  )
+  contactPhone: string;
+
   @IsUUID()
   parkingId: string;
 

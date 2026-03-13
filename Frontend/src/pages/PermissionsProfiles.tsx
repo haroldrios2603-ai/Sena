@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, Save, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Role, User } from '../context/types';
 import permissionsService, {
     type AppScreen,
@@ -11,14 +12,6 @@ import usersService from '../services/users.service';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 
 const roleOptions: Role[] = ['SUPER_ADMIN', 'ADMIN_PARKING', 'OPERATOR', 'AUDITOR', 'CLIENT'];
-
-const roleLabels: Record<Role, string> = {
-    SUPER_ADMIN: 'Super admin',
-    ADMIN_PARKING: 'Administrador de sede',
-    OPERATOR: 'Operador',
-    AUDITOR: 'Auditor',
-    CLIENT: 'Cliente',
-};
 
 type TabType = 'roles' | 'users';
 
@@ -35,6 +28,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const PermissionsProfiles = () => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<TabType>('roles');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -50,13 +44,26 @@ const PermissionsProfiles = () => {
 
     useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
+    const roleLabels = useMemo<Record<Role, string>>(
+        () => ({
+            SUPER_ADMIN: t('common.roleLabels.SUPER_ADMIN'),
+            ADMIN_PARKING: t('common.roleLabels.ADMIN_PARKING'),
+            OPERATOR: t('common.roleLabels.OPERATOR'),
+            AUDITOR: t('common.roleLabels.AUDITOR'),
+            CLIENT: t('common.roleLabels.CLIENT'),
+        }),
+        [t],
+    );
+
     const currentSubjectLabel = useMemo(() => {
         if (activeTab === 'roles') {
             return roleLabels[selectedRole];
         }
         const selectedUser = users.find((user) => user.id === selectedUserId);
-        return selectedUser ? `${selectedUser.fullName} (${selectedUser.email})` : 'Usuario';
-    }, [activeTab, selectedRole, selectedUserId, users]);
+        return selectedUser
+            ? `${selectedUser.fullName} (${selectedUser.email})`
+            : t('permissionsProfiles.fallbackUser');
+    }, [activeTab, roleLabels, selectedRole, selectedUserId, t, users]);
 
     const loadScreens = async () => {
         const data = await permissionsService.getScreens();
@@ -97,7 +104,7 @@ const PermissionsProfiles = () => {
                 await Promise.all([loadScreens(), loadUsers()]);
             } catch (error) {
                 setMessage({
-                    text: getErrorMessage(error, 'No se pudieron cargar pantallas o usuarios.'),
+                    text: getErrorMessage(error, t('permissionsProfiles.loadBaseError')),
                     type: 'error',
                 });
             } finally {
@@ -105,7 +112,7 @@ const PermissionsProfiles = () => {
             }
         };
         void init();
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         if (!screens.length) {
@@ -123,7 +130,7 @@ const PermissionsProfiles = () => {
                 }
             } catch (error) {
                 setMessage({
-                    text: getErrorMessage(error, 'No se pudieron cargar los permisos.'),
+                    text: getErrorMessage(error, t('permissionsProfiles.loadPermissionsError')),
                     type: 'error',
                 });
             } finally {
@@ -132,7 +139,7 @@ const PermissionsProfiles = () => {
         };
 
         void loadPermissions();
-    }, [activeTab, screens.length, selectedRole, selectedUserId]);
+    }, [activeTab, screens.length, selectedRole, selectedUserId, t]);
 
     const handleToggle = (screenKey: string) => {
         setPermissionMap((prev) => ({
@@ -159,10 +166,10 @@ const PermissionsProfiles = () => {
             } else if (selectedUserId) {
                 await permissionsService.saveUserPermissions(selectedUserId, payload);
             }
-            setMessage({ text: 'Permisos guardados correctamente.', type: 'success' });
+            setMessage({ text: t('permissionsProfiles.saveSuccess'), type: 'success' });
         } catch (error) {
             setMessage({
-                text: getErrorMessage(error, 'No se pudieron guardar los permisos.'),
+                text: getErrorMessage(error, t('permissionsProfiles.saveError')),
                 type: 'error',
             });
         } finally {
@@ -176,18 +183,18 @@ const PermissionsProfiles = () => {
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <span className="pill bg-indigo-100 text-indigo-700">
-                            <Shield size={16} /> Configuración
+                            <Shield size={16} /> {t('permissionsProfiles.settingsBadge')}
                         </span>
-                        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Permisos por perfil</h1>
+                        <h1 className="mt-2 text-3xl font-semibold text-slate-900">{t('permissionsProfiles.title')}</h1>
                         <p className="text-sm text-slate-500">
-                            Asigna qué pantallas puede ver cada rol o usuario específico.
+                            {t('permissionsProfiles.subtitle')}
                         </p>
                     </div>
                     <Link
                         to="/dashboard"
                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
                     >
-                        <ArrowLeft size={16} /> Volver al dashboard
+                        <ArrowLeft size={16} /> {t('permissionsProfiles.backToDashboard')}
                     </Link>
                 </div>
 
@@ -202,7 +209,7 @@ const PermissionsProfiles = () => {
                                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                             }`}
                         >
-                            Roles
+                            {t('permissionsProfiles.tabs.roles')}
                         </button>
                         <button
                             type="button"
@@ -213,14 +220,14 @@ const PermissionsProfiles = () => {
                                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                             }`}
                         >
-                            Usuarios
+                            {t('permissionsProfiles.tabs.users')}
                         </button>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         {activeTab === 'roles' ? (
                             <label>
-                                <span className="form-label">Rol</span>
+                                <span className="form-label">{t('permissionsProfiles.selectors.role')}</span>
                                 <select
                                     className="input-field"
                                     value={selectedRole}
@@ -235,7 +242,7 @@ const PermissionsProfiles = () => {
                             </label>
                         ) : (
                             <label>
-                                <span className="form-label">Usuario</span>
+                                <span className="form-label">{t('permissionsProfiles.selectors.user')}</span>
                                 <select
                                     className="input-field"
                                     value={selectedUserId}
@@ -265,21 +272,21 @@ const PermissionsProfiles = () => {
 
                     {loading ? (
                         <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <Loader2 size={16} className="animate-spin" /> Cargando permisos...
+                            <Loader2 size={16} className="animate-spin" /> {t('permissionsProfiles.loading')}
                         </div>
                     ) : (
                         <div className="space-y-4">
                             <p className="text-sm text-slate-500">
-                                Perfil seleccionado: <span className="font-semibold text-slate-800">{currentSubjectLabel}</span>
+                                {t('permissionsProfiles.selectedProfile')} <span className="font-semibold text-slate-800">{currentSubjectLabel}</span>
                             </p>
                             <div className="overflow-hidden rounded-2xl border border-slate-200">
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-50 text-slate-600">
                                         <tr>
-                                            <th className="px-4 py-3 text-left">Pantalla</th>
-                                            <th className="px-4 py-3 text-left">Clave</th>
-                                            <th className="px-4 py-3 text-left">Ruta</th>
-                                            <th className="px-4 py-3 text-center">Puede ver</th>
+                                            <th className="px-4 py-3 text-left">{t('permissionsProfiles.table.screen')}</th>
+                                            <th className="px-4 py-3 text-left">{t('permissionsProfiles.table.key')}</th>
+                                            <th className="px-4 py-3 text-left">{t('permissionsProfiles.table.route')}</th>
+                                            <th className="px-4 py-3 text-center">{t('permissionsProfiles.table.canView')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -313,7 +320,7 @@ const PermissionsProfiles = () => {
                                     className="btn-primary w-auto px-4"
                                 >
                                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    Guardar permisos
+                                    {t('permissionsProfiles.savePermissions')}
                                 </button>
                             </div>
                         </div>

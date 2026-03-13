@@ -3,11 +3,22 @@ import api from '../api';
 export interface CreateClientPayload {
     fullName: string;
     email: string;
+    contactPhone: string;
     parkingId: string;
     startDate: string;
     endDate: string;
     monthlyFee: number;
     planName?: string;
+}
+
+export interface ContractFilters {
+    fullName?: string;
+    email?: string;
+    contactPhone?: string;
+    parkingId?: string;
+    parkingName?: string;
+    planName?: string;
+    status?: 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'PAYMENT_PENDING';
 }
 
 export interface RenewContractPayload {
@@ -41,6 +52,7 @@ export interface ContractRecord {
         id: string;
         fullName: string;
         email: string;
+        contactPhone?: string | null;
     };
     parking: {
         id: string;
@@ -66,8 +78,10 @@ const clientsService = {
     /**
      * Lista los contratos vigentes junto con usuario y parqueadero.
      */
-    async listContracts() {
-        const response = await api.get<ContractRecord[]>('/clients/contracts');
+    async listContracts(filters?: ContractFilters) {
+        const response = await api.get<ContractRecord[]>('/clients/contracts', {
+            params: filters,
+        });
         return response.data;
     },
 

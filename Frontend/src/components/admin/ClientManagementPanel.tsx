@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import clientsService, {
     type AlertRecord,
+    type ContractFilters,
     type ContractRecord,
 } from '../../services/clients.service';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
@@ -55,10 +56,42 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
 };
 
+const formatPhoneInput = (value: string) => {
+    const hasLeadingPlus = value.trim().startsWith('+');
+    const digits = value.replace(/\D/g, '').slice(0, 15);
+    const prefix = hasLeadingPlus ? '+' : '';
+
+    if (!digits) {
+        return prefix;
+    }
+
+    if (digits.length <= 3) {
+        return `${prefix}${digits}`;
+    }
+
+    if (digits.length <= 6) {
+        return `${prefix}${digits.slice(0, 3)} ${digits.slice(3)}`;
+    }
+
+    if (digits.length <= 10) {
+        return `${prefix}${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    }
+
+    return `${prefix}${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)} ${digits.slice(10)}`;
+};
+
+const formatPhoneDisplay = (value: string | null | undefined) => {
+    if (!value?.trim()) {
+        return 'Sin teléfono';
+    }
+    return formatPhoneInput(value);
+};
+
 const statusTokens: Record<string, { label: string; classes: string }> = {
     ACTIVE: { label: 'Activo', classes: 'bg-emerald-100 text-emerald-700' },
     EXPIRED: { label: 'Vencido', classes: 'bg-rose-100 text-rose-700' },
     EXPIRING_SOON: { label: 'Por vencer', classes: 'bg-amber-100 text-amber-700' },
+    PAYMENT_PENDING: { label: 'Pago pendiente', classes: 'bg-amber-100 text-amber-700' },
 };
 
 const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPanelProps) => {
@@ -73,12 +106,14 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
     const [newClientData, setNewClientData] = useState({
         fullName: '',
         email: '',
+        contactPhone: '',
         parkingId: '',
         startDate: period.today,
         endDate: period.nextMonth,
         monthlyFee: '',
         planName: 'Mensualidad',
     });
+    const [contractFilters, setContractFilters] = useState<ContractFilters>({});
     const [renewalData, setRenewalData] = useState({
         contractId: '',
         newEndDate: '',
@@ -88,10 +123,10 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
 
     useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
-    const loadContracts = useCallback(async () => {
+    const loadContracts = useCallback(async (filters: ContractFilters = contractFilters) => {
         setLoadingContracts(true);
         try {
-            const data = await clientsService.listContracts();
+            const data = await clientsService.listContracts(filters);
             setContracts(data);
         } catch (error) {
             setMessage({
@@ -101,7 +136,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         } finally {
             setLoadingContracts(false);
         }
-    }, []);
+    }, [contractFilters]);
 
     const loadAlerts = useCallback(async () => {
         setLoadingAlerts(true);
@@ -168,6 +203,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
             await clientsService.createClient({
                 fullName: newClientData.fullName,
                 email: newClientData.email,
+                contactPhone: newClientData.contactPhone,
                 parkingId: newClientData.parkingId,
                 startDate: newClientData.startDate,
                 endDate: newClientData.endDate,
@@ -179,11 +215,12 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                 ...prev,
                 fullName: '',
                 email: '',
+                contactPhone: '',
                 startDate: period.today,
                 endDate: period.nextMonth,
                 monthlyFee: '',
             }));
-            await Promise.all([loadContracts(), loadAlerts()]);
+            await Promise.all([loadContracts(contractFilters), loadAlerts()]);
         } catch (error) {
             setMessage({
                 text: getErrorMessage(error, 'Error al registrar el cliente'),
@@ -283,6 +320,19 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                             type="email"
                             value={newClientData.email}
                             onChange={(event) => setNewClientData({ ...newClientData, email: event.target.value })}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Teléfono de contacto</label>
+                        <input
+                            className="input-field"
+                            type="tel"
+                            value={newClientData.contactPhone}
+                            onChange={(event) =>
+                                setNewClientData({ ...newClientData, contactPhone: formatPhoneInput(event.target.value) })
+                            }
+                            placeholder="Ej. +57 300 123 4567"
                             required
                         />
                     </div>
@@ -496,6 +546,110 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                         Sincronizar
                     </button>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                    <div>
+                        <label className="form-label">Nombre completo</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            value={contractFilters.fullName ?? ''}
+                            onChange={(event) => setContractFilters((prev) => ({ ...prev, fullName: event.target.value || undefined }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Correo</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            value={contractFilters.email ?? ''}
+                            onChange={(event) => setContractFilters((prev) => ({ ...prev, email: event.target.value || undefined }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Teléfono</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            value={contractFilters.contactPhone ?? ''}
+                            onChange={(event) => {
+                                const formatted = formatPhoneInput(event.target.value);
+                                setContractFilters((prev) => ({ ...prev, contactPhone: formatted || undefined }));
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Estado</label>
+                        <select
+                            className="input-field"
+                            value={contractFilters.status ?? ''}
+                            onChange={(event) =>
+                                setContractFilters((prev) => ({
+                                    ...prev,
+                                    status: (event.target.value || undefined) as ContractFilters['status'],
+                                }))
+                            }
+                        >
+                            <option value="">Todos</option>
+                            <option value="ACTIVE">Activo</option>
+                            <option value="EXPIRING_SOON">Por vencer</option>
+                            <option value="EXPIRED">Vencido</option>
+                            <option value="PAYMENT_PENDING">Pago pendiente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="form-label">Parqueadero</label>
+                        <select
+                            className="input-field"
+                            value={contractFilters.parkingId ?? ''}
+                            onChange={(event) => setContractFilters((prev) => ({ ...prev, parkingId: event.target.value || undefined }))}
+                        >
+                            <option value="">Todos</option>
+                            {parkings.map((parking) => (
+                                <option key={parking.id} value={parking.id}>{parking.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="form-label">Nombre parqueadero</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            value={contractFilters.parkingName ?? ''}
+                            onChange={(event) => setContractFilters((prev) => ({ ...prev, parkingName: event.target.value || undefined }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Plan</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            value={contractFilters.planName ?? ''}
+                            onChange={(event) => setContractFilters((prev) => ({ ...prev, planName: event.target.value || undefined }))}
+                        />
+                    </div>
+                    <div className="flex items-end gap-2">
+                        <button
+                            type="button"
+                            className="btn-primary w-auto px-4"
+                            onClick={() => loadContracts(contractFilters)}
+                            disabled={loadingContracts}
+                        >
+                            Buscar
+                        </button>
+                        <button
+                            type="button"
+                            className="btn-outline !w-auto px-4"
+                            onClick={() => {
+                                const reset: ContractFilters = {};
+                                setContractFilters(reset);
+                                void loadContracts(reset);
+                            }}
+                            disabled={loadingContracts}
+                        >
+                            Limpiar filtros
+                        </button>
+                    </div>
+                </div>
                 {loadingContracts ? (
                     <div className="flex items-center justify-center py-10 text-slate-500">
                         <Loader2 size={20} className="animate-spin" />
@@ -514,6 +668,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                                         <div>
                                             <p className="font-semibold text-slate-900">{contract.user.fullName}</p>
                                             <p className="text-xs text-slate-500">{contract.user.email}</p>
+                                            <p className="text-xs text-slate-500">{formatPhoneDisplay(contract.user.contactPhone)}</p>
                                         </div>
                                         <span className={`pill ${token.classes}`}>{token.label}</span>
                                     </div>

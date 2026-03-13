@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { isAxiosError } from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import api from '../api';
 import {
@@ -21,6 +21,7 @@ import {
 import UserManagementPanel from '../components/admin/UserManagementPanel';
 import ClientManagementPanel from '../components/admin/ClientManagementPanel';
 import ConfigPanel from '../components/admin/ConfigPanel';
+import AuditLogs from './AuditLogs';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 
@@ -85,7 +86,7 @@ type ApiErrorResponse = {
     message?: string;
 };
 
-type DashboardView = 'operations' | 'config' | 'users' | 'clients';
+type DashboardView = 'operations' | 'config' | 'users' | 'clients' | 'audit';
 
 type MenuItem = {
     key: string;
@@ -117,6 +118,7 @@ const currencyFormatter = new Intl.NumberFormat('es-CO', {
 const Dashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [plateEntry, setPlateEntry] = useState('');
     const [plateExit, setPlateExit] = useState('');
     const [vehicleTypeEntry, setVehicleTypeEntry] = useState<VehicleType>('CAR');
@@ -142,7 +144,7 @@ const Dashboard = () => {
             setTicketsActivos(response.data.activos ?? []);
             setTicketsCerrados(response.data.cerrados ?? []);
         } catch (err: unknown) {
-            console.error('Error fetching ticket summary', err);
+            console.error('Error al consultar el resumen de tickets', err);
             setMessage({
                 text: getErrorMessage(err, 'No se pudo cargar el resumen de tickets'),
                 type: 'error',
@@ -187,8 +189,9 @@ const Dashboard = () => {
         if (canManageSettings) views.push('config');
         if (canManageUsers) views.push('users');
         if (canManageClients) views.push('clients');
+        if (canViewAuditLogs) views.push('audit');
         return views;
-    }, [canManageClients, canManageSettings, canManageUsers, canViewOperations]);
+    }, [canManageClients, canManageSettings, canManageUsers, canViewAuditLogs, canViewOperations]);
 
     useEffect(() => {
         if (!availableViews.includes(activeView)) {
@@ -233,6 +236,12 @@ const Dashboard = () => {
             icon: <CreditCard size={16} />,
             accent: 'text-emerald-700',
         },
+        audit: {
+            label: 'Auditoría',
+            description: 'Trazabilidad detallada de acciones del sistema',
+            icon: <Shield size={16} />,
+            accent: 'text-rose-700',
+        },
     };
 
     const menuItems: MenuItem[] = availableViews.map((view) => ({
@@ -253,17 +262,11 @@ const Dashboard = () => {
         });
     }
 
-    if (canViewAuditLogs) {
-        menuItems.push({
-            key: 'audit-logs',
-            view: 'config',
-            label: 'Auditoría',
-            description: 'Trazabilidad detallada de acciones del sistema',
-            icon: <Shield size={16} />,
-            accent: 'text-rose-700',
-            route: '/admin/auditoria',
-        });
-    }
+    useEffect(() => {
+        if (location.pathname === '/admin/auditoria' && canViewAuditLogs) {
+            setActiveView('audit');
+        }
+    }, [canViewAuditLogs, location.pathname]);
 
     useEffect(() => {
         const fetchParkings = async () => {
@@ -275,7 +278,7 @@ const Dashboard = () => {
                     setSelectedParkingId(res.data[0].id);
                 }
             } catch (err: unknown) {
-                console.error('Error fetching parkings', err);
+                console.error('Error al consultar parqueaderos', err);
                 setMessage({
                     text: getErrorMessage(err, 'No se pudo cargar la lista de parqueaderos'),
                     type: 'error',
@@ -438,10 +441,16 @@ const Dashboard = () => {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            if (item.route) {
+                                            if (item.view === 'audit') {
+                                                setActiveView('audit');
+                                                navigate('/admin/auditoria');
+                                            } else if (item.route) {
                                                 navigate(item.route);
                                             } else {
                                                 setActiveView(item.view);
+                                                if (location.pathname !== '/dashboard') {
+                                                    navigate('/dashboard');
+                                                }
                                             }
                                             setSidebarOpen(false);
                                         }}
@@ -559,7 +568,7 @@ const Dashboard = () => {
                                         <span className="pill"><Car size={16} /> Entrada</span>
                                         <h2 className="panel-card__title mt-2">Registrar ingreso</h2>
                                     </div>
-                                    <span className="text-xs text-slate-400">Última placa: {plateEntry || 'N/A'}</span>
+                                    <span className="text-xs text-slate-400">Última placa: {plateEntry || 'S/N'}</span>
                                 </div>
                                 <form onSubmit={handleEntry} className="space-y-5">
                                     <div>
@@ -869,6 +878,8 @@ const Dashboard = () => {
                 {activeView === 'clients' && canManageClients && (
                     <ClientManagementPanel parkings={parkings} loadingParkings={loadingParkings} />
                 )}
+
+                {activeView === 'audit' && canViewAuditLogs && <AuditLogs embedded />}
 
                 {!availableViews.length && (
                     <section className="panel-card">

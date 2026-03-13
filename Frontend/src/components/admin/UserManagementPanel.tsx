@@ -38,6 +38,37 @@ const PASSWORD_POLICY = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/;
 const PASSWORD_POLICY_MESSAGE =
     'La contraseña debe contener mayúsculas, minúsculas, números y un carácter especial';
 
+const formatPhoneInput = (value: string) => {
+    const hasLeadingPlus = value.trim().startsWith('+');
+    const digits = value.replace(/\D/g, '').slice(0, 15);
+    const prefix = hasLeadingPlus ? '+' : '';
+
+    if (!digits) {
+        return prefix;
+    }
+
+    if (digits.length <= 3) {
+        return `${prefix}${digits}`;
+    }
+
+    if (digits.length <= 6) {
+        return `${prefix}${digits.slice(0, 3)} ${digits.slice(3)}`;
+    }
+
+    if (digits.length <= 10) {
+        return `${prefix}${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    }
+
+    return `${prefix}${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)} ${digits.slice(10)}`;
+};
+
+const formatPhoneDisplay = (value: string | null | undefined) => {
+    if (!value?.trim()) {
+        return 'Sin teléfono';
+    }
+    return formatPhoneInput(value);
+};
+
 const UserManagementPanel = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,9 +77,13 @@ const UserManagementPanel = () => {
     const [creating, setCreating] = useState(false);
     const [roleFilter, setRoleFilter] = useState<'ALL' | Role>('ALL');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+    const [fullNameFilter, setFullNameFilter] = useState('');
+    const [emailFilter, setEmailFilter] = useState('');
+    const [contactPhoneFilter, setContactPhoneFilter] = useState('');
     const [formData, setFormData] = useState<CreateUserPayload>({
         fullName: '',
         email: '',
+        contactPhone: '',
         password: '',
         role: 'OPERATOR',
     });
@@ -73,8 +108,17 @@ const UserManagementPanel = () => {
         if (statusFilter !== 'ALL') {
             params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
         }
+        if (fullNameFilter.trim()) {
+            params.fullName = fullNameFilter.trim();
+        }
+        if (emailFilter.trim()) {
+            params.email = emailFilter.trim();
+        }
+        if (contactPhoneFilter.trim()) {
+            params.contactPhone = contactPhoneFilter.trim();
+        }
         return Object.keys(params).length ? params : undefined;
-    }, [roleFilter, statusFilter]);
+    }, [contactPhoneFilter, emailFilter, fullNameFilter, roleFilter, statusFilter]);
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
@@ -133,11 +177,12 @@ const UserManagementPanel = () => {
             const payload: CreateUserPayload = {
                 fullName: formData.fullName.trim(),
                 email: formData.email.trim().toLowerCase(),
+                contactPhone: formData.contactPhone.trim(),
                 password: formData.password,
                 role: formData.role,
             };
             await usersService.createUser(payload);
-            setFormData({ fullName: '', email: '', password: '', role: 'OPERATOR' });
+            setFormData({ fullName: '', email: '', contactPhone: '', password: '', role: 'OPERATOR' });
 
             const shouldResetRoleFilter = roleFilter !== 'ALL' && roleFilter !== payload.role;
             const shouldResetStatusFilter = statusFilter === 'INACTIVE';
@@ -212,6 +257,14 @@ const UserManagementPanel = () => {
         }
     };
 
+    const handleClearFilters = () => {
+        setFullNameFilter('');
+        setEmailFilter('');
+        setContactPhoneFilter('');
+        setRoleFilter('ALL');
+        setStatusFilter('ALL');
+    };
+
     return (
         <section className="space-y-6">
             <header className="flex flex-col gap-2">
@@ -272,6 +325,19 @@ const UserManagementPanel = () => {
                         />
                     </div>
                     <div>
+                        <label className="form-label">Teléfono de contacto</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="Ej. +57 300 123 4567"
+                            value={formData.contactPhone}
+                            onChange={(event) =>
+                                setFormData({ ...formData, contactPhone: formatPhoneInput(event.target.value) })
+                            }
+                            required
+                        />
+                    </div>
+                    <div>
                         <label className="form-label">Contraseña temporal</label>
                         <input
                             type="password"
@@ -324,6 +390,27 @@ const UserManagementPanel = () => {
                             <h3 className="panel-card__title mt-2">Usuarios registrados</h3>
                         </div>
                         <div className="flex flex-wrap gap-3">
+                            <input
+                                type="text"
+                                className="input-field md:w-48"
+                                value={fullNameFilter}
+                                onChange={(event) => setFullNameFilter(event.target.value)}
+                                placeholder="Filtrar por nombre"
+                            />
+                            <input
+                                type="text"
+                                className="input-field md:w-56"
+                                value={emailFilter}
+                                onChange={(event) => setEmailFilter(event.target.value)}
+                                placeholder="Filtrar por correo"
+                            />
+                            <input
+                                type="text"
+                                className="input-field md:w-44"
+                                value={contactPhoneFilter}
+                                onChange={(event) => setContactPhoneFilter(formatPhoneInput(event.target.value))}
+                                placeholder="Filtrar por teléfono"
+                            />
                             <select
                                 className="input-field md:w-40"
                                 value={roleFilter}
@@ -353,6 +440,9 @@ const UserManagementPanel = () => {
                             >
                                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                                 Actualizar
+                            </button>
+                            <button type="button" className="btn-outline !w-auto px-4" onClick={handleClearFilters}>
+                                Limpiar filtros
                             </button>
                         </div>
                     </div>
@@ -385,6 +475,7 @@ const UserManagementPanel = () => {
                                             <td className="py-4">
                                                 <p className="font-semibold text-slate-900">{user.fullName}</p>
                                                 <p className="text-xs text-slate-500">{user.email}</p>
+                                                <p className="text-xs text-slate-500">{formatPhoneDisplay(user.contactPhone)}</p>
                                             </td>
                                             <td className="py-4">
                                                 <select

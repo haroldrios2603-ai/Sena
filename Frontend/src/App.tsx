@@ -5,7 +5,6 @@ import PermissionRoute from './components/PermissionRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PermissionsProfiles from './pages/PermissionsProfiles';
-import AuditLogs from './pages/AuditLogs';
 import { SCREEN_KEYS } from './permissions';
 import './App.css';
 
@@ -31,7 +30,7 @@ function App() {
           </Route>
 
           <Route element={<PermissionRoute requiredScreen={SCREEN_KEYS.AUDIT_LOGS} />}>
-            <Route path="/admin/auditoria" element={<AuditLogs />} />
+            <Route path="/admin/auditoria" element={<Dashboard />} />
           </Route>
 
           {/* Redirección por defecto */}

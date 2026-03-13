@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Obtener URL del API desde variables de entorno o default local
+// Obtener URL del API desde variables de entorno o valor local por defecto
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 /**

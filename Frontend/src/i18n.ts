@@ -1,0 +1,136 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+const resources = {
+    es: {
+        translation: {
+            common: {
+                roleLabels: {
+                    SUPER_ADMIN: 'Super admin',
+                    ADMIN_PARKING: 'Administrador de sede',
+                    OPERATOR: 'Operador',
+                    AUDITOR: 'Auditor',
+                    CLIENT: 'Cliente',
+                },
+            },
+            login: {
+                invalidCredentials: 'Credenciales invalidas o error en el servidor',
+                forgotPassword: 'Olvidaste tu contrasena?',
+                sendingCode: 'Enviando codigo...',
+                sendRecoveryRequiresEmail: 'Ingresa tu correo antes de solicitar la recuperacion.',
+                recoveryCodeSent: 'Hemos enviado un codigo de confirmacion a tu correo.',
+                recoveryMissingFields: 'Debes ingresar el codigo y la nueva contrasena.',
+                recoveryUpdated: 'Tu contrasena se actualizo correctamente. Inicia sesion con la nueva clave.',
+                brandSubtitle: 'Gestion Inteligente de Espacios',
+                welcome: 'Bienvenido',
+                credentialsPrompt: 'Ingresa tus credenciales para acceder',
+                emailLabel: 'Correo electronico',
+                emailPlaceholder: 'ejemplo@rmparking.com',
+                passwordLabel: 'Contrasena',
+                recoveryInstructions:
+                    'Ingresa el codigo que enviamos a {{email}} y define una nueva contrasena segura.',
+                recoveryCodeLabel: 'Codigo de confirmacion',
+                recoveryCodePlaceholder: 'ABC123',
+                newPasswordLabel: 'Nueva contrasena',
+                updatePassword: 'Actualizar contrasena',
+                updating: 'Actualizando...',
+                cancel: 'Cancelar',
+                signIn: 'Iniciar sesion',
+                rightsReserved: 'Todos los derechos reservados.',
+            },
+            permissionsProfiles: {
+                loadBaseError: 'No se pudieron cargar pantallas o usuarios.',
+                loadPermissionsError: 'No se pudieron cargar los permisos.',
+                saveSuccess: 'Permisos guardados correctamente.',
+                saveError: 'No se pudieron guardar los permisos.',
+                settingsBadge: 'Configuracion',
+                title: 'Permisos por perfil',
+                subtitle: 'Asigna que pantallas puede ver cada rol o usuario especifico.',
+                backToDashboard: 'Volver al dashboard',
+                tabs: {
+                    roles: 'Roles',
+                    users: 'Usuarios',
+                },
+                selectors: {
+                    role: 'Rol',
+                    user: 'Usuario',
+                },
+                loading: 'Cargando permisos...',
+                selectedProfile: 'Perfil seleccionado:',
+                fallbackUser: 'Usuario',
+                table: {
+                    screen: 'Pantalla',
+                    key: 'Clave',
+                    route: 'Ruta',
+                    canView: 'Puede ver',
+                },
+                savePermissions: 'Guardar permisos',
+            },
+            audit: {
+                badge: 'Modulo de auditoria',
+                title: 'Trazabilidad de eventos',
+                subtitle:
+                    'Revisa quien hizo que, cuando y desde donde. Los registros son inmutables y se ordenan por fecha descendente.',
+                exportSuccess: 'Exportacion {{format}} generada',
+                loadError: 'No se pudo cargar la auditoria',
+                exportError: 'No se pudo exportar la auditoria',
+                filters: {
+                    from: 'Desde',
+                    to: 'Hasta',
+                    user: 'Usuario (correo)',
+                    entity: 'Entidad',
+                    operation: 'Operacion',
+                    result: 'Resultado',
+                    recordId: 'ID registro',
+                    allOperations: 'Todas',
+                    allResults: 'Todos',
+                },
+                columns: {
+                    timestamp: 'Fecha',
+                    user: 'Usuario',
+                    ip: 'IP',
+                    operation: 'Operacion',
+                    entity: 'Entidad',
+                    result: 'Resultado',
+                    action: 'Accion',
+                },
+                operationLabels: {
+                    CREATE: 'Crear',
+                    UPDATE: 'Actualizar',
+                    DELETE: 'Eliminar',
+                    VIEW: 'Consultar',
+                    LOGIN: 'Inicio de sesion',
+                    LOGOUT: 'Cierre de sesion',
+                    LOGIN_FAILED: 'Inicio fallido',
+                    FORBIDDEN: 'Acceso denegado',
+                    PASSWORD_CHANGE: 'Cambio de contrasena',
+                    EXPORT: 'Exportar',
+                },
+                resultLabels: {
+                    SUCCESS: 'Exito',
+                    FAILURE: 'Fallo',
+                },
+                totalRecords: 'Total registros: {{count}}',
+                page: 'Pagina {{page}} de {{totalPages}}',
+                previous: 'Anterior',
+                next: 'Siguiente',
+                loading: 'Cargando registros...',
+                anonymousSystem: 'sistema/anonimo',
+                viewDetail: 'Ver detalle',
+                detailTitle: 'Detalle del registro',
+                close: 'Cerrar',
+                exportCsv: 'Exportar CSV',
+                exportJson: 'Exportar JSON',
+            },
+        },
+    },
+};
+
+void i18n.use(initReactI18next).init({
+    resources,
+    lng: 'es',
+    fallbackLng: 'es',
+    interpolation: { escapeValue: false },
+});
+
+export default i18n;

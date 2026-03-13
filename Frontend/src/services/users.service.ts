@@ -4,6 +4,7 @@ import type { Role, User } from '../context/types';
 export interface CreateUserPayload {
     fullName: string;
     email: string;
+    contactPhone: string;
     password: string;
     role: Role;
 }
@@ -11,6 +12,9 @@ export interface CreateUserPayload {
 export interface UserFilters {
     role?: Role;
     isActive?: 'true' | 'false';
+    fullName?: string;
+    email?: string;
+    contactPhone?: string;
 }
 
 const usersService = {

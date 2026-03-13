@@ -8,6 +8,7 @@ import { CreateClientDto } from './dto/create-client.dto';
 import { RenewContractDto } from './dto/renew-contract.dto';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { ListContractsDto } from './dto/list-contracts.dto';
 
 /**
  * Servicio para gestionar clientes con mensualidades y alertas.
@@ -54,9 +55,13 @@ export class ClientsService {
   /**
    * Lista todos los contratos con información del cliente y estacionamiento.
    */
-  async listContracts() {
+  async listContracts(filters: ListContractsDto = {}) {
     await this.syncContractStatuses();
+
+    const where = this.buildContractWhere(filters);
+
     return this.prisma.contract.findMany({
+      where,
       include: {
         user: true,
         parking: true,
@@ -133,7 +138,13 @@ export class ClientsService {
     }
 
     if (existingUser) {
-      return existingUser;
+      return this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          fullName: createClientDto.fullName,
+          contactPhone: createClientDto.contactPhone,
+        },
+      });
     }
 
     const temporaryPassword = this.generateTemporalPassword();
@@ -143,10 +154,37 @@ export class ClientsService {
       data: {
         email: createClientDto.email,
         fullName: createClientDto.fullName,
+        contactPhone: createClientDto.contactPhone,
         passwordHash,
         role: Role.CLIENT,
       },
     });
+  }
+
+  private buildContractWhere(filters: ListContractsDto) {
+    return {
+      status: filters.status || undefined,
+      planName: filters.planName
+        ? { contains: filters.planName, mode: 'insensitive' as const }
+        : undefined,
+      parkingId: filters.parkingId || undefined,
+      user: {
+        fullName: filters.fullName
+          ? { contains: filters.fullName, mode: 'insensitive' as const }
+          : undefined,
+        email: filters.email
+          ? { contains: filters.email, mode: 'insensitive' as const }
+          : undefined,
+        contactPhone: filters.contactPhone
+          ? { contains: filters.contactPhone, mode: 'insensitive' as const }
+          : undefined,
+      },
+      parking: {
+        name: filters.parkingName
+          ? { contains: filters.parkingName, mode: 'insensitive' as const }
+          : undefined,
+      },
+    };
   }
 
   /**

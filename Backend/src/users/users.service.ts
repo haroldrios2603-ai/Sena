@@ -36,6 +36,7 @@ export class UsersService {
       data: {
         email: createUserDto.email,
         fullName: createUserDto.fullName,
+        contactPhone: createUserDto.contactPhone,
         passwordHash,
         role: createUserDto.role,
       },
@@ -56,6 +57,18 @@ export class UsersService {
 
     if (typeof filters.isActive !== 'undefined') {
       where.isActive = filters.isActive === 'true';
+    }
+
+    if (filters.fullName?.trim()) {
+      where.fullName = { contains: filters.fullName.trim(), mode: 'insensitive' };
+    }
+
+    if (filters.email?.trim()) {
+      where.email = { contains: filters.email.trim(), mode: 'insensitive' };
+    }
+
+    if (filters.contactPhone?.trim()) {
+      where.contactPhone = { contains: filters.contactPhone.trim(), mode: 'insensitive' };
     }
 
     const users = await this.prisma.user.findMany({

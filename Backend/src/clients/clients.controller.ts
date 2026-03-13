@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { AuditOperation, AuditResult, Role } from '@prisma/client';
 import { RequireScreenPermission } from '../common/decorators/screen-permission.decorator';
 import { AuditService } from '../audit/audit.service';
+import { ListContractsDto } from './dto/list-contracts.dto';
 
 /**
  * Controlador para gestión de clientes con mensualidades.
@@ -52,13 +54,16 @@ export class ClientsController {
    * Lista contratos activos y su estado actual.
    */
   @Get('contracts')
-  async findContracts(@Request() req: any) {
-    const items = await this.clientsService.listContracts();
+  async findContracts(@Query() filters: ListContractsDto, @Request() req: any) {
+    const items = await this.clientsService.listContracts(filters);
     this.auditService.log({
       operation: AuditOperation.VIEW,
       entity: 'clients_contracts',
       result: AuditResult.SUCCESS,
-      metadata: { count: items.length },
+      metadata: {
+        count: items.length,
+        filters: this.auditService.sanitizePayload(filters),
+      },
       context: this.auditService.buildContextFromRequest(req),
     });
     return items;

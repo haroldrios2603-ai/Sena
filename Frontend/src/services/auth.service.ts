@@ -5,9 +5,7 @@ import api from '../api';
  */
 const authService = {
     /**
-     * Login user and return token.
-     * 
-     * ES: Iniciar sesión y retornar token.
+    * Inicia sesión y retorna el token de acceso.
      */
     login: async (email: string, password: string) => {
         const response = await api.post('/auth/login', { email, password });
@@ -20,7 +18,7 @@ const authService = {
     /**
      * Cerrar sesión del usuario en el servidor y eliminar token local.
      * 
-     * ES: Llama al endpoint /auth/logout (protegido) para registrar checkOut,
+        * ES: Llama al endpoint /auth/logout (protegido) para registrar cierre de sesion,
      * luego elimina el token localmente.
      */
     logout: async () => {
@@ -35,9 +33,7 @@ const authService = {
     },
 
     /**
-     * Get current user profile.
-     * 
-     * ES: Obtener perfil del usuario actual.
+     * Obtiene el perfil del usuario actual.
      */
     getProfile: async () => {
         return api.get('/auth/me');

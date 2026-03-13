@@ -5,6 +5,7 @@ import {
   MaxLength,
   Matches,
   IsEnum,
+  IsNotEmpty,
 } from 'class-validator';
 import { Transform, TransformFnParams } from 'class-transformer';
 import { Role } from '@prisma/client';
@@ -32,6 +33,21 @@ export class CreateUserDto {
     typeof value === 'string' ? value.toLowerCase().trim() : '',
   )
   email: string;
+
+  /**
+   * Teléfono de contacto principal del usuario.
+   */
+  @IsString()
+  @IsNotEmpty({ message: 'El teléfono de contacto es obligatorio' })
+  @MinLength(7)
+  @MaxLength(20)
+  @Matches(/^[+0-9()\-\s]+$/, {
+    message: 'El teléfono de contacto contiene caracteres inválidos',
+  })
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : '',
+  )
+  contactPhone: string;
 
   /**
    * Contraseña temporal asignada por el administrador.

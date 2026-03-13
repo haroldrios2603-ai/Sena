@@ -44,6 +44,7 @@ model User {
    email        String    @unique
    passwordHash String
    fullName     String
+  contactPhone String?
    role         Role      @default(OPERATOR)
    isActive     Boolean   @default(true)
    createdAt    DateTime  @default(now())
@@ -61,6 +62,7 @@ model User {
 
   // Índices para mejor rendimiento
    @@index([email])
+  @@index([contactPhone])
    @@index([role])
 }
 

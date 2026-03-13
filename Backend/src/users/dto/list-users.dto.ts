@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsBooleanString } from 'class-validator';
+import { IsEnum, IsOptional, IsBooleanString, IsString } from 'class-validator';
 import { Role } from '@prisma/client';
 
 /**
@@ -18,4 +18,25 @@ export class ListUsersDto {
   @IsOptional()
   @IsBooleanString()
   isActive?: string;
+
+  /**
+   * Filtro opcional por nombre completo.
+   */
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  /**
+   * Filtro opcional por correo.
+   */
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  /**
+   * Filtro opcional por teléfono de contacto.
+   */
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
 }

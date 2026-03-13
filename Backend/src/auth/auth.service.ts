@@ -197,7 +197,7 @@ export class AuthService {
       });
     });
 
-    // TODO: Integrar servicio de correo/SMS; por ahora se registra en logs para pruebas.
+    // Pendiente: Integrar servicio de correo/SMS; por ahora se registra en logs para pruebas.
     console.log(
       `Código de recuperación para ${email}: ${code} (válido ${this.recoveryExpirationMinutes} minutos)`,
     );

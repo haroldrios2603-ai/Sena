@@ -5,17 +5,18 @@ import authService from '../services/auth.service';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
+import { useTranslation } from 'react-i18next';
 import '../features/auth/login.css';
 
 type AuthErrorResponse = {
     message?: string;
 };
 
-const getErrorMessage = (error: unknown) => {
+const getErrorMessage = (error: unknown, fallback: string) => {
     if (isAxiosError<AuthErrorResponse>(error)) {
-        return error.response?.data?.message || 'Credenciales inválidas o error en el servidor';
+        return error.response?.data?.message || fallback;
     }
-    return 'Credenciales inválidas o error en el servidor';
+    return fallback;
 };
 
 /**
@@ -24,6 +25,7 @@ const getErrorMessage = (error: unknown) => {
  * Gestiona la validación de credenciales y redirección al Dashboard.
  */
 const Login = () => {
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -55,7 +57,7 @@ const Login = () => {
             login(data.accessToken, profileRes.data);
             navigate('/dashboard');
         } catch (err: unknown) {
-            setError(getErrorMessage(err));
+            setError(getErrorMessage(err, t('login.invalidCredentials')));
         } finally {
             setIsSubmitting(false);
         }
@@ -70,7 +72,7 @@ const Login = () => {
         setRecoveryMessage('');
 
         if (!email) {
-            setError('Ingresa tu correo antes de solicitar la recuperación.');
+            setError(t('login.sendRecoveryRequiresEmail'));
             return;
         }
 
@@ -79,9 +81,9 @@ const Login = () => {
             await authService.requestPasswordReset(email);
             setRecoveryEmail(email);
             setIsRecoveryVisible(true);
-            setRecoveryMessage('Hemos enviado un código de confirmación a tu correo.');
+            setRecoveryMessage(t('login.recoveryCodeSent'));
         } catch (err) {
-            setError(getErrorMessage(err));
+            setError(getErrorMessage(err, t('login.invalidCredentials')));
         } finally {
             setIsSendingRecovery(false);
         }
@@ -92,7 +94,7 @@ const Login = () => {
      */
     const handleConfirmRecovery = async () => {
         if (!recoveryCode || !recoveryNewPassword) {
-            setError('Debes ingresar el código y la nueva contraseña.');
+            setError(t('login.recoveryMissingFields'));
             return;
         }
 
@@ -100,12 +102,12 @@ const Login = () => {
         setError('');
         try {
             await authService.confirmPasswordReset(recoveryEmail || email, recoveryCode, recoveryNewPassword);
-            setRecoveryMessage('Tu contraseña se actualizó correctamente. Inicia sesión con la nueva clave.');
+            setRecoveryMessage(t('login.recoveryUpdated'));
             setRecoveryCode('');
             setRecoveryNewPassword('');
             setIsRecoveryVisible(false);
         } catch (err) {
-            setError(getErrorMessage(err));
+            setError(getErrorMessage(err, t('login.invalidCredentials')));
         } finally {
             setIsConfirmingRecovery(false);
         }
@@ -128,13 +130,13 @@ const Login = () => {
                 <div className="login-brand">
                     <div className="brand-logo">RM</div>
                     <h1>Parking</h1>
-                    <p>Gestión Inteligente de Espacios</p>
+                    <p>{t('login.brandSubtitle')}</p>
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="form-header">
-                        <h2>Bienvenido</h2>
-                        <p>Ingresa tus credenciales para acceder</p>
+                        <h2>{t('login.welcome')}</h2>
+                        <p>{t('login.credentialsPrompt')}</p>
                     </div>
 
                     {error && (
@@ -145,7 +147,7 @@ const Login = () => {
                     )}
 
                     <div className="input-group">
-                        <label htmlFor="email">Correo Electrónico</label>
+                        <label htmlFor="email">{t('login.emailLabel')}</label>
                         <div className="input-wrapper">
                             <Mail className="input-icon" size={20} />
                             <input
@@ -153,14 +155,14 @@ const Login = () => {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="ejemplo@rmparking.com"
+                                placeholder={t('login.emailPlaceholder')}
                                 required
                             />
                         </div>
                     </div>
 
                     <div className="input-group">
-                        <label htmlFor="password">Contraseña</label>
+                        <label htmlFor="password">{t('login.passwordLabel')}</label>
                         <div className="input-wrapper">
                             <Lock className="input-icon" size={20} />
                             <input
@@ -180,31 +182,31 @@ const Login = () => {
                             className="recovery-link"
                             onClick={handleSendRecoveryCode}
                         >
-                            ¿Olvidaste tu contraseña?
+                            {t('login.forgotPassword')}
                         </a>
-                        {isSendingRecovery && <span className="recovery-status">Enviando código...</span>}
+                        {isSendingRecovery && <span className="recovery-status">{t('login.sendingCode')}</span>}
                     </div>
 
                     {isRecoveryVisible && (
                         <div className="recovery-section">
                             <p className="recovery-instructions">
-                                Ingresa el código que enviamos a {recoveryEmail || email} y define una nueva contraseña segura.
+                                {t('login.recoveryInstructions', { email: recoveryEmail || email })}
                             </p>
                             <div className="input-group">
-                                <label htmlFor="recovery-code">Código de confirmación</label>
+                                <label htmlFor="recovery-code">{t('login.recoveryCodeLabel')}</label>
                                 <div className="input-wrapper">
                                     <input
                                         id="recovery-code"
                                         type="text"
                                         value={recoveryCode}
                                         onChange={(e) => setRecoveryCode(e.target.value)}
-                                        placeholder="ABC123"
+                                        placeholder={t('login.recoveryCodePlaceholder')}
                                         required
                                     />
                                 </div>
                             </div>
                             <div className="input-group">
-                                <label htmlFor="recovery-password">Nueva contraseña</label>
+                                <label htmlFor="recovery-password">{t('login.newPasswordLabel')}</label>
                                 <div className="input-wrapper">
                                     <input
                                         id="recovery-password"
@@ -223,14 +225,14 @@ const Login = () => {
                                     onClick={handleConfirmRecovery}
                                     disabled={isConfirmingRecovery}
                                 >
-                                    {isConfirmingRecovery ? 'Actualizando...' : 'Actualizar contraseña'}
+                                    {isConfirmingRecovery ? t('login.updating') : t('login.updatePassword')}
                                 </button>
                                 <button
                                     type="button"
                                     className="ghost-button"
                                     onClick={handleCancelRecovery}
                                 >
-                                    Cancelar
+                                    {t('login.cancel')}
                                 </button>
                             </div>
                             {recoveryMessage && <p className="recovery-message">{recoveryMessage}</p>}
@@ -242,7 +244,7 @@ const Login = () => {
                             <span className="loader"></span>
                         ) : (
                             <>
-                                <span>Iniciar Sesión</span>
+                                <span>{t('login.signIn')}</span>
                                 <LogIn size={20} />
                             </>
                         )}
@@ -250,7 +252,7 @@ const Login = () => {
                 </form>
 
                 <div className="login-footer">
-                    &copy; 2026 RM Parking. Todos los derechos reservados.
+                    &copy; 2026 RM Parking. {t('login.rightsReserved')}
                 </div>
             </div>
         </div>

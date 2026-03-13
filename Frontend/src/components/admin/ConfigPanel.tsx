@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
+import { Link } from 'react-router-dom';
 import {
     AlertCircle,
     Building2,
@@ -16,6 +17,7 @@ import configService, {
     type RespuestaConfiguracion,
     type TarifaConfigurada,
 } from '../../services/config.service';
+import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 
 interface MensajeEstado {
     texto: string;
@@ -192,6 +194,8 @@ const ConfigPanel = () => {
         apertura: '06:00',
         cierre: '22:00',
     });
+
+    useAutoDismiss(Boolean(mensaje.texto), () => setMensaje({ texto: '', tipo: '' }), 5000);
 
     const prepararEstadoInicial = useCallback((respuesta: RespuestaConfiguracion) => {
         const capacidades = extraerLista<CapacidadTipoFormulario>(respuesta.configuracion.capacidadPorTipo) ?? configuracionVacia.capacidadPorTipo;
@@ -623,6 +627,36 @@ const ConfigPanel = () => {
                     Administra tarifas, capacidades, políticas y sedes desde un único módulo centralizado. Los cambios se aplican en caliente para todos los usuarios autorizados.
                 </p>
             </header>
+
+            <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-slate-900">Permisos por perfil</p>
+                    <p className="text-xs text-slate-500">
+                        Configura qué pantallas puede visualizar cada rol y usuario.
+                    </p>
+                </div>
+                <Link
+                    to="/settings/permissions-profiles"
+                    className="btn-primary w-auto px-4 py-2 text-sm"
+                >
+                    Gestionar permisos
+                </Link>
+            </div>
+
+            <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-slate-900">Auditoría</p>
+                    <p className="text-xs text-slate-500">
+                        Consulta eventos críticos, accesos y cambios sensibles del sistema.
+                    </p>
+                </div>
+                <Link
+                    to="/admin/auditoria"
+                    className="btn-outline !w-auto px-4 py-2 text-sm"
+                >
+                    Ver auditoría
+                </Link>
+            </div>
 
             {mensaje.texto && (
                 <div

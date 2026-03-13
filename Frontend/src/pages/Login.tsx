@@ -4,6 +4,7 @@ import { useAuth } from '../context/useAuth';
 import authService from '../services/auth.service';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
+import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import '../features/auth/login.css';
 
 type AuthErrorResponse = {
@@ -37,6 +38,9 @@ const Login = () => {
     const [isConfirmingRecovery, setIsConfirmingRecovery] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+
+    useAutoDismiss(Boolean(error), () => setError(''), 5000);
+    useAutoDismiss(Boolean(recoveryMessage), () => setRecoveryMessage(''), 5000);
 
     /**
      * ES: Maneja el inicio de sesión tradicional.

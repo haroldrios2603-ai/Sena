@@ -5,6 +5,7 @@ export interface User {
   email: string;
   fullName: string;
   role: Role;
+  permissions?: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

@@ -3,9 +3,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use((req: Request & { _auditStartMs?: number }, _res: Response, next: NextFunction) => {
+    req._auditStartMs = Date.now();
+    next();
+  });
 
   // Habilitar validación global de DTOs
   app.useGlobalPipes(

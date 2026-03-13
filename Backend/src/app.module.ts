@@ -8,6 +8,8 @@ import { ParkingModule } from './parking/parking.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { SettingsModule } from './settings/settings.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { SettingsModule } from './settings/settings.module';
     UsersModule,
     ClientsModule,
     SettingsModule,
+    PermissionsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

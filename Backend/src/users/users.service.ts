@@ -94,6 +94,14 @@ export class UsersService {
     return this.sanitizeUser(user);
   }
 
+  async findById(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    return this.sanitizeUser(user);
+  }
+
   /**
    * Confirma que el usuario existe antes de actualizarlo.
    */

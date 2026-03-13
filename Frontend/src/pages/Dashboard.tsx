@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { isAxiosError } from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import api from '../api';
 import {
@@ -20,6 +21,8 @@ import {
 import UserManagementPanel from '../components/admin/UserManagementPanel';
 import ClientManagementPanel from '../components/admin/ClientManagementPanel';
 import ConfigPanel from '../components/admin/ConfigPanel';
+import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
+import { useAutoDismiss } from '../hooks/useAutoDismiss';
 
 type VehicleType = 'CAR' | 'MOTORCYCLE';
 
@@ -84,6 +87,16 @@ type ApiErrorResponse = {
 
 type DashboardView = 'operations' | 'config' | 'users' | 'clients';
 
+type MenuItem = {
+    key: string;
+    view: DashboardView;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    accent: string;
+    route?: string;
+};
+
 const getErrorMessage = (error: unknown, fallback: string) => {
     if (isAxiosError<ApiErrorResponse>(error)) {
         return error.response?.data?.message ?? fallback;
@@ -103,6 +116,7 @@ const currencyFormatter = new Intl.NumberFormat('es-CO', {
  */
 const Dashboard = () => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [plateEntry, setPlateEntry] = useState('');
     const [plateExit, setPlateExit] = useState('');
     const [vehicleTypeEntry, setVehicleTypeEntry] = useState<VehicleType>('CAR');
@@ -120,6 +134,8 @@ const Dashboard = () => {
 
     const clearMessage = useCallback(() => setMessage({ text: '', type: '' }), []);
 
+    useAutoDismiss(Boolean(message.text), clearMessage, 5000);
+
     const cargarResumenTickets = useCallback(async () => {
         try {
             const response = await api.get<ResumenTicketsResponse>('/parking/tickets/resumen');
@@ -134,18 +150,45 @@ const Dashboard = () => {
         }
     }, []);
 
-    const role = user?.role;
-    const canManageUsers = role === 'SUPER_ADMIN';
-    const canManageSettings = canManageUsers;
-    const canManageClients = role === 'SUPER_ADMIN' || role === 'ADMIN_PARKING';
+    const canViewOperations = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.OPERATIONS,
+    );
+    const canManageSettings = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.SETTINGS,
+    );
+    const canManageUsers = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.USERS,
+    );
+    const canManageClients = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.CLIENTS,
+    );
+    const canManagePermissionsProfiles = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.PERMISSIONS_PROFILES,
+    );
+    const canViewAuditLogs = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.AUDIT_LOGS,
+    );
 
     const availableViews = useMemo(() => {
-        const views: DashboardView[] = ['operations'];
+        const views: DashboardView[] = [];
+        if (canViewOperations) views.push('operations');
         if (canManageSettings) views.push('config');
         if (canManageUsers) views.push('users');
         if (canManageClients) views.push('clients');
         return views;
-    }, [canManageClients, canManageSettings, canManageUsers]);
+    }, [canManageClients, canManageSettings, canManageUsers, canViewOperations]);
 
     useEffect(() => {
         if (!availableViews.includes(activeView)) {
@@ -192,11 +235,35 @@ const Dashboard = () => {
         },
     };
 
-    const menuItems = availableViews.map((view) => ({
+    const menuItems: MenuItem[] = availableViews.map((view) => ({
         key: view,
         view,
         ...viewMeta[view],
     }));
+
+    if (canManagePermissionsProfiles) {
+        menuItems.push({
+            key: 'permissions-profiles',
+            view: 'config',
+            label: 'Permisos por perfil',
+            description: 'Control de visualización por rol y usuario',
+            icon: <Shield size={16} />,
+            accent: 'text-indigo-700',
+            route: '/settings/permissions-profiles',
+        });
+    }
+
+    if (canViewAuditLogs) {
+        menuItems.push({
+            key: 'audit-logs',
+            view: 'config',
+            label: 'Auditoría',
+            description: 'Trazabilidad detallada de acciones del sistema',
+            icon: <Shield size={16} />,
+            accent: 'text-rose-700',
+            route: '/admin/auditoria',
+        });
+    }
 
     useEffect(() => {
         const fetchParkings = async () => {
@@ -371,7 +438,11 @@ const Dashboard = () => {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setActiveView(item.view);
+                                            if (item.route) {
+                                                navigate(item.route);
+                                            } else {
+                                                setActiveView(item.view);
+                                            }
                                             setSidebarOpen(false);
                                         }}
                                         className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
@@ -439,7 +510,7 @@ const Dashboard = () => {
                 </header>
 
                 <main className="dashboard-shell flex-1 space-y-10">
-                {activeView === 'operations' && (
+                {activeView === 'operations' && canViewOperations && (
                     <>
                         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                             <article className="panel-card">
@@ -625,14 +696,14 @@ const Dashboard = () => {
                                         type="text"
                                         value={filtroBusqueda}
                                         onChange={(e) => setFiltroBusqueda(e.target.value.toUpperCase())}
-                                        className="input-field uppercase tracking-widest"
+                                        className="input-field uppercase tracking-widest md:max-w-xs"
                                         placeholder="Filtra por placa"
                                     />
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
                                             onClick={aplicarFiltroPlaca}
-                                            className="btn-primary whitespace-nowrap"
+                                            className="btn-primary whitespace-nowrap w-auto rounded-2xl px-4 py-2 text-sm"
                                         >
                                             Buscar
                                         </button>
@@ -797,6 +868,15 @@ const Dashboard = () => {
 
                 {activeView === 'clients' && canManageClients && (
                     <ClientManagementPanel parkings={parkings} loadingParkings={loadingParkings} />
+                )}
+
+                {!availableViews.length && (
+                    <section className="panel-card">
+                        <h2 className="panel-card__title">Sin módulos habilitados</h2>
+                        <p className="mt-2 text-sm text-slate-500">
+                            Tu perfil no tiene permisos de visualización configurados. Contacta al administrador.
+                        </p>
+                    </section>
                 )}
             </main>
         </div>

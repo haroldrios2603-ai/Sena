@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power } from 'lucide-react';
 import usersService, { type UserFilters, type CreateUserPayload } from '../../services/users.service';
 import type { Role, User } from '../../context/types';
+import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 
 interface MessageState {
     text: string;
@@ -52,6 +53,8 @@ const UserManagementPanel = () => {
         role: 'OPERATOR',
     });
     const isMounted = useRef(true);
+
+    useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
     useEffect(() => {
         // ES: React 18 re-monta componentes en desarrollo; aseguramos que el flag esté alineado con el ciclo actual.

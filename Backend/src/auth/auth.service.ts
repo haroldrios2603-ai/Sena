@@ -12,6 +12,7 @@ import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PasswordRequestDto } from './dto/password-request.dto';
 import { PasswordResetDto } from './dto/password-reset.dto';
+import { PermissionsService } from '../permissions/permissions.service';
 
 /**
  * Servicio responsable de la lógica de Autenticación.
@@ -20,7 +21,7 @@ import { PasswordResetDto } from './dto/password-reset.dto';
 @Injectable()
 export class AuthService {
   validateToken(token: string) {
-    throw new Error('Method not implemented.');
+    return this.jwtService.verify(token);
   }
   /**
    * Minutos de vigencia del código de recuperación.
@@ -30,6 +31,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   /**
@@ -115,7 +117,19 @@ export class AuthService {
         updatedAt: true,
       },
     });
-    return user;
+
+    if (!user) {
+      return null;
+    }
+
+    const effective = await this.permissionsService.getEffectivePermissionsForUser(
+      userId,
+    );
+
+    return {
+      ...user,
+      permissions: effective.allowedScreenKeys,
+    };
   }
 
   /**

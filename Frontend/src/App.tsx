@@ -1,8 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PermissionRoute from './components/PermissionRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import PermissionsProfiles from './pages/PermissionsProfiles';
+import AuditLogs from './pages/AuditLogs';
+import { SCREEN_KEYS } from './permissions';
 import './App.css';
 
 /**
@@ -20,6 +24,14 @@ function App() {
           {/* Rutas Protegidas */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
+
+          <Route element={<PermissionRoute requiredScreen={SCREEN_KEYS.PERMISSIONS_PROFILES} />}>
+            <Route path="/settings/permissions-profiles" element={<PermissionsProfiles />} />
+          </Route>
+
+          <Route element={<PermissionRoute requiredScreen={SCREEN_KEYS.AUDIT_LOGS} />}>
+            <Route path="/admin/auditoria" element={<AuditLogs />} />
           </Route>
 
           {/* Redirección por defecto */}

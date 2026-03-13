@@ -6,6 +6,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { compare } from 'bcrypt';
 import { Role } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
+import { PermissionsService } from '../permissions/permissions.service';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -31,6 +32,13 @@ describe('AuthService', () => {
 
   const mockJwtService = {
     sign: jest.fn(),
+    verify: jest.fn(),
+  };
+
+  const mockPermissionsService = {
+    getEffectivePermissionsForUser: jest.fn().mockResolvedValue({
+      allowedScreenKeys: ['operations-dashboard'],
+    }),
   };
 
   beforeEach(async () => {
@@ -44,6 +52,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: mockJwtService,
+        },
+        {
+          provide: PermissionsService,
+          useValue: mockPermissionsService,
         },
       ],
     }).compile();

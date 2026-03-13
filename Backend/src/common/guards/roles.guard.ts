@@ -5,35 +5,81 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@prisma/client';
+import { AuditOperation, AuditResult, Role } from '@prisma/client';
 import { Request } from 'express';
+import { SCREEN_PERMISSION_KEY } from '../decorators/screen-permission.decorator';
+import { PermissionsService } from '../../permissions/permissions.service';
+import { AuditService } from '../../audit/audit.service';
 
 /**
  * Guardián que valida si el usuario autenticado posee alguno de los roles requeridos.
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly permissionsService: PermissionsService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>('roles', [
       context.getHandler(),
       context.getClass(),
     ]);
+    const requiredScreenPermission = this.reflector.getAllAndOverride<string>(
+      SCREEN_PERMISSION_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
-    // ES: Si el handler no definió roles, se permite el acceso.
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
-    }
-
-    type RequestWithUser = Request & { user?: { role?: Role } };
+    type RequestWithUser = Request & {
+      user?: { userId?: string; role?: Role };
+    };
     const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const userId = request.user?.userId;
     const userRole = request.user?.role;
 
-    if (!userRole || !requiredRoles.includes(userRole)) {
+    if (requiredRoles?.length && (!userRole || !requiredRoles.includes(userRole))) {
+      this.auditService.log({
+        operation: AuditOperation.FORBIDDEN,
+        entity: 'authorization',
+        result: AuditResult.FAILURE,
+        errorCode: '403',
+        errorMessage: 'No tienes permisos suficientes para ejecutar esta acción.',
+        metadata: {
+          requiredRoles,
+        },
+        context: this.auditService.buildContextFromRequest(request),
+      });
       throw new ForbiddenException(
         'No tienes permisos suficientes para ejecutar esta acción.',
       );
+    }
+
+    if (requiredScreenPermission) {
+      if (!userId || !userRole) {
+        throw new ForbiddenException('Usuario no autenticado para validar permisos.');
+      }
+
+      const canView = await this.permissionsService.canUserViewScreen(
+        userId,
+        userRole,
+        requiredScreenPermission,
+      );
+
+      if (!canView) {
+        this.auditService.log({
+          operation: AuditOperation.FORBIDDEN,
+          entity: requiredScreenPermission,
+          result: AuditResult.FAILURE,
+          errorCode: '403',
+          errorMessage: 'No tienes permisos para visualizar este módulo.',
+          context: this.auditService.buildContextFromRequest(request),
+        });
+        throw new ForbiddenException(
+          'No tienes permisos para visualizar este módulo.',
+        );
+      }
     }
 
     return true;

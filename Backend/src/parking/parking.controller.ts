@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Patch,
+  Request,
 } from '@nestjs/common';
 import { ParkingService } from './parking.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -16,7 +17,9 @@ import { UpdateParkingDto } from './dto/update-parking.dto';
 import { UpdateParkingStatusDto } from './dto/update-parking-status.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { AuditOperation, AuditResult, Role } from '@prisma/client';
+import { RequireScreenPermission } from '../common/decorators/screen-permission.decorator';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * Controlador encargado de gestionar las operaciones de parqueadero.
@@ -24,8 +27,13 @@ import { Role } from '@prisma/client';
  */
 @Controller('parking')
 @UseGuards(AuthGuard('jwt'))
+@UseGuards(RolesGuard)
+@RequireScreenPermission('operations-dashboard')
 export class ParkingController {
-  constructor(private readonly parkingService: ParkingService) {}
+  constructor(
+    private readonly parkingService: ParkingService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Crea una nueva sede operativa. Solo administradores pueden gestionarla.
@@ -33,8 +41,17 @@ export class ParkingController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
-  async createParking(@Body() data: CreateParkingDto) {
-    return this.parkingService.createParking(data);
+  async createParking(@Body() data: CreateParkingDto, @Request() req: any) {
+    const created = await this.parkingService.createParking(data);
+    this.auditService.log({
+      operation: AuditOperation.CREATE,
+      entity: 'parking',
+      recordId: created.id,
+      newValues: created,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return created;
   }
 
   /**
@@ -43,8 +60,21 @@ export class ParkingController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
-  async updateParking(@Param('id') id: string, @Body() data: UpdateParkingDto) {
-    return this.parkingService.updateParking(id, data);
+  async updateParking(
+    @Param('id') id: string,
+    @Body() data: UpdateParkingDto,
+    @Request() req: any,
+  ) {
+    const updated = await this.parkingService.updateParking(id, data);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'parking',
+      recordId: id,
+      newValues: updated,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return updated;
   }
 
   /**
@@ -56,8 +86,18 @@ export class ParkingController {
   async updateParkingStatus(
     @Param('id') id: string,
     @Body() data: UpdateParkingStatusDto,
+    @Request() req: any,
   ) {
-    return this.parkingService.updateParkingStatus(id, data.activo);
+    const updated = await this.parkingService.updateParkingStatus(id, data.activo);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'parking_status',
+      recordId: id,
+      newValues: updated,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return updated;
   }
 
   /**
@@ -65,12 +105,21 @@ export class ParkingController {
    * @param data DTO con placa, tipo de vehículo e ID del parqueadero.
    */
   @Post('entry')
-  async registerEntry(@Body() data: EntryDto) {
-    return this.parkingService.registerEntry(
+  async registerEntry(@Body() data: EntryDto, @Request() req: any) {
+    const result = await this.parkingService.registerEntry(
       data.placa,
       data.vehicleType,
       data.parkingId,
     );
+    this.auditService.log({
+      operation: AuditOperation.CREATE,
+      entity: 'parking_entry',
+      recordId: result?.id,
+      newValues: { placa: data.placa, parkingId: data.parkingId },
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 
   /**
@@ -78,16 +127,32 @@ export class ParkingController {
    * @param data DTO con la placa del vehículo.
    */
   @Post('exit')
-  async registerExit(@Body() data: ExitDto) {
-    return this.parkingService.registerExit(data.placa);
+  async registerExit(@Body() data: ExitDto, @Request() req: any) {
+    const result = await this.parkingService.registerExit(data.placa);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'parking_exit',
+      newValues: { placa: data.placa, exitId: result?.exit?.id },
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 
   /**
    * Obtiene todos los parqueaderos registrados en el sistema.
    */
   @Get()
-  async getAllParkings() {
-    return this.parkingService.findAll();
+  async getAllParkings(@Request() req: any) {
+    const items = await this.parkingService.findAll();
+    this.auditService.log({
+      operation: AuditOperation.VIEW,
+      entity: 'parking',
+      result: AuditResult.SUCCESS,
+      metadata: { count: items.length },
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return items;
   }
 
   /**
@@ -98,8 +163,19 @@ export class ParkingController {
    * Retorna el resumen de vehículos con ingreso activo y egresos registrados.
    */
   @Get('tickets/resumen')
-  async obtenerResumenTickets() {
-    return this.parkingService.obtenerResumenTickets();
+  async obtenerResumenTickets(@Request() req: any) {
+    const result = await this.parkingService.obtenerResumenTickets();
+    this.auditService.log({
+      operation: AuditOperation.VIEW,
+      entity: 'parking_tickets_summary',
+      result: AuditResult.SUCCESS,
+      metadata: {
+        activos: result?.activos?.length ?? 0,
+        cerrados: result?.cerrados?.length ?? 0,
+      },
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 
   @Get(':id')

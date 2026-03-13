@@ -12,6 +12,7 @@ import clientsService, {
     type AlertRecord,
     type ContractRecord,
 } from '../../services/clients.service';
+import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 
 interface ClientManagementPanelProps {
     parkings: Array<{ id: string; name: string }>;
@@ -84,6 +85,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         paymentDate: period.today,
         monthlyFee: '',
     });
+
+    useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
     const loadContracts = useCallback(async () => {
         setLoadingContracts(true);

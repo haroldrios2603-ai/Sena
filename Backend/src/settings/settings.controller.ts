@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Put, Request, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import {
   UpdateGeneralConfigDto,
@@ -7,7 +7,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { AuditOperation, AuditResult, Role } from '@prisma/client';
+import { RequireScreenPermission } from '../common/decorators/screen-permission.decorator';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * Expone los endpoints administrativos para configurar el sistema.
@@ -15,30 +17,61 @@ import { Role } from '@prisma/client';
 @Controller('settings')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.SUPER_ADMIN)
+@RequireScreenPermission('settings-config')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Devuelve la configuración completa junto con sedes y tarifas activas.
    */
   @Get()
-  obtenerConfiguracion() {
-    return this.settingsService.obtenerConfiguracionCompleta();
+  async obtenerConfiguracion(@Request() req: any) {
+    const result = await this.settingsService.obtenerConfiguracionCompleta();
+    this.auditService.log({
+      operation: AuditOperation.VIEW,
+      entity: 'settings',
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 
   /**
    * Actualiza parámetros generales como capacidades, horarios o políticas.
    */
   @Put('general')
-  actualizarGeneral(@Body() dto: UpdateGeneralConfigDto) {
-    return this.settingsService.actualizarConfiguracion(dto);
+  async actualizarGeneral(@Body() dto: UpdateGeneralConfigDto, @Request() req: any) {
+    const before = await this.settingsService.obtenerConfiguracionCompleta();
+    const result = await this.settingsService.actualizarConfiguracion(dto);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'settings_general',
+      previousValues: before.configuracion,
+      newValues: result,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 
   /**
    * Sincroniza las tarifas por tipo de vehículo.
    */
   @Put('tarifas')
-  actualizarTarifas(@Body() dto: UpdateTarifasDto) {
-    return this.settingsService.actualizarTarifas(dto);
+  async actualizarTarifas(@Body() dto: UpdateTarifasDto, @Request() req: any) {
+    const before = await this.settingsService.obtenerConfiguracionCompleta();
+    const result = await this.settingsService.actualizarTarifas(dto);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'settings_tariffs',
+      previousValues: before.tarifas,
+      newValues: result,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 }

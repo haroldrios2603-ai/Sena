@@ -20,6 +20,24 @@ enum Role {
   CLIENT
 }
 
+enum AuditOperation {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  FORBIDDEN
+  PASSWORD_CHANGE
+  EXPORT
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}
+
 // User model for authentication
 model User {
    id           String    @id @default(uuid())
@@ -38,10 +56,59 @@ model User {
    payments     Payment[]
    reports      Report[]
   resetTokens  PasswordResetToken[]
+  screenPermissions UserScreenPermission[]
+  auditLogs    AuditLog[]
 
   // Índices para mejor rendimiento
    @@index([email])
    @@index([role])
+}
+
+// Pantallas/módulos configurables para permisos de visualización
+model AppScreen {
+  key         String   @id
+  name        String
+  description String?
+  route       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RoleScreenPermission[]
+  userPermissions UserScreenPermission[]
+}
+
+// Permisos de visualización por rol
+model RoleScreenPermission {
+  id        String   @id @default(uuid())
+  role      Role
+  screenKey String
+  canView   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  screen AppScreen @relation(fields: [screenKey], references: [key], onDelete: Cascade)
+
+  @@unique([role, screenKey])
+  @@index([role])
+  @@index([screenKey])
+}
+
+// Permisos de visualización explícitos por usuario
+model UserScreenPermission {
+  id        String   @id @default(uuid())
+  userId    String
+  screenKey String
+  canView   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screen AppScreen @relation(fields: [screenKey], references: [key], onDelete: Cascade)
+
+  @@unique([userId, screenKey])
+  @@index([userId])
+  @@index([screenKey])
 }
 
 // Parking Lot configuration
@@ -229,4 +296,36 @@ model ContractAlert {
   @@index([contractId])
   @@index([status])
   @@unique([contractId, alertType])
+}
+
+// Registro inmutable de auditoría para trazabilidad operativa y de seguridad.
+model AuditLog {
+  id               String         @id @default(uuid())
+  timestamp        DateTime       @default(now())
+  userId           String?
+  userEmail        String?
+  ipAddress        String?
+  userAgent        String?
+  operation        AuditOperation
+  entity           String
+  recordId         String?
+  previousValues   Json?
+  newValues        Json?
+  result           AuditResult
+  errorCode        String?
+  errorMessage     String?
+  endpoint         String?
+  method           String?
+  requestParams    Json?
+  responseTimeMs   Int?
+  metadata         Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp])
+  @@index([userId])
+  @@index([operation])
+  @@index([entity])
+  @@index([recordId])
+  @@index([result])
 }

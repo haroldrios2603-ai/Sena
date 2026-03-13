@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1773410537939" clover="3.2.0">
+  <project timestamp="1773410537940" name="All files">
+    <metrics statements="131" coveredstatements="131" conditionals="112" coveredconditionals="89" methods="27" coveredmethods="27" elements="270" coveredelements="247" complexity="0" loc="131" ncloc="131" packages="2" files="5" classes="5"/>
+    <package name="audit">
+      <metrics statements="107" coveredstatements="107" conditionals="104" coveredconditionals="83" methods="24" coveredmethods="24"/>
+      <file name="audit.controller.ts" path="C:\Sena\Backend\src\audit\audit.controller.ts">
+        <metrics statements="25" coveredstatements="25" conditionals="22" coveredconditionals="15" methods="4" coveredmethods="4"/>
+        <line num="1" count="2" type="stmt"/>
+        <line num="11" count="2" type="stmt"/>
+        <line num="12" count="2" type="stmt"/>
+        <line num="13" count="2" type="stmt"/>
+        <line num="14" count="2" type="stmt"/>
+        <line num="15" count="2" type="stmt"/>
+        <line num="16" count="2" type="stmt"/>
+        <line num="17" count="2" type="stmt"/>
+        <line num="18" count="2" type="stmt"/>
+        <line num="19" count="2" type="stmt"/>
+        <line num="25" count="2" type="stmt"/>
+        <line num="26" count="4" type="cond" truecount="3" falsecount="1"/>
+        <line num="29" count="2" type="cond" truecount="3" falsecount="1"/>
+        <line num="30" count="1" type="stmt"/>
+        <line num="34" count="2" type="stmt"/>
+        <line num="35" count="2" type="stmt"/>
+        <line num="36" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="37" count="1" type="stmt"/>
+        <line num="39" count="1" type="stmt"/>
+        <line num="43" count="2" type="stmt"/>
+        <line num="48" count="1" type="stmt"/>
+        <line num="50" count="1" type="stmt"/>
+        <line num="64" count="1" type="stmt"/>
+        <line num="65" count="1" type="stmt"/>
+        <line num="69" count="1" type="stmt"/>
+      </file>
+      <file name="audit.module.ts" path="C:\Sena\Backend\src\audit\audit.module.ts">
+        <metrics statements="6" coveredstatements="6" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="2" count="1" type="stmt"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="14" count="1" type="stmt"/>
+      </file>
+      <file name="audit.service.ts" path="C:\Sena\Backend\src\audit\audit.service.ts">
+        <metrics statements="76" coveredstatements="76" conditionals="82" coveredconditionals="68" methods="20" coveredmethods="20"/>
+        <line num="1" count="3" type="stmt"/>
+        <line num="7" count="3" type="stmt"/>
+        <line num="8" count="3" type="stmt"/>
+        <line num="14" count="3" type="stmt"/>
+        <line num="15" count="17" type="stmt"/>
+        <line num="18" count="17" type="cond" truecount="3" falsecount="1"/>
+        <line num="21" count="2" type="stmt"/>
+        <line num="25" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="26" count="1" type="stmt"/>
+        <line num="31" count="3" type="stmt"/>
+        <line num="32" count="3" type="stmt"/>
+        <line num="33" count="3" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="61" count="2" type="stmt"/>
+        <line num="62" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="63" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="64" count="2" type="stmt"/>
+        <line num="66" count="2" type="stmt"/>
+        <line num="76" count="2" type="stmt"/>
+        <line num="86" count="1" type="stmt"/>
+        <line num="90" count="2" type="stmt"/>
+        <line num="91" count="2" type="cond" truecount="1" falsecount="1"/>
+        <line num="92" count="2" type="cond" truecount="1" falsecount="1"/>
+        <line num="94" count="2" type="stmt"/>
+        <line num="100" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="101" count="1" type="stmt"/>
+        <line num="108" count="1" type="stmt"/>
+        <line num="125" count="1" type="stmt"/>
+        <line num="126" count="1" type="stmt"/>
+        <line num="142" count="14" type="stmt"/>
+        <line num="146" count="1" type="stmt"/>
+        <line num="166" count="2" type="stmt"/>
+        <line num="167" count="2" type="stmt"/>
+        <line num="169" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="171" count="2" type="stmt"/>
+        <line num="188" count="19" type="cond" truecount="2" falsecount="0"/>
+        <line num="189" count="10" type="stmt"/>
+        <line num="192" count="9" type="stmt"/>
+        <line num="207" count="9" type="stmt"/>
+        <line num="208" count="20" type="cond" truecount="2" falsecount="0"/>
+        <line num="209" count="2" type="stmt"/>
+        <line num="212" count="19" type="cond" truecount="4" falsecount="0"/>
+        <line num="213" count="11" type="stmt"/>
+        <line num="214" count="11" type="stmt"/>
+        <line num="217" count="14" type="stmt"/>
+        <line num="218" count="123" type="stmt"/>
+        <line num="219" count="14" type="cond" truecount="2" falsecount="0"/>
+        <line num="221" count="11" type="stmt"/>
+        <line num="224" count="8" type="stmt"/>
+        <line num="227" count="9" type="stmt"/>
+        <line num="231" count="4" type="stmt"/>
+        <line num="233" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="234" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="235" count="1" type="stmt"/>
+        <line num="236" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="237" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="238" count="1" type="stmt"/>
+        <line num="239" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="240" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="242" count="4" type="cond" truecount="4" falsecount="0"/>
+        <line num="243" count="1" type="stmt"/>
+        <line num="249" count="4" type="stmt"/>
+        <line num="253" count="14" type="stmt"/>
+        <line num="254" count="14" type="stmt"/>
+        <line num="258" count="2" type="cond" truecount="1" falsecount="1"/>
+        <line num="259" count="2" type="cond" truecount="1" falsecount="1"/>
+        <line num="261" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="262" count="1" type="stmt"/>
+        <line num="265" count="1" type="stmt"/>
+        <line num="266" count="1" type="stmt"/>
+        <line num="271" count="4" type="stmt"/>
+        <line num="272" count="4" type="stmt"/>
+        <line num="273" count="4" type="stmt"/>
+        <line num="277" count="3" type="cond" truecount="2" falsecount="0"/>
+        <line num="278" count="1" type="stmt"/>
+        <line num="291" count="2" type="stmt"/>
+      </file>
+    </package>
+    <package name="audit.dto">
+      <metrics statements="24" coveredstatements="24" conditionals="8" coveredconditionals="6" methods="3" coveredmethods="3"/>
+      <file name="export-audit-logs.dto.ts" path="C:\Sena\Backend\src\audit\dto\export-audit-logs.dto.ts">
+        <metrics statements="8" coveredstatements="8" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="1" count="3" type="stmt"/>
+        <line num="2" count="3" type="stmt"/>
+        <line num="3" count="3" type="stmt"/>
+        <line num="4" count="3" type="stmt"/>
+        <line num="6" count="3" type="stmt"/>
+        <line num="9" count="3" type="stmt"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="16" count="3" type="stmt"/>
+      </file>
+      <file name="query-audit-logs.dto.ts" path="C:\Sena\Backend\src\audit\dto\query-audit-logs.dto.ts">
+        <metrics statements="16" coveredstatements="16" conditionals="8" coveredconditionals="6" methods="2" coveredmethods="2"/>
+        <line num="1" count="3" type="stmt"/>
+        <line num="10" count="3" type="stmt"/>
+        <line num="11" count="3" type="stmt"/>
+        <line num="13" count="3" type="stmt"/>
+        <line num="16" count="3" type="stmt"/>
+        <line num="20" count="3" type="stmt"/>
+        <line num="24" count="3" type="stmt"/>
+        <line num="28" count="3" type="stmt"/>
+        <line num="32" count="3" type="cond" truecount="3" falsecount="1"/>
+        <line num="36" count="3" type="stmt"/>
+        <line num="40" count="3" type="stmt"/>
+        <line num="44" count="3" type="cond" truecount="3" falsecount="1"/>
+        <line num="47" count="2" type="stmt"/>
+        <line num="50" count="4" type="stmt"/>
+        <line num="53" count="2" type="stmt"/>
+        <line num="57" count="4" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>

@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -16,7 +17,9 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { AuditOperation, AuditResult, Role } from '@prisma/client';
+import { RequireScreenPermission } from '../common/decorators/screen-permission.decorator';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * Controlador para tareas administrativas de usuarios.
@@ -24,44 +27,92 @@ import { Role } from '@prisma/client';
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.SUPER_ADMIN)
+@RequireScreenPermission('users-management')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Crea un usuario operativo con el rol deseado.
    */
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.createUser(createUserDto);
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @Request() req: any,
+  ) {
+    const created = await this.usersService.createUser(createUserDto);
+    this.auditService.log({
+      operation: AuditOperation.CREATE,
+      entity: 'users',
+      recordId: created.id,
+      newValues: created,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return created;
   }
 
   /**
    * Lista usuarios con filtros opcionales.
    */
   @Get()
-  findAll(@Query() filters: ListUsersDto) {
-    return this.usersService.findAll(filters);
+  async findAll(@Query() filters: ListUsersDto, @Request() req: any) {
+    const users = await this.usersService.findAll(filters);
+    this.auditService.log({
+      operation: AuditOperation.VIEW,
+      entity: 'users',
+      result: AuditResult.SUCCESS,
+      metadata: { count: users.length },
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return users;
   }
 
   /**
    * Cambia el rol del usuario identificado.
    */
   @Patch(':id/role')
-  updateRole(
+  async updateRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
+    @Request() req: any,
   ) {
-    return this.usersService.updateRole(id, updateUserRoleDto);
+    const previous = await this.usersService.findById(id);
+    const updated = await this.usersService.updateRole(id, updateUserRoleDto);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'users',
+      recordId: id,
+      previousValues: previous,
+      newValues: updated,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return updated;
   }
 
   /**
    * Activa o desactiva el usuario identificado.
    */
   @Patch(':id/status')
-  updateStatus(
+  async updateStatus(
     @Param('id') id: string,
     @Body() updateUserStatusDto: UpdateUserStatusDto,
+    @Request() req: any,
   ) {
-    return this.usersService.updateStatus(id, updateUserStatusDto);
+    const previous = await this.usersService.findById(id);
+    const updated = await this.usersService.updateStatus(id, updateUserStatusDto);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'users',
+      recordId: id,
+      previousValues: previous,
+      newValues: updated,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return updated;
   }
 }

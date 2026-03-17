@@ -124,6 +124,79 @@ describe('UsersService', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
+  it('should update and sanitize user data on updateUser', async () => {
+    prismaMock.user.findUnique
+      .mockResolvedValueOnce({
+        id: 'user-1',
+        email: 'operator@rmparking.com',
+        fullName: 'Operador Base',
+        contactPhone: '+57 300 100 1000',
+        role: Role.OPERATOR,
+        isActive: true,
+        passwordHash: 'hashed-original',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .mockResolvedValueOnce(null);
+
+    prismaMock.user.update.mockResolvedValue({
+      id: 'user-1',
+      email: 'operator.editado@rmparking.com',
+      fullName: 'Operador Editado',
+      contactPhone: '+57 300 222 2222',
+      role: Role.ADMIN_PARKING,
+      isActive: false,
+      passwordHash: 'hashed-original',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.updateUser('user-1', {
+      fullName: 'Operador Editado',
+      email: 'operator.editado@rmparking.com',
+      contactPhone: '+57 300 222 2222',
+      role: Role.ADMIN_PARKING,
+      isActive: false,
+    });
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user-1' },
+      }),
+    );
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(result.fullName).toBe('Operador Editado');
+    expect(result.email).toBe('operator.editado@rmparking.com');
+    expect(result.role).toBe(Role.ADMIN_PARKING);
+    expect(result.isActive).toBe(false);
+  });
+
+  it('should reject duplicate email on updateUser', async () => {
+    prismaMock.user.findUnique
+      .mockResolvedValueOnce({
+        id: 'user-1',
+        email: 'operator@rmparking.com',
+        fullName: 'Operador Base',
+      })
+      .mockResolvedValueOnce({
+        id: 'user-2',
+        email: 'operator.editado@rmparking.com',
+        fullName: 'Otro Usuario',
+      });
+
+    await expect(
+      service.updateUser('user-1', { email: 'operator.editado@rmparking.com' }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('should throw NotFoundException on updateUser when user does not exist', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.updateUser('missing-id', { fullName: 'Sin usuario' }),
+    ).rejects.toThrow(NotFoundException);
+  });
+
   it('should keep bcrypt mock available', () => {
     expect(compare).toBeDefined();
   });

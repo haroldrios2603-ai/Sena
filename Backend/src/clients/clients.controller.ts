@@ -12,6 +12,7 @@ import {
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { RenewContractDto } from './dto/renew-contract.dto';
+import { UpdateContractDto } from './dto/update-contract.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -105,5 +106,28 @@ export class ClientsController {
       });
       return result;
     });
+  }
+
+  /**
+   * Edita datos de cliente y contrato mensual existente.
+   */
+  @Patch('contracts/:id')
+  async updateContract(
+    @Param('id') id: string,
+    @Body() updateContractDto: UpdateContractDto,
+    @Request() req: any,
+  ) {
+    const previous = await this.clientsService.findContractById(id);
+    const updated = await this.clientsService.updateContract(id, updateContractDto);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'clients_contracts',
+      recordId: id,
+      previousValues: previous,
+      newValues: updated,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return updated;
   }
 }

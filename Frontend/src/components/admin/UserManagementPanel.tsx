@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power } from 'lucide-react';
-import usersService, { type UserFilters, type CreateUserPayload } from '../../services/users.service';
+import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power, Pencil } from 'lucide-react';
+import usersService, {
+    type UserFilters,
+    type CreateUserPayload,
+    type UpdateUserPayload,
+} from '../../services/users.service';
 import type { Role, User } from '../../context/types';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 
@@ -87,6 +91,15 @@ const UserManagementPanel = () => {
         password: '',
         role: 'OPERATOR',
     });
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [editForm, setEditForm] = useState<UpdateUserPayload>({
+        fullName: '',
+        email: '',
+        contactPhone: '',
+        role: 'OPERATOR',
+        isActive: true,
+    });
     const isMounted = useRef(true);
 
     useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
@@ -148,6 +161,21 @@ const UserManagementPanel = () => {
     useEffect(() => {
         loadUsers();
     }, [loadUsers]);
+
+    useEffect(() => {
+        if (!editingUser) {
+            return;
+        }
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !savingEdit) {
+                setEditingUser(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [editingUser, savingEdit]);
 
     const isPasswordValid = useMemo(() => PASSWORD_POLICY.test(formData.password), [formData.password]);
     const isFormReady = useMemo(() => {
@@ -263,6 +291,55 @@ const UserManagementPanel = () => {
         setContactPhoneFilter('');
         setRoleFilter('ALL');
         setStatusFilter('ALL');
+    };
+
+    const openEditModal = (user: User) => {
+        setEditingUser(user);
+        setEditForm({
+            fullName: user.fullName,
+            email: user.email,
+            contactPhone: user.contactPhone ?? '',
+            role: user.role,
+            isActive: user.isActive,
+        });
+    };
+
+    const closeEditModal = () => {
+        if (savingEdit) {
+            return;
+        }
+        setEditingUser(null);
+    };
+
+    const handleSaveEdit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!editingUser || savingEdit) {
+            return;
+        }
+
+        const payload: UpdateUserPayload = {
+            fullName: (editForm.fullName ?? '').trim(),
+            email: (editForm.email ?? '').trim().toLowerCase(),
+            contactPhone: (editForm.contactPhone ?? '').trim(),
+            role: editForm.role,
+            isActive: Boolean(editForm.isActive),
+        };
+
+        setSavingEdit(true);
+        setMessage({ text: '', type: '' });
+        try {
+            await usersService.updateUser(editingUser.id, payload);
+            setMessage({ text: 'Usuario actualizado correctamente', type: 'success' });
+            setEditingUser(null);
+            await loadUsers();
+        } catch (error) {
+            setMessage({
+                text: getErrorMessage(error, 'No se pudo actualizar el usuario'),
+                type: 'error',
+            });
+        } finally {
+            setSavingEdit(false);
+        }
     };
 
     return (
@@ -473,7 +550,14 @@ const UserManagementPanel = () => {
                                         return (
                                         <tr key={user.id} className="align-middle">
                                             <td className="py-4">
-                                                <p className="font-semibold text-slate-900">{user.fullName}</p>
+                                                <button
+                                                    type="button"
+                                                    className="text-left"
+                                                    onClick={() => openEditModal(user)}
+                                                    title="Editar usuario"
+                                                >
+                                                    <p className="font-semibold text-slate-900 hover:text-indigo-700">{user.fullName}</p>
+                                                </button>
                                                 <p className="text-xs text-slate-500">{user.email}</p>
                                                 <p className="text-xs text-slate-500">{formatPhoneDisplay(user.contactPhone)}</p>
                                             </td>
@@ -512,22 +596,31 @@ const UserManagementPanel = () => {
                                                 })}
                                             </td>
                                             <td className="py-4">
-                                                <button
-                                                    type="button"
-                                                    className={`btn-suspend !w-auto px-4 text-xs ${
-                                                        user.isActive ? 'btn-suspend--danger' : 'btn-suspend--success'
-                                                    }`}
-                                                    onClick={() => handleStatusToggle(user)}
-                                                    disabled={rowLoading === user.id}
-                                                >
-                                                    {rowLoading === user.id ? (
-                                                        <Loader2 size={14} className="animate-spin" />
-                                                    ) : user.isActive ? (
-                                                        'Suspender'
-                                                    ) : (
-                                                        'Reactivar'
-                                                    )}
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        className="btn-outline !w-auto px-3 text-xs"
+                                                        onClick={() => openEditModal(user)}
+                                                    >
+                                                        <Pencil size={13} /> Editar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`btn-suspend !w-auto px-4 text-xs ${
+                                                            user.isActive ? 'btn-suspend--danger' : 'btn-suspend--success'
+                                                        }`}
+                                                        onClick={() => handleStatusToggle(user)}
+                                                        disabled={rowLoading === user.id}
+                                                    >
+                                                        {rowLoading === user.id ? (
+                                                            <Loader2 size={14} className="animate-spin" />
+                                                        ) : user.isActive ? (
+                                                            'Suspender'
+                                                        ) : (
+                                                            'Reactivar'
+                                                        )}
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -542,6 +635,110 @@ const UserManagementPanel = () => {
                     )}
                 </article>
             </div>
+
+            {editingUser && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            closeEditModal();
+                        }
+                    }}
+                >
+                    <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-900">Editar usuario</h3>
+                                <p className="text-xs text-slate-500">{editingUser.email}</p>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-outline !w-auto px-3 py-2"
+                                onClick={closeEditModal}
+                                disabled={savingEdit}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+
+                        <form className="space-y-4" onSubmit={handleSaveEdit}>
+                            <div>
+                                <label className="form-label">Nombre completo</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={editForm.fullName ?? ''}
+                                    onChange={(event) => setEditForm({ ...editForm, fullName: event.target.value })}
+                                    minLength={2}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Correo corporativo</label>
+                                <input
+                                    type="email"
+                                    className="input-field lowercase"
+                                    value={editForm.email ?? ''}
+                                    onChange={(event) => setEditForm({ ...editForm, email: event.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Teléfono</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={editForm.contactPhone ?? ''}
+                                    onChange={(event) =>
+                                        setEditForm({ ...editForm, contactPhone: formatPhoneInput(event.target.value) })
+                                    }
+                                    minLength={7}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Rol</label>
+                                <select
+                                    className="input-field"
+                                    value={editForm.role}
+                                    onChange={(event) => setEditForm({ ...editForm, role: event.target.value as Role })}
+                                    required
+                                >
+                                    {filterRoles.map((role) => (
+                                        <option key={role} value={role}>
+                                            {roleLabels[role]}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="form-label">Estado</label>
+                                <select
+                                    className="input-field"
+                                    value={editForm.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                    onChange={(event) =>
+                                        setEditForm({ ...editForm, isActive: event.target.value === 'ACTIVE' })
+                                    }
+                                    required
+                                >
+                                    <option value="ACTIVE">Activo</option>
+                                    <option value="INACTIVE">Suspendido</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" className="btn-primary" disabled={savingEdit}>
+                                {savingEdit ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 className="animate-spin" size={16} /> Guardando cambios
+                                    </span>
+                                ) : (
+                                    'Guardar cambios'
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

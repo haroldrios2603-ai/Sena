@@ -47,6 +47,7 @@ test.describe.serial('Administración > Usuarios y Clientes (API)', () => {
             data: {
                 fullName: 'QA Operador',
                 email,
+                contactPhone: '+57 300 101 0101',
                 password: 'QaUser2026@',
                 role: 'OPERATOR',
             },
@@ -78,6 +79,21 @@ test.describe.serial('Administración > Usuarios y Clientes (API)', () => {
         const enableJson = await enableRes.json();
         expect(enableJson.isActive).toBe(true);
 
+        // Actualización integral
+        const updateRes = await api.patch(`/users/${createdUser.id}`, {
+            data: {
+                fullName: 'QA Operador Editado',
+                email: `qa.user.updated.${uniqueSuffix}@rmparking.com`,
+                contactPhone: '+57 300 202 0202',
+                role: 'ADMIN_PARKING',
+                isActive: true,
+            },
+        });
+        expect(updateRes.ok()).toBeTruthy();
+        const updateJson = await updateRes.json();
+        expect(updateJson.fullName).toBe('QA Operador Editado');
+        expect(updateJson.contactPhone).toBe('+57 300 202 0202');
+
         // Listar usuarios filtrando por rol
         const listRes = await api.get('/users?role=ADMIN_PARKING');
         expect(listRes.ok()).toBeTruthy();
@@ -106,6 +122,7 @@ test.describe.serial('Administración > Usuarios y Clientes (API)', () => {
             data: {
                 fullName: 'Cliente QA Mensual',
                 email: clientEmail,
+                contactPhone: '+57 300 303 0303',
                 parkingId,
                 startDate,
                 endDate,
@@ -141,6 +158,33 @@ test.describe.serial('Administración > Usuarios y Clientes (API)', () => {
         expect(renewRes.ok()).toBeTruthy();
         const renewed = await renewRes.json();
         expect(new Date(renewed.endDate).toISOString()).toBe(newEnd);
+
+        // Edición completa cliente/contrato
+        const updateRes = await api.patch(`/clients/contracts/${contract.id}`, {
+            data: {
+                fullName: 'Cliente QA Editado',
+                email: `qa.client.updated.${suffix}@rmparking.com`,
+                contactPhone: '+57 300 404 0404',
+                parkingId,
+                startDate,
+                endDate: newEnd,
+                monthlyFee: 210000,
+                planName: 'QA Editado',
+                isRecurring: true,
+            },
+        });
+        expect(updateRes.ok()).toBeTruthy();
+        const updated = await updateRes.json();
+        expect(updated.user.fullName).toBe('Cliente QA Editado');
+        expect(updated.planName).toBe('QA Editado');
+
+        // Auditoría de cambios en clientes
+        const auditRes = await api.get(`/audit/logs?entity=clients_contracts&recordId=${contract.id}&pageSize=5`);
+        expect(auditRes.ok()).toBeTruthy();
+        const auditJson = await auditRes.json();
+        const hasUpdateLog = Array.isArray(auditJson.items)
+            && auditJson.items.some((item: { operation: string }) => item.operation === 'UPDATE');
+        expect(hasUpdateLog).toBeTruthy();
 
         await api.dispose();
     });

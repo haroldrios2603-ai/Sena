@@ -154,4 +154,16 @@ test.describe('Gestión administrativa en Dashboard', () => {
         await expect(page.getByText('Registrar ingreso')).toBeVisible();
         await expect(page.getByText('Registrar salida')).toBeVisible();
     });
+
+    test('SUPER_ADMIN en móvil navega desde menú y visualiza clientes', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await setupDashboard(page, 'SUPER_ADMIN');
+        await page.goto('/dashboard');
+
+        await expect(page.getByRole('button', { name: /Menú/i })).toBeVisible();
+        await page.getByRole('button', { name: /Menú/i }).click();
+        await expect(page.getByRole('button', { name: /Clientes/i })).toBeVisible();
+        await page.getByRole('button', { name: /Clientes/i }).click();
+        await expect(page.getByText('Contratos y alertas')).toBeVisible();
+    });
 });

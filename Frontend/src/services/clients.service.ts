@@ -27,6 +27,20 @@ export interface RenewContractPayload {
     monthlyFee?: number;
 }
 
+export interface UpdateContractPayload {
+    fullName?: string;
+    email?: string;
+    contactPhone?: string;
+    parkingId?: string;
+    startDate?: string;
+    endDate?: string;
+    lastPaymentDate?: string;
+    nextPaymentDate?: string;
+    monthlyFee?: number;
+    planName?: string;
+    isRecurring?: boolean;
+}
+
 export interface ContractAlert {
     id: string;
     alertType: string;
@@ -98,6 +112,14 @@ const clientsService = {
      */
     async renewContract(contractId: string, payload: RenewContractPayload) {
         const response = await api.patch<ContractRecord>(`/clients/contracts/${contractId}/renew`, payload);
+        return response.data;
+    },
+
+    /**
+     * Actualiza datos editables del cliente y su contrato.
+     */
+    async updateContract(contractId: string, payload: UpdateContractPayload) {
+        const response = await api.patch<ContractRecord>(`/clients/contracts/${contractId}`, payload);
         return response.data;
     },
 };

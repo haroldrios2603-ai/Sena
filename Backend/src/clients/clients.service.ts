@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { RenewContractDto } from './dto/renew-contract.dto';
+import { UpdateContractDto } from './dto/update-contract.dto';
 import { Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { ListContractsDto } from './dto/list-contracts.dto';
@@ -128,6 +129,126 @@ export class ClientsService {
 
       await this.handleAlertsForContract(contractId, newEndDate, tx);
       return updated;
+    });
+  }
+
+  /**
+   * Obtiene un contrato por id incluyendo cliente, parqueadero y alertas activas.
+   */
+  async findContractById(contractId: string) {
+    const contract = await this.prisma.contract.findUnique({
+      where: { id: contractId },
+      include: {
+        user: true,
+        parking: true,
+        alerts: {
+          where: { status: 'PENDING' },
+        },
+      },
+    });
+
+    if (!contract) {
+      throw new NotFoundException('Contrato no encontrado');
+    }
+
+    return contract;
+  }
+
+  /**
+   * Edita datos del cliente y del contrato en una sola transacción.
+   */
+  async updateContract(contractId: string, updateContractDto: UpdateContractDto) {
+    const existing = await this.findContractById(contractId);
+
+    const startDate =
+      typeof updateContractDto.startDate === 'string'
+        ? new Date(updateContractDto.startDate)
+        : existing.startDate;
+    const endDate =
+      typeof updateContractDto.endDate === 'string'
+        ? new Date(updateContractDto.endDate)
+        : existing.endDate;
+
+    this.validateContractRange(startDate, endDate);
+
+    const lastPaymentDate =
+      typeof updateContractDto.lastPaymentDate === 'string'
+        ? new Date(updateContractDto.lastPaymentDate)
+        : undefined;
+    const nextPaymentDate =
+      typeof updateContractDto.nextPaymentDate === 'string'
+        ? new Date(updateContractDto.nextPaymentDate)
+        : undefined;
+
+    if (
+      typeof updateContractDto.email === 'string' &&
+      updateContractDto.email !== existing.user.email
+    ) {
+      const duplicated = await this.prisma.user.findUnique({
+        where: { email: updateContractDto.email },
+      });
+      if (duplicated && duplicated.id !== existing.userId) {
+        throw new ConflictException('El correo ya está registrado');
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: existing.userId },
+        data: {
+          ...(typeof updateContractDto.fullName === 'string'
+            ? { fullName: updateContractDto.fullName }
+            : {}),
+          ...(typeof updateContractDto.email === 'string'
+            ? { email: updateContractDto.email }
+            : {}),
+          ...(typeof updateContractDto.contactPhone === 'string'
+            ? { contactPhone: updateContractDto.contactPhone }
+            : {}),
+        },
+      });
+
+      const updated = await tx.contract.update({
+        where: { id: contractId },
+        data: {
+          ...(typeof updateContractDto.parkingId === 'string'
+            ? { parkingId: updateContractDto.parkingId }
+            : {}),
+          ...(typeof updateContractDto.startDate === 'string' ? { startDate } : {}),
+          ...(typeof updateContractDto.endDate === 'string' ? { endDate } : {}),
+          ...(typeof updateContractDto.monthlyFee === 'number'
+            ? { monthlyFee: updateContractDto.monthlyFee }
+            : {}),
+          ...(typeof updateContractDto.planName === 'string'
+            ? { planName: updateContractDto.planName }
+            : {}),
+          ...(typeof updateContractDto.isRecurring === 'boolean'
+            ? { isRecurring: updateContractDto.isRecurring }
+            : {}),
+          ...(typeof updateContractDto.lastPaymentDate === 'string'
+            ? { lastPaymentDate }
+            : {}),
+          ...(typeof updateContractDto.nextPaymentDate === 'string'
+            ? { nextPaymentDate }
+            : typeof updateContractDto.endDate === 'string'
+              ? { nextPaymentDate: endDate }
+              : {}),
+          status: this.computeStatus(endDate),
+        },
+      });
+
+      await this.handleAlertsForContract(contractId, endDate, tx);
+
+      return tx.contract.findUniqueOrThrow({
+        where: { id: updated.id },
+        include: {
+          user: true,
+          parking: true,
+          alerts: {
+            where: { status: 'PENDING' },
+          },
+        },
+      });
     });
   }
 

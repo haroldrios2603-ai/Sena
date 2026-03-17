@@ -7,11 +7,14 @@ import {
     Loader2,
     RefreshCw,
     CalendarCheck,
+    Pencil,
+    X,
 } from 'lucide-react';
 import clientsService, {
     type AlertRecord,
     type ContractFilters,
     type ContractRecord,
+    type UpdateContractPayload,
 } from '../../services/clients.service';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 
@@ -102,6 +105,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
     const [loadingAlerts, setLoadingAlerts] = useState(true);
     const [creating, setCreating] = useState(false);
     const [renewing, setRenewing] = useState(false);
+    const [savingEdit, setSavingEdit] = useState(false);
     const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
     const [newClientData, setNewClientData] = useState({
         fullName: '',
@@ -120,6 +124,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         paymentDate: period.today,
         monthlyFee: '',
     });
+    const [editingContract, setEditingContract] = useState<ContractRecord | null>(null);
+    const [editData, setEditData] = useState<UpdateContractPayload>({});
 
     useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
@@ -185,6 +191,21 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
             syncRenewalDefaults(contracts[0].id);
         }
     }, [contracts, renewalData.contractId, syncRenewalDefaults]);
+
+    useEffect(() => {
+        if (!editingContract) {
+            return;
+        }
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !savingEdit) {
+                setEditingContract(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [editingContract, savingEdit]);
 
     const handleCreateClient = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -263,6 +284,72 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
             });
         } finally {
             setRenewing(false);
+        }
+    };
+
+    const openEditContractModal = (contract: ContractRecord) => {
+        setEditingContract(contract);
+        setEditData({
+            fullName: contract.user.fullName,
+            email: contract.user.email,
+            contactPhone: contract.user.contactPhone ?? '',
+            parkingId: contract.parkingId,
+            startDate: toInputDate(contract.startDate),
+            endDate: toInputDate(contract.endDate),
+            lastPaymentDate: contract.lastPaymentDate ? toInputDate(contract.lastPaymentDate) : '',
+            nextPaymentDate: contract.nextPaymentDate ? toInputDate(contract.nextPaymentDate) : '',
+            monthlyFee: Number(contract.monthlyFee ?? 0),
+            planName: contract.planName,
+            isRecurring: contract.isRecurring,
+        });
+    };
+
+    const closeEditContractModal = () => {
+        if (savingEdit) {
+            return;
+        }
+        setEditingContract(null);
+    };
+
+    const handleUpdateContract = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!editingContract || savingEdit) {
+            return;
+        }
+
+        const payload: UpdateContractPayload = {
+            fullName: (editData.fullName ?? '').trim(),
+            email: (editData.email ?? '').trim().toLowerCase(),
+            contactPhone: (editData.contactPhone ?? '').trim(),
+            parkingId: editData.parkingId,
+            startDate: editData.startDate,
+            endDate: editData.endDate,
+            lastPaymentDate: editData.lastPaymentDate || undefined,
+            nextPaymentDate: editData.nextPaymentDate || undefined,
+            monthlyFee: Number(editData.monthlyFee ?? 0),
+            planName: (editData.planName ?? '').trim(),
+            isRecurring: Boolean(editData.isRecurring),
+        };
+
+        if (Number.isNaN(payload.monthlyFee ?? Number.NaN)) {
+            setMessage({ text: 'La mensualidad debe ser un valor numérico', type: 'error' });
+            return;
+        }
+
+        setSavingEdit(true);
+        setMessage({ text: '', type: '' });
+        try {
+            await clientsService.updateContract(editingContract.id, payload);
+            setMessage({ text: 'Cliente y contrato actualizados correctamente', type: 'success' });
+            setEditingContract(null);
+            await Promise.all([loadContracts(contractFilters), loadAlerts()]);
+        } catch (error) {
+            setMessage({
+                text: getErrorMessage(error, 'No se pudo actualizar el cliente'),
+                type: 'error',
+            });
+        } finally {
+            setSavingEdit(false);
         }
     };
 
@@ -672,6 +759,15 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                                         </div>
                                         <span className={`pill ${token.classes}`}>{token.label}</span>
                                     </div>
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            className="btn-outline !w-auto px-3 text-xs"
+                                            onClick={() => openEditContractModal(contract)}
+                                        >
+                                            <Pencil size={13} /> Editar
+                                        </button>
+                                    </div>
                                     <p className="text-sm text-slate-500">{contract.parking.name}</p>
                                     <div className="text-2xl font-semibold text-slate-900">
                                         {moneyFormatter.format(contract.monthlyFee || 0)}
@@ -710,6 +806,171 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                     <p className="text-sm text-slate-500">Aún no existen contratos. Registra un cliente para comenzar a monitorear.</p>
                 )}
             </article>
+
+            {editingContract && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            closeEditContractModal();
+                        }
+                    }}
+                >
+                    <div className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-900">Editar cliente y contrato</h3>
+                                <p className="text-xs text-slate-500">Contrato: {editingContract.id}</p>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-outline !w-auto px-3 py-2"
+                                onClick={closeEditContractModal}
+                                disabled={savingEdit}
+                            >
+                                <X size={14} /> Cerrar
+                            </button>
+                        </div>
+
+                        <form className="space-y-4" onSubmit={handleUpdateContract}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="form-label">Nombre completo</label>
+                                    <input
+                                        className="input-field"
+                                        type="text"
+                                        value={editData.fullName ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, fullName: event.target.value })}
+                                        required
+                                        minLength={2}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Correo</label>
+                                    <input
+                                        className="input-field lowercase"
+                                        type="email"
+                                        value={editData.email ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, email: event.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Teléfono</label>
+                                    <input
+                                        className="input-field"
+                                        type="text"
+                                        value={editData.contactPhone ?? ''}
+                                        onChange={(event) =>
+                                            setEditData({ ...editData, contactPhone: formatPhoneInput(event.target.value) })
+                                        }
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Parqueadero</label>
+                                    <select
+                                        className="input-field"
+                                        value={editData.parkingId ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, parkingId: event.target.value })}
+                                        required
+                                        disabled={loadingParkings || !parkings.length}
+                                    >
+                                        {parkings.map((parking) => (
+                                            <option key={parking.id} value={parking.id}>{parking.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="form-label">Inicio</label>
+                                    <input
+                                        className="input-field"
+                                        type="date"
+                                        value={editData.startDate ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, startDate: event.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Fin</label>
+                                    <input
+                                        className="input-field"
+                                        type="date"
+                                        value={editData.endDate ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, endDate: event.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Último pago</label>
+                                    <input
+                                        className="input-field"
+                                        type="date"
+                                        value={editData.lastPaymentDate ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, lastPaymentDate: event.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Próximo pago</label>
+                                    <input
+                                        className="input-field"
+                                        type="date"
+                                        value={editData.nextPaymentDate ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, nextPaymentDate: event.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Plan</label>
+                                    <input
+                                        className="input-field"
+                                        type="text"
+                                        value={editData.planName ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, planName: event.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Mensualidad (COP)</label>
+                                    <input
+                                        className="input-field"
+                                        type="number"
+                                        min="0"
+                                        step="1000"
+                                        value={String(editData.monthlyFee ?? 0)}
+                                        onChange={(event) =>
+                                            setEditData({ ...editData, monthlyFee: Number(event.target.value) })
+                                        }
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Renovación automática</label>
+                                    <select
+                                        className="input-field"
+                                        value={editData.isRecurring ? 'YES' : 'NO'}
+                                        onChange={(event) =>
+                                            setEditData({ ...editData, isRecurring: event.target.value === 'YES' })
+                                        }
+                                    >
+                                        <option value="YES">Sí</option>
+                                        <option value="NO">No</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button type="submit" className="btn-primary" disabled={savingEdit}>
+                                {savingEdit ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 size={16} className="animate-spin" /> Guardando cambios
+                                    </span>
+                                ) : (
+                                    'Guardar edición'
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

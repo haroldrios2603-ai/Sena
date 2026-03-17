@@ -17,6 +17,14 @@ export interface UserFilters {
     contactPhone?: string;
 }
 
+export interface UpdateUserPayload {
+    fullName?: string;
+    email?: string;
+    contactPhone?: string;
+    role?: Role;
+    isActive?: boolean;
+}
+
 const usersService = {
     /**
      * Recupera la lista de usuarios administrativos con filtros opcionales.
@@ -47,6 +55,14 @@ const usersService = {
      */
     async updateUserStatus(userId: string, isActive: boolean) {
         const response = await api.patch<User>(`/users/${userId}/status`, { isActive });
+        return response.data;
+    },
+
+    /**
+     * Actualiza los datos generales de un usuario.
+     */
+    async updateUser(userId: string, payload: UpdateUserPayload) {
+        const response = await api.patch<User>(`/users/${userId}`, payload);
         return response.data;
     },
 };

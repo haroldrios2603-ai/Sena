@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import * as bcrypt from 'bcrypt';
 import { User } from '@prisma/client';
@@ -102,6 +103,48 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { isActive: updateUserStatusDto.isActive },
+    });
+
+    return this.sanitizeUser(user);
+  }
+
+  /**
+   * Actualiza los campos administrativos permitidos para un usuario.
+   */
+  async updateUser(userId: string, updateUserDto: UpdateUserDto) {
+    const currentUser = await this.ensureUserExists(userId);
+
+    if (
+      typeof updateUserDto.email !== 'undefined' &&
+      updateUserDto.email !== currentUser.email
+    ) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: updateUserDto.email },
+      });
+      if (existingUser && existingUser.id !== userId) {
+        throw new ConflictException('El correo ya está registrado');
+      }
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(typeof updateUserDto.fullName !== 'undefined'
+          ? { fullName: updateUserDto.fullName }
+          : {}),
+        ...(typeof updateUserDto.email !== 'undefined'
+          ? { email: updateUserDto.email }
+          : {}),
+        ...(typeof updateUserDto.contactPhone !== 'undefined'
+          ? { contactPhone: updateUserDto.contactPhone }
+          : {}),
+        ...(typeof updateUserDto.role !== 'undefined'
+          ? { role: updateUserDto.role }
+          : {}),
+        ...(typeof updateUserDto.isActive !== 'undefined'
+          ? { isActive: updateUserDto.isActive }
+          : {}),
+      },
     });
 
     return this.sanitizeUser(user);

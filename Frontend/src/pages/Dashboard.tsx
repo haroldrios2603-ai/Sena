@@ -114,6 +114,14 @@ const currencyFormatter = new Intl.NumberFormat('es-CO', {
     minimumFractionDigits: 0,
 });
 
+const roleLabelMap: Record<string, string> = {
+    SUPER_ADMIN: 'Super admin',
+    ADMIN_PARKING: 'Administrador sede',
+    OPERATOR: 'Operador',
+    AUDITOR: 'Auditor',
+    CLIENT: 'Cliente',
+};
+
 /**
  * Componente Dashboard renovado con mayor jerarquía visual.
  * Presenta KPIs operativos, formularios, y contexto de actividad reciente.
@@ -558,7 +566,7 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right">
-                            <p className="text-xs uppercase text-slate-400">Operario</p>
+                            <p className="text-xs uppercase text-slate-400">{user?.role ? roleLabelMap[user.role] ?? user.role : 'Perfil'}</p>
                             <p className="text-lg font-semibold">{user?.fullName || 'Sesión no identificada'}</p>
                         </div>
                         <button

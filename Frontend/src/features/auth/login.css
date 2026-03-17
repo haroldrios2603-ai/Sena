@@ -241,6 +241,19 @@
     }
 }
 
+@media (max-height: 760px) {
+    .login-wrapper {
+        align-items: flex-start;
+        overflow-y: auto;
+        padding-block: 1rem;
+    }
+
+    .login-card-container {
+        padding-top: 0.5rem;
+        padding-bottom: 1.25rem;
+    }
+}
+
 /* Enlace y bloque de recuperación de contraseña */
 .recovery-link-wrapper {
     display: flex;

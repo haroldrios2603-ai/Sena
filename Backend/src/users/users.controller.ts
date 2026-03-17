@@ -13,6 +13,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -68,6 +69,29 @@ export class UsersController {
       context: this.auditService.buildContextFromRequest(req),
     });
     return users;
+  }
+
+  /**
+   * Actualiza datos generales del usuario identificado.
+   */
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Request() req: any,
+  ) {
+    const previous = await this.usersService.findById(id);
+    const updated = await this.usersService.updateUser(id, updateUserDto);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'users',
+      recordId: id,
+      previousValues: previous,
+      newValues: updated,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return updated;
   }
 
   /**

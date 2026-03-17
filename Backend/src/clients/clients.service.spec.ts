@@ -23,6 +23,7 @@ describe('ClientsService', () => {
       create: jest.fn(),
       update: jest.fn(),
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       findMany: jest.fn(),
     },
     contractAlert: {
@@ -155,5 +156,77 @@ describe('ClientsService', () => {
     expect(prismaMock.$transaction).toHaveBeenCalled();
     expect(prismaMock.contract.update).toHaveBeenCalled();
     expect(result.id).toBe('contract-1');
+  });
+
+  it('should update client and contract atomically', async () => {
+    prismaMock.contract.findUnique.mockResolvedValue({
+      id: 'contract-1',
+      userId: 'client-user-1',
+      parkingId: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78',
+      startDate: new Date('2026-03-10'),
+      endDate: new Date('2026-04-10'),
+      status: 'ACTIVE',
+      planName: 'Mensualidad',
+      monthlyFee: 180000,
+      isRecurring: true,
+      user: {
+        id: 'client-user-1',
+        email: 'cliente1@rmparking.com',
+      },
+      parking: { id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78', name: 'Sede Norte' },
+      alerts: [],
+    });
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.update.mockResolvedValue({ id: 'client-user-1' });
+    prismaMock.contract.update.mockResolvedValue({ id: 'contract-1' });
+    prismaMock.contract.findUniqueOrThrow.mockResolvedValue({
+      id: 'contract-1',
+      status: 'EXPIRING_SOON',
+      user: { id: 'client-user-1', email: 'cliente.editado@rmparking.com' },
+      parking: { id: 'new-parking-id', name: 'Sede Sur' },
+      alerts: [],
+    });
+    prismaMock.contractAlert.upsert.mockResolvedValue({ id: 'alert-1' });
+
+    const result = await service.updateContract('contract-1', {
+      fullName: 'Cliente Editado',
+      email: 'cliente.editado@rmparking.com',
+      contactPhone: '+57 300 111 2222',
+      parkingId: 'new-parking-id',
+      startDate: '2026-03-10',
+      endDate: '2026-03-20',
+      monthlyFee: 195000,
+      planName: 'Corporativo',
+      isRecurring: false,
+    });
+
+    expect(prismaMock.$transaction).toHaveBeenCalled();
+    expect(prismaMock.user.update).toHaveBeenCalled();
+    expect(prismaMock.contract.update).toHaveBeenCalled();
+    expect(result.id).toBe('contract-1');
+  });
+
+  it('should reject duplicate email on updateContract', async () => {
+    prismaMock.contract.findUnique.mockResolvedValue({
+      id: 'contract-1',
+      userId: 'client-user-1',
+      startDate: new Date('2026-03-10'),
+      endDate: new Date('2026-04-10'),
+      user: {
+        id: 'client-user-1',
+        email: 'cliente1@rmparking.com',
+      },
+      parking: { id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78', name: 'Sede Norte' },
+      alerts: [],
+    });
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'other-user',
+      email: 'repetido@rmparking.com',
+      role: Role.CLIENT,
+    });
+
+    await expect(
+      service.updateContract('contract-1', { email: 'repetido@rmparking.com' }),
+    ).rejects.toThrow(ConflictException);
   });
 });

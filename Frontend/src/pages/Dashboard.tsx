@@ -23,6 +23,7 @@ import UserManagementPanel from '../components/admin/UserManagementPanel';
 import ClientManagementPanel from '../components/admin/ClientManagementPanel';
 import ConfigPanel from '../components/admin/ConfigPanel';
 import AuditLogs from './AuditLogs';
+import ReportsPanel from '../components/reports/ReportsPanel';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import { SETTINGS_UPDATED_EVENT } from '../utils/settingsRefresh';
@@ -88,7 +89,7 @@ type ApiErrorResponse = {
     message?: string;
 };
 
-type DashboardView = 'operations' | 'config' | 'users' | 'clients' | 'audit';
+type DashboardView = 'operations' | 'config' | 'users' | 'clients' | 'audit' | 'reports';
 
 type MenuItem = {
     key: string;
@@ -185,6 +186,11 @@ const Dashboard = () => {
         user?.permissions,
         SCREEN_KEYS.AUDIT_LOGS,
     );
+    const canAccessReports = hasScreenPermission(
+        user?.role,
+        user?.permissions,
+        SCREEN_KEYS.REPORTS_ACCESS,
+    );
 
     const availableViews = useMemo(() => {
         const views: DashboardView[] = [];
@@ -193,8 +199,9 @@ const Dashboard = () => {
         if (canManageUsers) views.push('users');
         if (canManageClients) views.push('clients');
         if (canViewAuditLogs) views.push('audit');
+        if (canAccessReports) views.push('reports');
         return views;
-    }, [canManageClients, canManageSettings, canManageUsers, canViewAuditLogs, canViewOperations]);
+    }, [canAccessReports, canManageClients, canManageSettings, canManageUsers, canViewAuditLogs, canViewOperations]);
 
     useEffect(() => {
         if (!availableViews.includes(activeView)) {
@@ -244,6 +251,12 @@ const Dashboard = () => {
             description: 'Trazabilidad detallada de acciones del sistema',
             icon: <Shield size={16} />,
             accent: 'text-rose-700',
+        },
+        reports: {
+            label: 'Reportes',
+            description: 'Visualizaciones y reportes operativos del parqueadero',
+            icon: <DollarSign size={16} />,
+            accent: 'text-cyan-700',
         },
     };
 
@@ -929,6 +942,8 @@ const Dashboard = () => {
                 )}
 
                 {activeView === 'audit' && canViewAuditLogs && <AuditLogs embedded />}
+
+                {activeView === 'reports' && canAccessReports && <ReportsPanel />}
 
                 {!availableViews.length && (
                     <section className="panel-card">

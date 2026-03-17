@@ -197,6 +197,7 @@ model Ticket {
 
    // Índices para mejor rendimiento
    @@index([ticketCode])
+  @@index([entryTime])
    @@index([parkingId])
    @@index([vehicleId])
    @@index([status])
@@ -213,6 +214,8 @@ model Exit {
   
   paymentId       String?  @unique
   payment         Payment? @relation(fields: [paymentId], references: [id])
+
+  @@index([exitTime])
 }
 
 // Payment transaction
@@ -225,6 +228,10 @@ model Payment {
   user      User?    @relation(fields: [userId], references: [id])
   exit      Exit?
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId])
 }
 
 // Monthly Contracts
@@ -247,6 +254,8 @@ model Contract {
 
   @@index([status])
   @@index([endDate])
+  @@index([userId])
+  @@index([lastPaymentDate])
 }
 
 // Employee Attendance
@@ -256,6 +265,10 @@ model Attendance {
   user      User     @relation(fields: [userId], references: [id])
   checkIn   DateTime
   checkOut  DateTime?
+
+  @@index([userId])
+  @@index([checkIn])
+  @@index([checkOut])
 }
 
 // Reports metadata

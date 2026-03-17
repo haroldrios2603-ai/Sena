@@ -10,6 +10,7 @@ import { ClientsModule } from './clients/clients.module';
 import { SettingsModule } from './settings/settings.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { AuditModule } from './audit/audit.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuditModule } from './audit/audit.module';
     SettingsModule,
     PermissionsModule,
     AuditModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -122,6 +122,58 @@ const resources = {
                 exportCsv: 'Exportar CSV',
                 exportJson: 'Exportar JSON',
             },
+            reports: {
+                badge: 'Modulo de reportes',
+                title: 'Reportes operativos',
+                subtitle:
+                    'Consulta indicadores de operacion, facturacion, mensualidades y asistencia con filtros por fecha.',
+                tabs: {
+                    workers: 'Trabajadores en turno',
+                    vehicles: 'Vehiculos por periodo',
+                    billing: 'Facturacion',
+                    monthly: 'Mensualidades',
+                    attendance: 'Asistencia',
+                    income: 'Ingresos por tipo',
+                    peak: 'Horas y dias pico',
+                },
+                filters: {
+                    from: 'Fecha inicial',
+                    to: 'Fecha final',
+                    period: 'Periodo',
+                    referenceDate: 'Fecha de referencia',
+                    client: 'Cliente',
+                    allClients: 'Todos los clientes',
+                    status: 'Estado',
+                    employeeId: 'ID de empleado',
+                    employeeIdPlaceholder: 'UUID opcional',
+                },
+                period: {
+                    day: 'Dia',
+                    week: 'Semana',
+                    month: 'Mes',
+                },
+                status: {
+                    all: 'Todos',
+                    current: 'Al dia',
+                    late: 'Atrasados',
+                },
+                export: {
+                    excel: 'Excel',
+                    pdf: 'PDF',
+                    word: 'Word',
+                },
+                actions: {
+                    query: 'Consultar',
+                    loading: 'Consultando...',
+                },
+                messages: {
+                    loaded: 'Reporte cargado correctamente.',
+                    loadError: 'No fue posible cargar el reporte.',
+                    exported: 'Archivo {{format}} generado correctamente.',
+                    exportError: 'No fue posible exportar el reporte.',
+                    noSectionPermission: 'No tienes permisos para visualizar secciones de reportes.',
+                },
+            },
         },
     },
 };

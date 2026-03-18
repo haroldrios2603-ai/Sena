@@ -148,7 +148,7 @@ export class ReportsController {
     const data = await this.resolveReportForExport(dto);
     const exportConfig = this.buildExportConfig(dto.reportType, data);
     const rows = exportConfig.rows;
-    const title = `${exportConfig.title} (${dto.format.toUpperCase()})`;
+    const title = exportConfig.title;
     const file = await this.reportsExportService.buildFile(dto.format, title, rows);
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const fileName = `${dto.reportType}-${stamp}.${file.extension}`;

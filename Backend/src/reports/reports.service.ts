@@ -80,7 +80,7 @@ export class ReportsService {
   }
 
   async getVehiclesByPeriod(dto: VehiclesPeriodDto) {
-    const baseDate = dto.date ? new Date(dto.date) : new Date();
+    const baseDate = dto.date ? this.parseDateInput(dto.date, false) : new Date();
     const range = this.resolvePeriodRange(dto.period, baseDate);
 
     const tickets = await this.prisma.ticket.findMany({

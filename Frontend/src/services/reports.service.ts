@@ -55,8 +55,21 @@ const reportsService = {
         });
 
         const disposition = response.headers['content-disposition'] as string | undefined;
-        const fileNameMatch = disposition?.match(/filename="?([^\"]+)"?/);
-        const fileName = fileNameMatch?.[1] ?? `reporte-${Date.now()}`;
+        const utf8FileNameMatch = disposition?.match(/filename\*=UTF-8''([^;]+)/i);
+        const simpleFileNameMatch = disposition?.match(/filename="?([^\"]+)"?/i);
+
+        const extensionByFormat: Record<ReportExportFormat, string> = {
+            excel: 'xlsx',
+            pdf: 'pdf',
+            word: 'docx',
+        };
+
+        const decodedUtf8FileName = utf8FileNameMatch?.[1]
+            ? decodeURIComponent(utf8FileNameMatch[1])
+            : undefined;
+
+        const fallbackName = `${params.reportType}-${Date.now()}.${extensionByFormat[params.format]}`;
+        const fileName = decodedUtf8FileName ?? simpleFileNameMatch?.[1] ?? fallbackName;
 
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');

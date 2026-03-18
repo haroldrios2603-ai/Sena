@@ -29,6 +29,8 @@ async function bootstrap() {
         ? process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173']
         : ['http://localhost:5173', 'http://localhost:3000'], // Permitir frontend en desarrollo
     credentials: true, // Permitir cookies si se usan en el futuro
+    // ES: Exponemos cabeceras de descarga para que el navegador lea nombre/extension del archivo.
+    exposedHeaders: ['Content-Disposition', 'Content-Type'],
   });
 
   // Usar filtro global de excepciones

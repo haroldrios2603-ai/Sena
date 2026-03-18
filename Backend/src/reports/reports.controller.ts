@@ -146,8 +146,9 @@ export class ReportsController {
     }
 
     const data = await this.resolveReportForExport(dto);
-    const rows = this.normalizeRows(data);
-    const title = `Reporte ${dto.reportType}`;
+    const exportConfig = this.buildExportConfig(dto.reportType, data);
+    const rows = exportConfig.rows;
+    const title = `${exportConfig.title} (${dto.format.toUpperCase()})`;
     const file = await this.reportsExportService.buildFile(dto.format, title, rows);
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const fileName = `${dto.reportType}-${stamp}.${file.extension}`;
@@ -211,6 +212,7 @@ export class ReportsController {
       case 'asistencia':
         return this.reportsService.getAttendanceReport({
           userId: dto.userId,
+          documentNumber: dto.documentNumber,
           from: dto.from,
           to: dto.to,
         });
@@ -221,26 +223,112 @@ export class ReportsController {
     }
   }
 
-  private normalizeRows(data: Record<string, any>) {
-    if (Array.isArray(data.registros)) {
-      return data.registros;
+  private buildExportConfig(reportType: ExportReportDto['reportType'], data: Record<string, any>) {
+    if (reportType === 'trabajadores') {
+      return {
+        title: 'Reporte de trabajadores en turno',
+        rows: (data.registros ?? []).map((row: any) => ({
+          nombre: row.nombre,
+          correo: row.correo,
+          rol: row.rol,
+          ingreso: row.ingreso,
+          salida: row.salida,
+          estado: row.presente ? 'PRESENTE' : 'RETIRADO',
+        })),
+      };
     }
-    if (Array.isArray(data.detalle)) {
-      return data.detalle;
+
+    if (reportType === 'vehiculos') {
+      return {
+        title: 'Reporte de vehiculos ingresados',
+        rows: (data.porPeriodo ?? []).map((row: any) => ({
+          periodo: row.bucket,
+          vehiculosIngresados: row.totalVehiculos ?? row.total ?? 0,
+          valorCobros: row.totalCobrado ?? 0,
+        })),
+      };
     }
-    if (Array.isArray(data.desglose)) {
-      return data.desglose;
+
+    if (reportType === 'facturacion-total') {
+      return {
+        title: 'Reporte de facturacion total',
+        rows: (data.detalle ?? []).map((row: any) => ({
+          transaccionId: row.id,
+          fechaSalida: row.exitTime,
+          valorCobrado: row.totalAmount,
+        })),
+      };
     }
-    if (Array.isArray(data.porPeriodo)) {
-      return data.porPeriodo;
+
+    if (reportType === 'facturacion-cliente') {
+      return {
+        title: 'Reporte de facturacion por cliente',
+        rows: (data.movimientos ?? []).map((row: any) => ({
+          tipo: row.tipo,
+          referencia: row.referencia,
+          fecha: row.fecha,
+          estado: row.estado,
+          descripcion: row.descripcion,
+          monto: row.monto,
+        })),
+      };
     }
-    if (Array.isArray(data.movimientos)) {
-      return data.movimientos;
+
+    if (reportType === 'mensualidades') {
+      return {
+        title: 'Reporte de estado de mensualidades',
+        rows: (data.registros ?? []).map((row: any) => ({
+          cliente: row.cliente,
+          documento: row.documento,
+          parqueadero: row.parqueadero,
+          plan: row.plan,
+          mensualidad: row.mensualidad,
+          estadoPago: row.estadoPago,
+          fechaVencimiento: row.fechaVencimiento,
+        })),
+      };
     }
-    if (Array.isArray(data.porHora)) {
-      return data.porHora;
+
+    if (reportType === 'asistencia') {
+      return {
+        title: 'Reporte de asistencia',
+        rows: (data.registros ?? []).map((row: any) => ({
+          nombre: row.nombre,
+          documento: row.documento,
+          rol: row.rol,
+          ingreso: row.ingreso,
+          salida: row.salida,
+          horasTrabajadas: row.horasTrabajadas,
+        })),
+      };
     }
-    return [data];
+
+    if (reportType === 'ingresos-por-tipo') {
+      return {
+        title: 'Reporte de ingresos por tipo de vehiculo',
+        rows: (data.desglose ?? []).map((row: any) => ({
+          tipoVehiculo: row.tipoVehiculo,
+          totalIngresos: row.totalIngresos,
+          cantidadServicios: row.cantidadServicios,
+        })),
+      };
+    }
+
+    return {
+      title: 'Reporte de horas pico',
+      rows: [
+        ...(data.porHora ?? []).map((row: any) => ({
+          tipo: 'HORA',
+          etiqueta: row.hora,
+          ingresos: row.ingresos,
+        })),
+        ...(data.porDiaSemana ?? []).map((row: any) => ({
+          tipo: 'DIA_SEMANA',
+          etiqueta: row.dia,
+          ingresos: row.ingresos,
+        })),
+      ],
+    };
   }
 
   private logView(req: any, entity: string, metadata: Record<string, unknown>) {

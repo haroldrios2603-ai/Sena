@@ -93,6 +93,12 @@ export class ReportsService {
       select: {
         id: true,
         entryTime: true,
+        exit: {
+          select: {
+            totalAmount: true,
+            exitTime: true,
+          },
+        },
         vehicle: {
           select: {
             type: true,
@@ -102,17 +108,25 @@ export class ReportsService {
       orderBy: { entryTime: 'asc' },
     });
 
-    const buckets = new Map<string, number>();
+    const buckets = new Map<string, { totalVehiculos: number; totalCobrado: number }>();
 
     for (const ticket of tickets) {
       const bucket = this.resolveBucket(dto.period, ticket.entryTime);
-      buckets.set(bucket, (buckets.get(bucket) ?? 0) + 1);
+      const current = buckets.get(bucket) ?? { totalVehiculos: 0, totalCobrado: 0 };
+      current.totalVehiculos += 1;
+      current.totalCobrado += ticket.exit?.totalAmount ?? 0;
+      buckets.set(bucket, current);
     }
 
-    const detalle = Array.from(buckets.entries()).map(([bucket, total]) => ({
+    const detalle = Array.from(buckets.entries()).map(([bucket, data]) => ({
       bucket,
-      total,
+      total: data.totalVehiculos,
+      totalVehiculos: data.totalVehiculos,
+      totalCobrado: Number(data.totalCobrado.toFixed(2)),
     }));
+
+    const totalCobrado = tickets.reduce((acc, item) => acc + (item.exit?.totalAmount ?? 0), 0);
+    const totalVehiculosConCobro = tickets.filter((item) => Boolean(item.exit)).length;
 
     return {
       periodo: dto.period,
@@ -121,6 +135,8 @@ export class ReportsService {
         fin: range.to,
       },
       totalVehiculos: tickets.length,
+      totalVehiculosConCobro,
+      totalCobrado: Number(totalCobrado.toFixed(2)),
       porPeriodo: detalle,
     };
   }
@@ -483,15 +499,37 @@ export class ReportsService {
     fallbackDays = 7,
   ): Range {
     const now = new Date();
-    const to = dto.to ? new Date(dto.to) : now;
+    const to = dto.to ? this.parseDateInput(dto.to, true) : now;
     const from = dto.from
-      ? new Date(dto.from)
+      ? this.parseDateInput(dto.from, false)
       : new Date(to.getTime() - fallbackDays * 24 * 60 * 60 * 1000);
+
+    if (from.getTime() > to.getTime()) {
+      return { from: to, to: from };
+    }
 
     return {
       from,
       to,
     };
+  }
+
+  private parseDateInput(value: string, endOfDay: boolean): Date {
+    const onlyDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
+    if (onlyDate) {
+      const [year, month, day] = value.split('-').map(Number);
+      if (endOfDay) {
+        return new Date(year, month - 1, day, 23, 59, 59, 999);
+      }
+      return new Date(year, month - 1, day, 0, 0, 0, 0);
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date();
+    }
+
+    return parsed;
   }
 
   private resolvePeriodRange(period: 'day' | 'week' | 'month', date: Date): Range {

@@ -169,6 +169,7 @@ const ReportsPanel = () => {
                 period,
                 status,
                 userId: userId || undefined,
+                documentNumber: documentNumberFilter || undefined,
                 clientId: clientId || undefined,
             });
             setSuccess(t('reports.messages.exported', { format: format.toUpperCase() }));
@@ -430,7 +431,13 @@ const ReportsPanel = () => {
             {activeTab === 'vehiculos' && vehiclesData && (
                 <div className="space-y-4">
                     <p className="text-sm text-slate-600">
-                        Total de vehículos: <strong>{vehiclesData.totalVehiculos}</strong>
+                        Total de vehículos ingresados: <strong>{vehiclesData.totalVehiculos}</strong>
+                    </p>
+                    <p className="text-sm text-slate-600">
+                        Vehículos con cobro registrado: <strong>{vehiclesData.totalVehiculosConCobro ?? 0}</strong>
+                    </p>
+                    <p className="text-sm text-slate-600">
+                        Valor total de cobros: <strong>{currency.format(vehiclesData.totalCobrado ?? 0)}</strong>
                     </p>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
@@ -443,6 +450,26 @@ const ReportsPanel = () => {
                                 <Bar dataKey="total" fill="#0f766e" name="Vehículos" />
                             </BarChart>
                         </ResponsiveContainer>
+                    </div>
+                    <div className="overflow-auto border border-slate-200 rounded-xl">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-slate-100">
+                                <tr>
+                                    <th className="px-3 py-2 text-left">Periodo</th>
+                                    <th className="px-3 py-2 text-left">Vehículos ingresados</th>
+                                    <th className="px-3 py-2 text-left">Valor cobros</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(vehiclesData.porPeriodo ?? []).map((row: any) => (
+                                    <tr key={row.bucket} className="border-t border-slate-100">
+                                        <td className="px-3 py-2">{row.bucket}</td>
+                                        <td className="px-3 py-2">{row.totalVehiculos ?? row.total ?? 0}</td>
+                                        <td className="px-3 py-2">{currency.format(row.totalCobrado ?? 0)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}

@@ -46,6 +46,7 @@ const reportsService = {
         period?: 'day' | 'week' | 'month';
         status?: 'todos' | 'al_dia' | 'atrasados';
         userId?: string;
+        documentNumber?: string;
         clientId?: string;
     }) => {
         const response = await api.get('/reports/export', {

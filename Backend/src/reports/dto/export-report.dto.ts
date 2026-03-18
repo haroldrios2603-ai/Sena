@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 /**
  * DTO para exportacion de reportes en distintos formatos.
@@ -42,6 +42,10 @@ export class ExportReportDto {
   @IsOptional()
   @IsUUID()
   userId?: string;
+
+  @IsOptional()
+  @IsString()
+  documentNumber?: string;
 
   @IsOptional()
   @IsUUID()

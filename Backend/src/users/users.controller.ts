@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -138,5 +139,56 @@ export class UsersController {
       context: this.auditService.buildContextFromRequest(req),
     });
     return updated;
+  }
+
+  /**
+   * Elimina un usuario administrativo si no tiene dependencias activas.
+   */
+  @Delete(':id')
+  @RequireScreenPermission('users-delete')
+  async remove(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const previous = await this.usersService.findById(id);
+    const result = await this.usersService.deleteUser(id, req.user?.userId);
+    this.auditService.log({
+      operation: AuditOperation.DELETE,
+      entity: 'users',
+      recordId: id,
+      previousValues: previous,
+      newValues: result,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
+  }
+
+  /**
+   * Restaura un usuario previamente archivado.
+   */
+  @Post(':id/restore')
+  @RequireScreenPermission('users-delete')
+  async restore(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const previous = await this.usersService.findById(id);
+    const result = await this.usersService.restoreUser(id);
+    const updated = await this.usersService.findById(id);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'users',
+      recordId: id,
+      previousValues: previous,
+      newValues: {
+        ...updated,
+        restoreResult: result,
+      },
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+      metadata: { action: 'restore' },
+    });
+    return result;
   }
 }

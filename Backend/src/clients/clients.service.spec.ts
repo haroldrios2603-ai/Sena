@@ -18,6 +18,7 @@ describe('ClientsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+      delete: jest.fn(),
     },
     contract: {
       create: jest.fn(),
@@ -25,6 +26,8 @@ describe('ClientsService', () => {
       findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       findMany: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
     },
     contractAlert: {
       updateMany: jest.fn(),
@@ -228,5 +231,100 @@ describe('ClientsService', () => {
     await expect(
       service.updateContract('contract-1', { email: 'repetido@rmparking.com' }),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it('should archive contract and archive client user when no active contracts remain', async () => {
+    prismaMock.contract.findUnique.mockResolvedValue({
+      id: 'contract-1',
+      userId: 'client-user-1',
+      startDate: new Date('2026-03-10'),
+      endDate: new Date('2026-04-10'),
+      status: 'ACTIVE',
+      user: {
+        id: 'client-user-1',
+        email: 'cliente1@rmparking.com',
+        role: Role.CLIENT,
+        isActive: true,
+      },
+      parking: { id: 'p-1', name: 'Sede Norte' },
+      alerts: [],
+    });
+    prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.contract.update.mockResolvedValue({ id: 'contract-1', status: 'CANCELLED' });
+    prismaMock.contract.count.mockResolvedValue(0);
+    prismaMock.user.update.mockResolvedValue({ id: 'client-user-1', isActive: false });
+
+    const result = await service.deleteContract('contract-1');
+
+    expect(prismaMock.contract.update).toHaveBeenCalledWith({
+      where: { id: 'contract-1' },
+      data: {
+        status: 'CANCELLED',
+        isRecurring: false,
+      },
+    });
+    expect(result.userArchived).toBe(true);
+    expect(result.archived).toBe(true);
+    expect(result.deleted).toBe(true);
+  });
+
+  it('should archive contract and keep user active when other contracts exist', async () => {
+    prismaMock.contract.findUnique.mockResolvedValue({
+      id: 'contract-2',
+      userId: 'client-user-2',
+      startDate: new Date('2026-03-10'),
+      endDate: new Date('2026-04-10'),
+      status: 'ACTIVE',
+      user: {
+        id: 'client-user-2',
+        email: 'cliente2@rmparking.com',
+        role: Role.CLIENT,
+        isActive: true,
+      },
+      parking: { id: 'p-1', name: 'Sede Norte' },
+      alerts: [],
+    });
+    prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.contract.update.mockResolvedValue({ id: 'contract-2', status: 'CANCELLED' });
+    prismaMock.contract.count.mockResolvedValue(2);
+
+    const result = await service.deleteContract('contract-2');
+
+    expect(result.userArchived).toBe(false);
+    expect(result.archived).toBe(true);
+    expect(result.deleted).toBe(true);
+  });
+
+  it('should restore archived contract and reactivate client user when needed', async () => {
+    prismaMock.contract.findUnique
+      .mockResolvedValueOnce({
+        id: 'contract-restore',
+        userId: 'client-user-restore',
+        startDate: new Date('2026-03-10'),
+        endDate: new Date('2099-04-10'),
+        status: 'CANCELLED',
+        user: {
+          id: 'client-user-restore',
+          email: 'restore@rmparking.com',
+          role: Role.CLIENT,
+          isActive: false,
+        },
+        parking: { id: 'p-1', name: 'Sede Norte' },
+        alerts: [],
+      })
+      .mockResolvedValueOnce({ status: 'ACTIVE' });
+    prismaMock.contract.update.mockResolvedValue({ id: 'contract-restore', status: 'ACTIVE' });
+    prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.user.update.mockResolvedValue({ id: 'client-user-restore', isActive: true });
+
+    const result = await service.restoreContract('contract-restore');
+
+    expect(prismaMock.contract.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'contract-restore' },
+      }),
+    );
+    expect(result.restored).toBe(true);
+    expect(result.userRestored).toBe(true);
   });
 });

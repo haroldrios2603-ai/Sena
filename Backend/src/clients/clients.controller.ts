@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -129,5 +130,56 @@ export class ClientsController {
       context: this.auditService.buildContextFromRequest(req),
     });
     return updated;
+  }
+
+  /**
+   * Archiva un contrato y, si aplica, desactiva el usuario cliente asociado.
+   */
+  @Delete('contracts/:id')
+  @RequireScreenPermission('clients-delete')
+  async removeContract(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const previous = await this.clientsService.findContractById(id);
+    const result = await this.clientsService.deleteContract(id);
+    this.auditService.log({
+      operation: AuditOperation.DELETE,
+      entity: 'clients_contracts',
+      recordId: id,
+      previousValues: previous,
+      newValues: result,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
+  }
+
+  /**
+   * Restaura un contrato archivado y reactiva el usuario cliente cuando aplique.
+   */
+  @Post('contracts/:id/restore')
+  @RequireScreenPermission('clients-delete')
+  async restoreContract(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    const previous = await this.clientsService.findContractById(id);
+    const result = await this.clientsService.restoreContract(id);
+    const updated = await this.clientsService.findContractById(id);
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'clients_contracts',
+      recordId: id,
+      previousValues: previous,
+      newValues: {
+        ...updated,
+        restoreResult: result,
+      },
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+      metadata: { action: 'restore' },
+    });
+    return result;
   }
 }

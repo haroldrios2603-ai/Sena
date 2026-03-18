@@ -27,9 +27,21 @@ export const APP_SCREEN_DEFINITIONS: ScreenDefinition[] = [
     route: '/dashboard',
   },
   {
+    key: 'users-delete',
+    name: 'Eliminar usuarios',
+    description: 'Permite eliminar usuarios administrativos.',
+    route: '/dashboard',
+  },
+  {
     key: 'clients-management',
     name: 'Clientes',
     description: 'Contratos y alertas de clientes mensuales.',
+    route: '/dashboard',
+  },
+  {
+    key: 'clients-delete',
+    name: 'Eliminar clientes',
+    description: 'Permite eliminar contratos y clientes mensuales.',
     route: '/dashboard',
   },
   {

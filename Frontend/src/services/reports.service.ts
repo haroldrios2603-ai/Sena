@@ -18,12 +18,21 @@ const reportsService = {
         api.get('/reports/vehicles/count', { params }),
     billingTotal: (params: { from?: string; to?: string }) =>
         api.get('/reports/billing/total', { params }),
-    clients: () => api.get('/reports/clients'),
+    clients: () =>
+        api.get('/reports/clients').then((res) => ({
+            data: res.data.map((client: any) => ({
+                id: client.id,
+                fullName: client.fullName,
+                email: client.email,
+                documentType: client.documentType,
+                documentNumber: client.documentNumber,
+            })),
+        })),
     billingClient: (params: { clientId: string; from?: string; to?: string }) =>
         api.get('/reports/billing/client', { params }),
     monthlyStatus: (params: { status?: 'todos' | 'al_dia' | 'atrasados' }) =>
         api.get('/reports/monthly-payments/status', { params }),
-    attendance: (params: { userId?: string; from?: string; to?: string }) =>
+    attendance: (params: { userId?: string; documentNumber?: string; from?: string; to?: string }) =>
         api.get('/reports/attendance', { params }),
     incomeByVehicle: (params: { from?: string; to?: string }) =>
         api.get('/reports/income/by-vehicle', { params }),

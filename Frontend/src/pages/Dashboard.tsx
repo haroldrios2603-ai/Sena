@@ -90,6 +90,7 @@ type ApiErrorResponse = {
 };
 
 type DashboardView = 'operations' | 'config' | 'users' | 'clients' | 'audit' | 'reports';
+type ConfigSection = 'menu' | 'parametros-generales' | 'tarifario-avanzado' | 'sedes-parqueaderos';
 
 type MenuItem = {
     key: string;
@@ -120,6 +121,29 @@ const roleLabelMap: Record<string, string> = {
     OPERATOR: 'Operador',
     AUDITOR: 'Auditor',
     CLIENT: 'Cliente',
+};
+
+const obtenerSeccionConfiguracionDesdeRuta = (pathname: string): ConfigSection | null => {
+    if (pathname === '/dashboard/settings' || pathname === '/dashboard/settings/') {
+        return 'menu';
+    }
+
+    if (!pathname.startsWith('/dashboard/settings/')) {
+        return null;
+    }
+
+    const seccion = pathname.replace('/dashboard/settings/', '');
+    if (seccion === 'parametros-generales') {
+        return 'parametros-generales';
+    }
+    if (seccion === 'tarifario-avanzado') {
+        return 'tarifario-avanzado';
+    }
+    if (seccion === 'sedes-parqueaderos') {
+        return 'sedes-parqueaderos';
+    }
+
+    return null;
 };
 
 /**
@@ -200,6 +224,11 @@ const Dashboard = () => {
         SCREEN_KEYS.REPORTS_ACCESS,
     );
 
+    const configSection = useMemo(
+        () => obtenerSeccionConfiguracionDesdeRuta(location.pathname) ?? 'menu',
+        [location.pathname],
+    );
+
     const availableViews = useMemo(() => {
         const views: DashboardView[] = [];
         if (canViewOperations) views.push('operations');
@@ -272,6 +301,7 @@ const Dashboard = () => {
         key: view,
         view,
         ...viewMeta[view],
+        route: view === 'config' ? '/dashboard/settings' : undefined,
     }));
 
     if (canManagePermissionsProfiles) {
@@ -289,8 +319,27 @@ const Dashboard = () => {
     useEffect(() => {
         if (location.pathname === '/admin/auditoria' && canViewAuditLogs) {
             setActiveView('audit');
+            return;
         }
-    }, [canViewAuditLogs, location.pathname]);
+
+        if (location.pathname.startsWith('/dashboard/settings')) {
+            if (!canManageSettings) {
+                setMessage({ text: 'No tienes permisos para acceder a configuración.', type: 'error' });
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+
+            const seccion = obtenerSeccionConfiguracionDesdeRuta(location.pathname);
+            if (!seccion) {
+                // ES: Protegemos la navegación redirigiendo a un destino válido cuando la subruta no existe.
+                setMessage({ text: 'La sección de configuración no existe. Te llevamos al menú.', type: 'error' });
+                navigate('/dashboard/settings', { replace: true });
+                return;
+            }
+
+            setActiveView('config');
+        }
+    }, [canManageSettings, canViewAuditLogs, location.pathname, navigate]);
 
     useEffect(() => {
         let isMounted = true;
@@ -506,6 +555,7 @@ const Dashboard = () => {
                                                 setActiveView('audit');
                                                 navigate('/admin/auditoria');
                                             } else if (item.route) {
+                                                setActiveView(item.view);
                                                 navigate(item.route);
                                             } else {
                                                 setActiveView(item.view);
@@ -941,7 +991,7 @@ const Dashboard = () => {
                     </>
                 )}
 
-                {activeView === 'config' && canManageSettings && <ConfigPanel />}
+                {activeView === 'config' && canManageSettings && <ConfigPanel seccionActiva={configSection} />}
 
                 {activeView === 'users' && canManageUsers && <UserManagementPanel />}
 

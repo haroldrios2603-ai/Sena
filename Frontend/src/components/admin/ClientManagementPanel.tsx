@@ -9,6 +9,8 @@ import {
     CalendarCheck,
     Pencil,
     X,
+    Trash2,
+    RotateCcw,
 } from 'lucide-react';
 import clientsService, {
     type AlertRecord,
@@ -16,7 +18,10 @@ import clientsService, {
     type ContractRecord,
     type UpdateContractPayload,
 } from '../../services/clients.service';
+import type { DocumentType } from '../../context/types';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
+import { useAuth } from '../../context/useAuth';
+import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
 
 interface ClientManagementPanelProps {
     parkings: Array<{ id: string; name: string }>;
@@ -95,9 +100,21 @@ const statusTokens: Record<string, { label: string; classes: string }> = {
     EXPIRED: { label: 'Vencido', classes: 'bg-rose-100 text-rose-700' },
     EXPIRING_SOON: { label: 'Por vencer', classes: 'bg-amber-100 text-amber-700' },
     PAYMENT_PENDING: { label: 'Pago pendiente', classes: 'bg-amber-100 text-amber-700' },
+    CANCELLED: { label: 'Archivado', classes: 'bg-slate-200 text-slate-700' },
 };
 
+const documentTypeLabels: Record<DocumentType, string> = {
+    CEDULA: 'Cédula de ciudadanía',
+    TARJETA_IDENTIDAD: 'Tarjeta de identidad',
+    NIT: 'NIT',
+    PASAPORTE: 'Pasaporte',
+    PEP: 'Permiso Especial de Permanencia',
+};
+
+const documentTypes = Object.keys(documentTypeLabels) as DocumentType[];
+
 const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPanelProps) => {
+    const { user: sessionUser } = useAuth();
     const period = useMemo(() => getDefaultPeriod(), []);
     const [contracts, setContracts] = useState<ContractRecord[]>([]);
     const [alerts, setAlerts] = useState<AlertRecord[]>([]);
@@ -116,6 +133,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         endDate: period.nextMonth,
         monthlyFee: '',
         planName: 'Mensualidad',
+        documentType: '' as DocumentType | '',
+        documentNumber: '',
     });
     const [contractFilters, setContractFilters] = useState<ContractFilters>({});
     const [renewalData, setRenewalData] = useState({
@@ -126,6 +145,11 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
     });
     const [editingContract, setEditingContract] = useState<ContractRecord | null>(null);
     const [editData, setEditData] = useState<UpdateContractPayload>({});
+    const canDeleteClients = hasScreenPermission(
+        sessionUser?.role,
+        sessionUser?.permissions,
+        SCREEN_KEYS.CLIENTS_DELETE,
+    );
 
     useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
@@ -230,6 +254,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                 endDate: newClientData.endDate,
                 monthlyFee: monthlyFeeValue,
                 planName: newClientData.planName || undefined,
+                ...(newClientData.documentType ? { documentType: newClientData.documentType as DocumentType } : {}),
+                ...(newClientData.documentNumber.trim() ? { documentNumber: newClientData.documentNumber.trim() } : {}),
             });
             setMessage({ text: 'Cliente registrado y contrato creado', type: 'success' });
             setNewClientData((prev) => ({
@@ -240,6 +266,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                 startDate: period.today,
                 endDate: period.nextMonth,
                 monthlyFee: '',
+                documentType: '',
+                documentNumber: '',
             }));
             await Promise.all([loadContracts(contractFilters), loadAlerts()]);
         } catch (error) {
@@ -301,6 +329,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
             monthlyFee: Number(contract.monthlyFee ?? 0),
             planName: contract.planName,
             isRecurring: contract.isRecurring,
+            documentType: contract.user.documentType ?? undefined,
+            documentNumber: contract.user.documentNumber ?? '',
         });
     };
 
@@ -329,6 +359,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
             monthlyFee: Number(editData.monthlyFee ?? 0),
             planName: (editData.planName ?? '').trim(),
             isRecurring: Boolean(editData.isRecurring),
+            documentType: editData.documentType ?? null,
+            documentNumber: (editData.documentNumber ?? '').trim() || null,
         };
 
         if (Number.isNaN(payload.monthlyFee ?? Number.NaN)) {
@@ -346,6 +378,62 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         } catch (error) {
             setMessage({
                 text: getErrorMessage(error, 'No se pudo actualizar el cliente'),
+                type: 'error',
+            });
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleDeleteContract = async (contract: ContractRecord) => {
+        if (savingEdit) {
+            return;
+        }
+
+        const shouldDelete = window.confirm(
+            `Vas a archivar el contrato de ${contract.user.fullName}. Luego podrás restaurarlo.`,
+        );
+        if (!shouldDelete) {
+            return;
+        }
+
+        setSavingEdit(true);
+        setMessage({ text: '', type: '' });
+        try {
+            await clientsService.deleteContract(contract.id);
+            setMessage({ text: 'Contrato archivado correctamente', type: 'success' });
+            await Promise.all([loadContracts(contractFilters), loadAlerts()]);
+        } catch (error) {
+            setMessage({
+                text: getErrorMessage(error, 'No se pudo archivar el cliente'),
+                type: 'error',
+            });
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleRestoreContract = async (contract: ContractRecord) => {
+        if (savingEdit) {
+            return;
+        }
+
+        const shouldRestore = window.confirm(
+            `Vas a restaurar el contrato de ${contract.user.fullName}.`,
+        );
+        if (!shouldRestore) {
+            return;
+        }
+
+        setSavingEdit(true);
+        setMessage({ text: '', type: '' });
+        try {
+            await clientsService.restoreContract(contract.id);
+            setMessage({ text: 'Contrato restaurado correctamente', type: 'success' });
+            await Promise.all([loadContracts(contractFilters), loadAlerts()]);
+        } catch (error) {
+            setMessage({
+                text: getErrorMessage(error, 'No se pudo restaurar el contrato'),
                 type: 'error',
             });
         } finally {
@@ -398,6 +486,33 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                             value={newClientData.fullName}
                             onChange={(event) => setNewClientData({ ...newClientData, fullName: event.target.value })}
                             required
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Tipo de documento</label>
+                        <select
+                            className="input-field"
+                            value={newClientData.documentType}
+                            onChange={(event) =>
+                                setNewClientData({ ...newClientData, documentType: event.target.value as DocumentType | '' })
+                            }
+                        >
+                            <option value="">Sin documento</option>
+                            {documentTypes.map((dt) => (
+                                <option key={dt} value={dt}>
+                                    {documentTypeLabels[dt]}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="form-label">Número de documento</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="Ej. 1234567890"
+                            value={newClientData.documentNumber}
+                            onChange={(event) => setNewClientData({ ...newClientData, documentNumber: event.target.value })}
                         />
                     </div>
                     <div>
@@ -681,6 +796,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                             <option value="EXPIRING_SOON">Por vencer</option>
                             <option value="EXPIRED">Vencido</option>
                             <option value="PAYMENT_PENDING">Pago pendiente</option>
+                            <option value="CANCELLED">Archivado</option>
                         </select>
                     </div>
                     <div>
@@ -712,6 +828,16 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                             type="text"
                             value={contractFilters.planName ?? ''}
                             onChange={(event) => setContractFilters((prev) => ({ ...prev, planName: event.target.value || undefined }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Número de documento</label>
+                        <input
+                            className="input-field"
+                            type="text"
+                            value={contractFilters.documentNumber ?? ''}
+                            onChange={(event) => setContractFilters((prev) => ({ ...prev, documentNumber: event.target.value || undefined }))}
+                            placeholder="Ej. 1234567890"
                         />
                     </div>
                     <div className="flex items-end gap-2">
@@ -756,17 +882,44 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                                             <p className="font-semibold text-slate-900">{contract.user.fullName}</p>
                                             <p className="text-xs text-slate-500">{contract.user.email}</p>
                                             <p className="text-xs text-slate-500">{formatPhoneDisplay(contract.user.contactPhone)}</p>
+                                            {contract.user.documentNumber && (
+                                                <p className="text-xs text-slate-400">
+                                                    {contract.user.documentType ? documentTypeLabels[contract.user.documentType] : 'Doc.'}: {contract.user.documentNumber}
+                                                </p>
+                                            )}
                                         </div>
                                         <span className={`pill ${token.classes}`}>{token.label}</span>
                                     </div>
                                     <div className="flex justify-end">
-                                        <button
-                                            type="button"
-                                            className="btn-outline !w-auto px-3 text-xs"
-                                            onClick={() => openEditContractModal(contract)}
-                                        >
-                                            <Pencil size={13} /> Editar
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                className="btn-outline !w-auto px-3 text-xs"
+                                                onClick={() => openEditContractModal(contract)}
+                                                disabled={contract.status === 'CANCELLED'}
+                                            >
+                                                <Pencil size={13} /> Editar
+                                            </button>
+                                            {canDeleteClients && (
+                                                contract.status === 'CANCELLED' ? (
+                                                    <button
+                                                        type="button"
+                                                        className="btn-suspend btn-suspend--success !w-auto px-3 text-xs"
+                                                        onClick={() => handleRestoreContract(contract)}
+                                                    >
+                                                        <RotateCcw size={13} /> Restaurar
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        className="btn-suspend btn-suspend--danger !w-auto px-3 text-xs"
+                                                        onClick={() => handleDeleteContract(contract)}
+                                                    >
+                                                        <Trash2 size={13} /> Archivar
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-sm text-slate-500">{contract.parking.name}</p>
                                     <div className="text-2xl font-semibold text-slate-900">
@@ -834,7 +987,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
 
                         <form className="space-y-4" onSubmit={handleUpdateContract}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
+                                <div className="md:col-span-2">
                                     <label className="form-label">Nombre completo</label>
                                     <input
                                         className="input-field"
@@ -843,6 +996,33 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                                         onChange={(event) => setEditData({ ...editData, fullName: event.target.value })}
                                         required
                                         minLength={2}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Tipo de documento</label>
+                                    <select
+                                        className="input-field"
+                                        value={editData.documentType ?? ''}
+                                        onChange={(event) =>
+                                            setEditData({ ...editData, documentType: (event.target.value as DocumentType) || undefined })
+                                        }
+                                    >
+                                        <option value="">Sin documento</option>
+                                        {documentTypes.map((dt) => (
+                                            <option key={dt} value={dt}>
+                                                {documentTypeLabels[dt]}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="form-label">Número de documento</label>
+                                    <input
+                                        className="input-field"
+                                        type="text"
+                                        placeholder="Ej. 1234567890"
+                                        value={editData.documentNumber ?? ''}
+                                        onChange={(event) => setEditData({ ...editData, documentNumber: event.target.value })}
                                     />
                                 </div>
                                 <div>

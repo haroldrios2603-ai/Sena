@@ -23,6 +23,8 @@ function App() {
           {/* Rutas Protegidas */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/settings" element={<Dashboard />} />
+            <Route path="/dashboard/settings/:section" element={<Dashboard />} />
           </Route>
 
           <Route element={<PermissionRoute requiredScreen={SCREEN_KEYS.PERMISSIONS_PROFILES} />}>

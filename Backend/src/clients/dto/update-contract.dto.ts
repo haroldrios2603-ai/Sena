@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEmail,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
+import { DocumentType } from '@prisma/client';
 
 /**
  * DTO para actualizar datos editables de cliente y contrato.
@@ -79,4 +81,17 @@ export class UpdateContractDto {
   @IsOptional()
   @IsBoolean()
   isRecurring?: boolean;
+
+  @IsOptional()
+  @IsEnum(DocumentType, { message: 'Tipo de documento inválido' })
+  documentType?: DocumentType;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(20)
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  documentNumber?: string;
 }

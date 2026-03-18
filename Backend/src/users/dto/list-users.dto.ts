@@ -39,4 +39,11 @@ export class ListUsersDto {
   @IsOptional()
   @IsString()
   contactPhone?: string;
+
+  /**
+   * Filtro opcional por número de documento.
+   */
+  @IsOptional()
+  @IsString()
+  documentNumber?: string;
 }

@@ -48,6 +48,13 @@ export class ListContractsDto {
   planName?: string;
 
   @IsOptional()
-  @IsIn(['ACTIVE', 'EXPIRED', 'EXPIRING_SOON', 'PAYMENT_PENDING'])
-  status?: 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'PAYMENT_PENDING';
+  @IsIn(['ACTIVE', 'EXPIRED', 'EXPIRING_SOON', 'PAYMENT_PENDING', 'CANCELLED'])
+  status?: 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'PAYMENT_PENDING' | 'CANCELLED';
+
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : undefined,
+  )
+  documentNumber?: string;
 }

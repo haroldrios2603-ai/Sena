@@ -1,5 +1,7 @@
 export type Role = 'SUPER_ADMIN' | 'ADMIN_PARKING' | 'OPERATOR' | 'AUDITOR' | 'CLIENT';
 
+export type DocumentType = 'CEDULA' | 'TARJETA_IDENTIDAD' | 'NIT' | 'PASAPORTE' | 'PEP';
+
 export interface User {
   id: string;
   email: string;
@@ -8,6 +10,8 @@ export interface User {
   role: Role;
   permissions?: string[];
   isActive: boolean;
+  documentType?: DocumentType | null;
+  documentNumber?: string | null;
   createdAt: string;
   updatedAt: string;
 }

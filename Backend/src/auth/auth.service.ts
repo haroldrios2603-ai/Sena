@@ -48,7 +48,7 @@ export class AuthService {
       where: { email },
     });
     if (existingUser) {
-      throw new ConflictException('Email already in use');
+      throw new ConflictException('El correo ya está registrado');
     }
 
     // Hashear contraseña
@@ -65,7 +65,7 @@ export class AuthService {
       },
     });
 
-    return { message: 'User created successfully', userId: user.id };
+    return { message: 'Usuario creado correctamente', userId: user.id };
   }
 
   /**
@@ -77,13 +77,13 @@ export class AuthService {
     // Buscar usuario
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     // Validar contraseña
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     // Generar token
@@ -115,6 +115,8 @@ export class AuthService {
         fullName: true,
         role: true,
         isActive: true,
+        documentType: true,
+        documentNumber: true,
         createdAt: true,
         updatedAt: true,
       },

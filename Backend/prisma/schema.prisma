@@ -38,6 +38,15 @@ enum AuditResult {
   FAILURE
 }
 
+// Tipos de documento de identidad permitidos en Colombia
+enum DocumentType {
+  CEDULA                 // Cédula de ciudadanía
+  TARJETA_IDENTIDAD      // Tarjeta de identidad (menores de edad)
+  NIT                    // Número de Identificación Tributaria
+  PASAPORTE              // Pasaporte
+  PEP                    // Permiso Especial de Permanencia (personas extranjeras)
+}
+
 // User model for authentication
 model User {
    id           String    @id @default(uuid())
@@ -45,6 +54,8 @@ model User {
    passwordHash String
    fullName     String
   contactPhone String?
+  documentType  DocumentType?  // Tipo de documento de identidad
+  documentNumber String?       // Número de documento de identidad
    role         Role      @default(OPERATOR)
    isActive     Boolean   @default(true)
    createdAt    DateTime  @default(now())
@@ -64,6 +75,7 @@ model User {
    @@index([email])
   @@index([contactPhone])
    @@index([role])
+  @@index([documentNumber])
 }
 
 // Pantallas/módulos configurables para permisos de visualización

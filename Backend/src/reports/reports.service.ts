@@ -19,6 +19,8 @@ export class ReportsService {
         id: true,
         fullName: true,
         email: true,
+        documentType: true,
+        documentNumber: true,
       },
       orderBy: { fullName: 'asc' },
     });
@@ -43,6 +45,8 @@ export class ReportsService {
             email: true,
             role: true,
             isActive: true,
+            documentType: true,
+            documentNumber: true,
           },
         },
       },
@@ -260,6 +264,8 @@ export class ReportsService {
             fullName: true,
             email: true,
             contactPhone: true,
+            documentType: true,
+            documentNumber: true,
           },
         },
         parking: {
@@ -280,6 +286,9 @@ export class ReportsService {
         cliente: contract.user.fullName,
         correo: contract.user.email,
         telefono: contract.user.contactPhone,
+        documento: contract.user.documentNumber
+          ? `${contract.user.documentType || 'Doc'}: ${contract.user.documentNumber}`
+          : 'Sin registro',
         parqueadero: contract.parking.name,
         plan: contract.planName,
         mensualidad: contract.monthlyFee,
@@ -306,9 +315,16 @@ export class ReportsService {
   async getAttendanceReport(dto: AttendanceReportDto) {
     const range = this.resolveDateRange(dto);
 
+    let userFilter: any = undefined;
+    if (dto.userId) {
+      userFilter = { id: dto.userId };
+    } else if (dto.documentNumber) {
+      userFilter = { documentNumber: { contains: dto.documentNumber, mode: 'insensitive' } };
+    }
+
     const records = await this.prisma.attendance.findMany({
       where: {
-        userId: dto.userId,
+        ...(userFilter ? { user: userFilter } : {}),
         checkIn: {
           gte: range.from,
           lte: range.to,
@@ -321,6 +337,8 @@ export class ReportsService {
             fullName: true,
             email: true,
             role: true,
+            documentType: true,
+            documentNumber: true,
           },
         },
       },
@@ -337,6 +355,9 @@ export class ReportsService {
         nombre: record.user.fullName,
         correo: record.user.email,
         rol: record.user.role,
+        documento: record.user.documentNumber
+          ? `${record.user.documentType || 'Doc'}: ${record.user.documentNumber}`
+          : 'Sin registro',
         ingreso: record.checkIn,
         salida: record.checkOut,
         horasTrabajadas: Number((minutes / 60).toFixed(2)),

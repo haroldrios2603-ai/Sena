@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
 import { compare } from 'bcrypt';
@@ -22,6 +26,7 @@ describe('UsersService', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -37,6 +42,13 @@ describe('UsersService', () => {
 
     service = module.get<UsersService>(UsersService);
     jest.clearAllMocks();
+
+    prismaMock.$transaction.mockImplementation((arg: unknown) => {
+      if (typeof arg === 'function') {
+        return (arg as (tx: typeof prismaMock) => Promise<unknown>)(prismaMock);
+      }
+      return Promise.resolve(arg);
+    });
   });
 
   it('should create and sanitize user data', async () => {
@@ -195,6 +207,93 @@ describe('UsersService', () => {
     await expect(
       service.updateUser('missing-id', { fullName: 'Sin usuario' }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('should archive user by setting isActive=false', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user-delete',
+      email: 'delete@rmparking.com',
+      fullName: 'Delete User',
+      role: Role.OPERATOR,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      passwordHash: 'hashed',
+    });
+    prismaMock.user.update.mockResolvedValue({
+      id: 'user-delete',
+      email: 'delete@rmparking.com',
+      isActive: false,
+    });
+
+    const result = await service.deleteUser('user-delete', 'actor-1');
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-delete' },
+      data: { isActive: false },
+    });
+    expect(result.archived).toBe(true);
+    expect(result.deleted).toBe(true);
+  });
+
+  it('should reject self deletion', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'self-user',
+      email: 'self@rmparking.com',
+      fullName: 'Self User',
+      role: Role.OPERATOR,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      passwordHash: 'hashed',
+    });
+
+    await expect(service.deleteUser('self-user', 'self-user')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('should reject archive when user is already inactive', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'already-inactive',
+      email: 'inactive@rmparking.com',
+      fullName: 'Inactive User',
+      role: Role.OPERATOR,
+      isActive: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      passwordHash: 'hashed',
+    });
+
+    await expect(
+      service.deleteUser('already-inactive', 'actor-1'),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('should restore archived user', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'archived-user',
+      email: 'archived@rmparking.com',
+      fullName: 'Archived User',
+      role: Role.OPERATOR,
+      isActive: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      passwordHash: 'hashed',
+    });
+    prismaMock.user.update.mockResolvedValue({
+      id: 'archived-user',
+      email: 'archived@rmparking.com',
+      isActive: true,
+    });
+
+    const result = await service.restoreUser('archived-user');
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'archived-user' },
+      data: { isActive: true },
+    });
+    expect(result.restored).toBe(true);
   });
 
   it('should keep bcrypt mock available', () => {

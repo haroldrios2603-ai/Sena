@@ -108,6 +108,12 @@ export class ClientsService {
       throw new NotFoundException('Contrato no encontrado');
     }
 
+    if (contract.status === 'CANCELLED') {
+      throw new ConflictException(
+        'El contrato está archivado. Debes restaurarlo antes de renovarlo.',
+      );
+    }
+
     const newEndDate = new Date(renewContractDto.newEndDate);
     const paymentDate = new Date(renewContractDto.paymentDate);
     this.validateContractRange(contract.startDate, newEndDate);
@@ -160,6 +166,12 @@ export class ClientsService {
   async updateContract(contractId: string, updateContractDto: UpdateContractDto) {
     const existing = await this.findContractById(contractId);
 
+    if (existing.status === 'CANCELLED') {
+      throw new ConflictException(
+        'El contrato está archivado. Debes restaurarlo antes de editarlo.',
+      );
+    }
+
     const startDate =
       typeof updateContractDto.startDate === 'string'
         ? new Date(updateContractDto.startDate)
@@ -204,6 +216,12 @@ export class ClientsService {
             : {}),
           ...(typeof updateContractDto.contactPhone === 'string'
             ? { contactPhone: updateContractDto.contactPhone }
+            : {}),
+          ...(typeof updateContractDto.documentType !== 'undefined'
+            ? { documentType: updateContractDto.documentType }
+            : {}),
+          ...(typeof updateContractDto.documentNumber === 'string'
+            ? { documentNumber: updateContractDto.documentNumber }
             : {}),
         },
       });
@@ -253,6 +271,99 @@ export class ClientsService {
   }
 
   /**
+   * Archiva un contrato para mantener histórico y permitir restauración posterior.
+   */
+  async deleteContract(contractId: string) {
+    const existing = await this.findContractById(contractId);
+
+    if (existing.status === 'CANCELLED') {
+      throw new ConflictException('El contrato ya se encuentra archivado');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.contractAlert.updateMany({
+        where: { contractId, status: 'PENDING' },
+        data: { status: 'RESOLVED', resolvedAt: new Date() },
+      });
+
+      const archivedContract = await tx.contract.update({
+        where: { id: contractId },
+        data: {
+          status: 'CANCELLED',
+          isRecurring: false,
+        },
+      });
+
+      const remainingContracts = await tx.contract.count({
+        where: {
+          userId: existing.userId,
+          status: { not: 'CANCELLED' },
+        },
+      });
+
+      let userArchived = false;
+      if (remainingContracts === 0 && existing.user.role === Role.CLIENT) {
+        if (existing.user.isActive) {
+          await tx.user.update({
+            where: { id: existing.userId },
+            data: { isActive: false },
+          });
+          userArchived = true;
+        }
+      }
+
+      return {
+        contractId: archivedContract.id,
+        userId: existing.userId,
+        userArchived,
+        archived: true,
+        deleted: true,
+      };
+    });
+  }
+
+  /**
+   * Restaura un contrato archivado y reactiva al cliente cuando aplique.
+   */
+  async restoreContract(contractId: string) {
+    const existing = await this.findContractById(contractId);
+
+    if (existing.status !== 'CANCELLED') {
+      throw new ConflictException('El contrato no está archivado');
+    }
+
+    const restoredStatus = this.computeStatus(existing.endDate);
+
+    return this.prisma.$transaction(async (tx) => {
+      const restoredContract = await tx.contract.update({
+        where: { id: contractId },
+        data: {
+          status: restoredStatus,
+          isRecurring: true,
+        },
+      });
+
+      await this.handleAlertsForContract(contractId, existing.endDate, tx);
+
+      let userRestored = false;
+      if (existing.user.role === Role.CLIENT && !existing.user.isActive) {
+        await tx.user.update({
+          where: { id: existing.userId },
+          data: { isActive: true },
+        });
+        userRestored = true;
+      }
+
+      return {
+        contractId: restoredContract.id,
+        userId: existing.userId,
+        userRestored,
+        restored: true,
+      };
+    });
+  }
+
+  /**
    * Crea o actualiza el usuario con rol CLIENT.
    */
   private async upsertClientUser(
@@ -275,6 +386,8 @@ export class ClientsService {
         data: {
           fullName: createClientDto.fullName,
           contactPhone: createClientDto.contactPhone,
+          ...(createClientDto.documentType ? { documentType: createClientDto.documentType } : {}),
+          ...(createClientDto.documentNumber ? { documentNumber: createClientDto.documentNumber } : {}),
         },
       });
     }
@@ -289,13 +402,15 @@ export class ClientsService {
         contactPhone: createClientDto.contactPhone,
         passwordHash,
         role: Role.CLIENT,
+        ...(createClientDto.documentType ? { documentType: createClientDto.documentType } : {}),
+        ...(createClientDto.documentNumber ? { documentNumber: createClientDto.documentNumber } : {}),
       },
     });
   }
 
   private buildContractWhere(filters: ListContractsDto) {
     return {
-      status: filters.status || undefined,
+      status: filters.status || { not: 'CANCELLED' },
       planName: filters.planName
         ? { contains: filters.planName, mode: 'insensitive' as const }
         : undefined,
@@ -309,6 +424,9 @@ export class ClientsService {
           : undefined,
         contactPhone: filters.contactPhone
           ? { contains: filters.contactPhone, mode: 'insensitive' as const }
+          : undefined,
+        documentNumber: filters.documentNumber
+          ? { contains: filters.documentNumber, mode: 'insensitive' as const }
           : undefined,
       },
       parking: {
@@ -324,6 +442,7 @@ export class ClientsService {
    */
   private async syncContractStatuses() {
     const contracts = await this.prisma.contract.findMany({
+      where: { status: { not: 'CANCELLED' } },
       select: { id: true, endDate: true },
     });
 
@@ -363,6 +482,23 @@ export class ClientsService {
     tx?: Prisma.TransactionClient,
   ) {
     const db = tx ?? this.prisma;
+    const currentContract = await db.contract.findUnique({
+      where: { id: contractId },
+      select: { status: true },
+    });
+
+    if (!currentContract) {
+      return;
+    }
+
+    if (currentContract.status === 'CANCELLED') {
+      await db.contractAlert.updateMany({
+        where: { contractId, status: 'PENDING' },
+        data: { status: 'RESOLVED', resolvedAt: new Date() },
+      });
+      return;
+    }
+
     const status = this.computeStatus(endDate);
 
     await db.contract.update({

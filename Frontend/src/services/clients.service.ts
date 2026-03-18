@@ -1,4 +1,5 @@
 import api from '../api';
+import type { DocumentType } from '../context/types';
 
 export interface CreateClientPayload {
     fullName: string;
@@ -9,6 +10,8 @@ export interface CreateClientPayload {
     endDate: string;
     monthlyFee: number;
     planName?: string;
+    documentType?: DocumentType;
+    documentNumber?: string;
 }
 
 export interface ContractFilters {
@@ -18,7 +21,8 @@ export interface ContractFilters {
     parkingId?: string;
     parkingName?: string;
     planName?: string;
-    status?: 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'PAYMENT_PENDING';
+    status?: 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'PAYMENT_PENDING' | 'CANCELLED';
+    documentNumber?: string;
 }
 
 export interface RenewContractPayload {
@@ -39,6 +43,8 @@ export interface UpdateContractPayload {
     monthlyFee?: number;
     planName?: string;
     isRecurring?: boolean;
+    documentType?: DocumentType | null;
+    documentNumber?: string | null;
 }
 
 export interface ContractAlert {
@@ -67,6 +73,8 @@ export interface ContractRecord {
         fullName: string;
         email: string;
         contactPhone?: string | null;
+        documentType?: DocumentType | null;
+        documentNumber?: string | null;
     };
     parking: {
         id: string;
@@ -120,6 +128,33 @@ const clientsService = {
      */
     async updateContract(contractId: string, payload: UpdateContractPayload) {
         const response = await api.patch<ContractRecord>(`/clients/contracts/${contractId}`, payload);
+        return response.data;
+    },
+
+    /**
+     * Archiva un contrato y, si aplica, desactiva el cliente asociado.
+     */
+    async deleteContract(contractId: string) {
+        const response = await api.delete<{
+            contractId: string;
+            userId: string;
+            userArchived: boolean;
+            archived: boolean;
+            deleted: boolean;
+        }>(`/clients/contracts/${contractId}`);
+        return response.data;
+    },
+
+    /**
+     * Restaura un contrato archivado.
+     */
+    async restoreContract(contractId: string) {
+        const response = await api.post<{
+            contractId: string;
+            userId: string;
+            userRestored: boolean;
+            restored: boolean;
+        }>(`/clients/contracts/${contractId}/restore`);
         return response.data;
     },
 };

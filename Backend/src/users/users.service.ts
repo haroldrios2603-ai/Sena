@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -40,6 +36,8 @@ export class UsersService {
         contactPhone: createUserDto.contactPhone,
         passwordHash,
         role: createUserDto.role,
+        ...(createUserDto.documentType ? { documentType: createUserDto.documentType } : {}),
+        ...(createUserDto.documentNumber ? { documentNumber: createUserDto.documentNumber } : {}),
       },
     });
 
@@ -70,6 +68,10 @@ export class UsersService {
 
     if (filters.contactPhone?.trim()) {
       where.contactPhone = { contains: filters.contactPhone.trim(), mode: 'insensitive' };
+    }
+
+    if (filters.documentNumber?.trim()) {
+      where.documentNumber = { contains: filters.documentNumber.trim(), mode: 'insensitive' };
     }
 
     const users = await this.prisma.user.findMany({
@@ -144,10 +146,65 @@ export class UsersService {
         ...(typeof updateUserDto.isActive !== 'undefined'
           ? { isActive: updateUserDto.isActive }
           : {}),
+        ...(typeof updateUserDto.documentType !== 'undefined'
+          ? { documentType: updateUserDto.documentType }
+          : {}),
+        ...(typeof updateUserDto.documentNumber !== 'undefined'
+          ? { documentNumber: updateUserDto.documentNumber }
+          : {}),
       },
     });
 
     return this.sanitizeUser(user);
+  }
+
+  /**
+   * Archiva un usuario desactivándolo para mantener trazabilidad y permitir restauración.
+   */
+  async deleteUser(userId: string, actorUserId?: string) {
+    const user = await this.ensureUserExists(userId);
+
+    if (actorUserId && actorUserId === userId) {
+      throw new BadRequestException('No puedes eliminar tu propio usuario');
+    }
+
+    if (!user.isActive) {
+      throw new ConflictException('El usuario ya se encuentra archivado');
+    }
+
+    const archivedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: false },
+    });
+
+    return {
+      id: archivedUser.id,
+      email: archivedUser.email,
+      archived: true,
+      deleted: true,
+    };
+  }
+
+  /**
+   * Restaura un usuario archivado, reactivando su acceso.
+   */
+  async restoreUser(userId: string) {
+    const user = await this.ensureUserExists(userId);
+
+    if (user.isActive) {
+      throw new ConflictException('El usuario ya está activo');
+    }
+
+    const restoredUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: true },
+    });
+
+    return {
+      id: restoredUser.id,
+      email: restoredUser.email,
+      restored: true,
+    };
   }
 
   async findById(userId: string) {

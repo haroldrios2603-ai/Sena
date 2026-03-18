@@ -4,11 +4,14 @@ import {
   Min,
   IsString,
   MinLength,
+  MaxLength,
   IsUUID,
   IsOptional,
   IsDateString,
+  IsEnum,
 } from 'class-validator';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
+import { DocumentType } from '@prisma/client';
 
 /**
  * DTO para registrar clientes con mensualidad.
@@ -51,4 +54,17 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   planName?: string;
+
+  @IsOptional()
+  @IsEnum(DocumentType, { message: 'Tipo de documento inválido' })
+  documentType?: DocumentType;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(20)
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  documentNumber?: string;
 }

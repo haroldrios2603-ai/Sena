@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power, Pencil } from 'lucide-react';
+import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import usersService, {
     type UserFilters,
     type CreateUserPayload,
     type UpdateUserPayload,
 } from '../../services/users.service';
-import type { Role, User } from '../../context/types';
+import type { Role, User, DocumentType } from '../../context/types';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
+import { useAuth } from '../../context/useAuth';
+import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
 
 interface MessageState {
     text: string;
@@ -30,6 +32,16 @@ const roleLabels: Record<Role, string> = {
     AUDITOR: 'Auditor',
     CLIENT: 'Cliente',
 };
+
+const documentTypeLabels: Record<DocumentType, string> = {
+    CEDULA: 'Cédula de ciudadanía',
+    TARJETA_IDENTIDAD: 'Tarjeta de identidad',
+    NIT: 'NIT',
+    PASAPORTE: 'Pasaporte',
+    PEP: 'Permiso Especial de Permanencia',
+};
+
+const documentTypes = Object.keys(documentTypeLabels) as DocumentType[];
 
 const getErrorMessage = (error: unknown, fallback: string) => {
     if (isAxiosError<{ message?: string }>(error)) {
@@ -74,6 +86,7 @@ const formatPhoneDisplay = (value: string | null | undefined) => {
 };
 
 const UserManagementPanel = () => {
+    const { user: sessionUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [rowLoading, setRowLoading] = useState<string | null>(null);
@@ -84,12 +97,15 @@ const UserManagementPanel = () => {
     const [fullNameFilter, setFullNameFilter] = useState('');
     const [emailFilter, setEmailFilter] = useState('');
     const [contactPhoneFilter, setContactPhoneFilter] = useState('');
+    const [documentNumberFilter, setDocumentNumberFilter] = useState('');
     const [formData, setFormData] = useState<CreateUserPayload>({
         fullName: '',
         email: '',
         contactPhone: '',
         password: '',
         role: 'OPERATOR',
+        documentType: undefined,
+        documentNumber: '',
     });
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [savingEdit, setSavingEdit] = useState(false);
@@ -99,8 +115,15 @@ const UserManagementPanel = () => {
         contactPhone: '',
         role: 'OPERATOR',
         isActive: true,
+        documentType: undefined,
+        documentNumber: '',
     });
     const isMounted = useRef(true);
+    const canDeleteUsers = hasScreenPermission(
+        sessionUser?.role,
+        sessionUser?.permissions,
+        SCREEN_KEYS.USERS_DELETE,
+    );
 
     useAutoDismiss(Boolean(message.text), () => setMessage({ text: '', type: '' }), 5000);
 
@@ -130,8 +153,11 @@ const UserManagementPanel = () => {
         if (contactPhoneFilter.trim()) {
             params.contactPhone = contactPhoneFilter.trim();
         }
+        if (documentNumberFilter.trim()) {
+            params.documentNumber = documentNumberFilter.trim();
+        }
         return Object.keys(params).length ? params : undefined;
-    }, [contactPhoneFilter, emailFilter, fullNameFilter, roleFilter, statusFilter]);
+    }, [contactPhoneFilter, documentNumberFilter, emailFilter, fullNameFilter, roleFilter, statusFilter]);
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
@@ -208,9 +234,11 @@ const UserManagementPanel = () => {
                 contactPhone: formData.contactPhone.trim(),
                 password: formData.password,
                 role: formData.role,
+                ...(formData.documentType ? { documentType: formData.documentType } : {}),
+                ...(formData.documentNumber?.trim() ? { documentNumber: formData.documentNumber.trim() } : {}),
             };
             await usersService.createUser(payload);
-            setFormData({ fullName: '', email: '', contactPhone: '', password: '', role: 'OPERATOR' });
+            setFormData({ fullName: '', email: '', contactPhone: '', password: '', role: 'OPERATOR', documentType: undefined, documentNumber: '' });
 
             const shouldResetRoleFilter = roleFilter !== 'ALL' && roleFilter !== payload.role;
             const shouldResetStatusFilter = statusFilter === 'INACTIVE';
@@ -285,10 +313,67 @@ const UserManagementPanel = () => {
         }
     };
 
+    const handleDeleteUser = async (user: User) => {
+        if (rowLoading || rowLoading === user.id) {
+            return;
+        }
+
+        const shouldDelete = window.confirm(
+            `Vas a archivar a ${user.fullName}. Luego podrás restaurarlo cuando lo necesites.`,
+        );
+        if (!shouldDelete) {
+            return;
+        }
+
+        setRowLoading(user.id);
+        setMessage({ text: '', type: '' });
+        try {
+            await usersService.deleteUser(user.id);
+            setMessage({ text: 'Usuario archivado correctamente', type: 'success' });
+            await loadUsers();
+        } catch (error) {
+            setMessage({
+                text: getErrorMessage(error, 'No se pudo archivar el usuario'),
+                type: 'error',
+            });
+        } finally {
+            setRowLoading(null);
+        }
+    };
+
+    const handleRestoreUser = async (user: User) => {
+        if (rowLoading || rowLoading === user.id) {
+            return;
+        }
+
+        const shouldRestore = window.confirm(
+            `Vas a restaurar a ${user.fullName}. El usuario volverá a estar activo.`,
+        );
+        if (!shouldRestore) {
+            return;
+        }
+
+        setRowLoading(user.id);
+        setMessage({ text: '', type: '' });
+        try {
+            await usersService.restoreUser(user.id);
+            setMessage({ text: 'Usuario restaurado correctamente', type: 'success' });
+            await loadUsers();
+        } catch (error) {
+            setMessage({
+                text: getErrorMessage(error, 'No se pudo restaurar el usuario'),
+                type: 'error',
+            });
+        } finally {
+            setRowLoading(null);
+        }
+    };
+
     const handleClearFilters = () => {
         setFullNameFilter('');
         setEmailFilter('');
         setContactPhoneFilter('');
+        setDocumentNumberFilter('');
         setRoleFilter('ALL');
         setStatusFilter('ALL');
     };
@@ -301,6 +386,8 @@ const UserManagementPanel = () => {
             contactPhone: user.contactPhone ?? '',
             role: user.role,
             isActive: user.isActive,
+            documentType: user.documentType ?? undefined,
+            documentNumber: user.documentNumber ?? '',
         });
     };
 
@@ -323,6 +410,8 @@ const UserManagementPanel = () => {
             contactPhone: (editForm.contactPhone ?? '').trim(),
             role: editForm.role,
             isActive: Boolean(editForm.isActive),
+            documentType: editForm.documentType ?? null,
+            documentNumber: (editForm.documentNumber ?? '').trim() || null,
         };
 
         setSavingEdit(true);
@@ -388,6 +477,33 @@ const UserManagementPanel = () => {
                             value={formData.fullName}
                             onChange={(event) => setFormData({ ...formData, fullName: event.target.value })}
                             required
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Tipo de documento</label>
+                        <select
+                            className="input-field"
+                            value={formData.documentType ?? ''}
+                            onChange={(event) =>
+                                setFormData({ ...formData, documentType: (event.target.value as DocumentType) || undefined })
+                            }
+                        >
+                            <option value="">Sin documento</option>
+                            {documentTypes.map((dt) => (
+                                <option key={dt} value={dt}>
+                                    {documentTypeLabels[dt]}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="form-label">Número de documento</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="Ej. 1234567890"
+                            value={formData.documentNumber ?? ''}
+                            onChange={(event) => setFormData({ ...formData, documentNumber: event.target.value })}
                         />
                     </div>
                     <div>
@@ -488,6 +604,13 @@ const UserManagementPanel = () => {
                                 onChange={(event) => setContactPhoneFilter(formatPhoneInput(event.target.value))}
                                 placeholder="Filtrar por teléfono"
                             />
+                            <input
+                                type="text"
+                                className="input-field md:w-40"
+                                value={documentNumberFilter}
+                                onChange={(event) => setDocumentNumberFilter(event.target.value)}
+                                placeholder="Filtrar por documento"
+                            />
                             <select
                                 className="input-field md:w-40"
                                 value={roleFilter}
@@ -560,6 +683,11 @@ const UserManagementPanel = () => {
                                                 </button>
                                                 <p className="text-xs text-slate-500">{user.email}</p>
                                                 <p className="text-xs text-slate-500">{formatPhoneDisplay(user.contactPhone)}</p>
+                                                {user.documentNumber && (
+                                                    <p className="text-xs text-slate-400">
+                                                        {user.documentType ? documentTypeLabels[user.documentType] : 'Doc.'}: {user.documentNumber}
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="py-4">
                                                 <select
@@ -604,6 +732,27 @@ const UserManagementPanel = () => {
                                                     >
                                                         <Pencil size={13} /> Editar
                                                     </button>
+                                                    {canDeleteUsers && (
+                                                        user.isActive ? (
+                                                            <button
+                                                                type="button"
+                                                                className="btn-suspend btn-suspend--danger !w-auto px-3 text-xs"
+                                                                onClick={() => handleDeleteUser(user)}
+                                                                disabled={rowLoading === user.id}
+                                                            >
+                                                                <Trash2 size={13} /> Archivar
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                className="btn-suspend btn-suspend--success !w-auto px-3 text-xs"
+                                                                onClick={() => handleRestoreUser(user)}
+                                                                disabled={rowLoading === user.id}
+                                                            >
+                                                                <RotateCcw size={13} /> Restaurar
+                                                            </button>
+                                                        )
+                                                    )}
                                                     <button
                                                         type="button"
                                                         className={`btn-suspend !w-auto px-4 text-xs ${
@@ -671,6 +820,33 @@ const UserManagementPanel = () => {
                                     onChange={(event) => setEditForm({ ...editForm, fullName: event.target.value })}
                                     minLength={2}
                                     required
+                                />
+                            </div>
+                            <div>
+                                <label className="form-label">Tipo de documento</label>
+                                <select
+                                    className="input-field"
+                                    value={editForm.documentType ?? ''}
+                                    onChange={(event) =>
+                                        setEditForm({ ...editForm, documentType: (event.target.value as DocumentType) || undefined })
+                                    }
+                                >
+                                    <option value="">Sin documento</option>
+                                    {documentTypes.map((dt) => (
+                                        <option key={dt} value={dt}>
+                                            {documentTypeLabels[dt]}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="form-label">Número de documento</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Ej. 1234567890"
+                                    value={editForm.documentNumber ?? ''}
+                                    onChange={(event) => setEditForm({ ...editForm, documentNumber: event.target.value })}
                                 />
                             </div>
                             <div>

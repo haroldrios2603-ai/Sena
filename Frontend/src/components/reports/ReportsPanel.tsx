@@ -43,6 +43,7 @@ const ReportsPanel = () => {
     const [clientId, setClientId] = useState('');
     const [status, setStatus] = useState<'todos' | 'al_dia' | 'atrasados'>('todos');
     const [userId, setUserId] = useState('');
+    const [documentNumberFilter, setDocumentNumberFilter] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -55,7 +56,13 @@ const ReportsPanel = () => {
     const [attendanceData, setAttendanceData] = useState<any>(null);
     const [incomeData, setIncomeData] = useState<any>(null);
     const [peakData, setPeakData] = useState<any>(null);
-    const [clients, setClients] = useState<Array<{ id: string; fullName: string; email: string }>>([]);
+    const [clients, setClients] = useState<Array<{
+        id: string;
+        fullName: string;
+        email: string;
+        documentType?: string | null;
+        documentNumber?: string | null;
+    }>>([]);
 
     const canViewWorkers = hasScreenPermission(user?.role, user?.permissions, SCREEN_KEYS.REPORTS_WORKERS);
     const canViewVehicles = hasScreenPermission(user?.role, user?.permissions, SCREEN_KEYS.REPORTS_VEHICLES);
@@ -117,7 +124,7 @@ const ReportsPanel = () => {
             }
 
             if (activeTab === 'asistencia') {
-                const response = await reportsService.attendance({ from, to, userId: userId || undefined });
+                const response = await reportsService.attendance({ from, to, userId: userId || undefined, documentNumber: documentNumberFilter || undefined });
                 setAttendanceData(response.data);
             }
 
@@ -301,7 +308,7 @@ const ReportsPanel = () => {
                             <option value="">{t('reports.filters.allClients')}</option>
                             {clients.map((client) => (
                                 <option key={client.id} value={client.id}>
-                                    {client.fullName} ({client.email})
+                                    {client.fullName} ({client.documentNumber ? `${client.documentType || 'Doc'}: ${client.documentNumber}` : client.email})
                                 </option>
                             ))}
                         </select>
@@ -324,16 +331,32 @@ const ReportsPanel = () => {
                 )}
 
                 {activeTab === 'asistencia' && (
-                    <label className="text-sm text-slate-600">
-                        {t('reports.filters.employeeId')}
-                        <input
-                            type="text"
-                            value={userId}
-                            onChange={(e) => setUserId(e.target.value.trim())}
-                            className="input-field mt-1"
-                            placeholder={t('reports.filters.employeeIdPlaceholder')}
-                        />
-                    </label>
+                    <>
+                        <label className="text-sm text-slate-600">
+                            {t('reports.filters.employeeId')}
+                            <input
+                                type="text"
+                                value={userId}
+                                onChange={(e) => setUserId(e.target.value.trim())}
+                                className="input-field mt-1"
+                                placeholder={t('reports.filters.employeeIdPlaceholder')}
+                            />
+                        </label>
+                        <label className="text-sm text-slate-600">
+                            Número de documento
+                            <input
+                                type="text"
+                                value={documentNumberFilter}
+                                onChange={(e) => setDocumentNumberFilter(e.target.value.trim())}
+                                className="input-field mt-1"
+                                placeholder="Ej. 1234567890"
+                            />
+                        </label>
+                    </>
+                )}
+
+                {activeTab === 'asistencia' && !userId && !documentNumberFilter && (
+                    <div className="col-span-full text-xs text-amber-600">Selecciona empleado o documento para filtrar</div>
                 )}
             </div>
 
@@ -380,6 +403,7 @@ const ReportsPanel = () => {
                             <thead className="bg-slate-100">
                                 <tr>
                                     <th className="px-3 py-2 text-left">Nombre</th>
+                                    <th className="px-3 py-2 text-left">Documento</th>
                                     <th className="px-3 py-2 text-left">Rol</th>
                                     <th className="px-3 py-2 text-left">Ingreso</th>
                                     <th className="px-3 py-2 text-left">Salida</th>
@@ -390,6 +414,7 @@ const ReportsPanel = () => {
                                 {workersData.registros?.map((row: any) => (
                                     <tr key={row.attendanceId} className="border-t border-slate-100">
                                         <td className="px-3 py-2">{row.nombre}</td>
+                                        <td className="px-3 py-2 text-xs">{row.documento || 'Sin registro'}</td>
                                         <td className="px-3 py-2">{row.rol}</td>
                                         <td className="px-3 py-2">{new Date(row.ingreso).toLocaleString('es-CO')}</td>
                                         <td className="px-3 py-2">{row.salida ? new Date(row.salida).toLocaleString('es-CO') : 'Sin salida'}</td>
@@ -468,6 +493,7 @@ const ReportsPanel = () => {
                         <thead className="bg-slate-100">
                             <tr>
                                 <th className="px-3 py-2 text-left">Cliente</th>
+                                <th className="px-3 py-2 text-left">Documento</th>
                                 <th className="px-3 py-2 text-left">Parqueadero</th>
                                 <th className="px-3 py-2 text-left">Plan</th>
                                 <th className="px-3 py-2 text-left">Vencimiento</th>
@@ -478,6 +504,7 @@ const ReportsPanel = () => {
                             {monthlyData.registros?.map((row: any) => (
                                 <tr key={row.contractId} className="border-t border-slate-100">
                                     <td className="px-3 py-2">{row.cliente}</td>
+                                    <td className="px-3 py-2 text-xs">{row.documento || 'Sin registro'}</td>
                                     <td className="px-3 py-2">{row.parqueadero}</td>
                                     <td className="px-3 py-2">{row.plan}</td>
                                     <td className="px-3 py-2">{new Date(row.fechaVencimiento).toLocaleDateString('es-CO')}</td>
@@ -499,6 +526,7 @@ const ReportsPanel = () => {
                             <thead className="bg-slate-100">
                                 <tr>
                                     <th className="px-3 py-2 text-left">Empleado</th>
+                                    <th className="px-3 py-2 text-left">Documento</th>
                                     <th className="px-3 py-2 text-left">Ingreso</th>
                                     <th className="px-3 py-2 text-left">Salida</th>
                                     <th className="px-3 py-2 text-left">Horas</th>
@@ -508,6 +536,7 @@ const ReportsPanel = () => {
                                 {attendanceData.registros?.map((row: any) => (
                                     <tr key={row.attendanceId} className="border-t border-slate-100">
                                         <td className="px-3 py-2">{row.nombre}</td>
+                                        <td className="px-3 py-2 text-xs">{row.documento || 'Sin registro'}</td>
                                         <td className="px-3 py-2">{new Date(row.ingreso).toLocaleString('es-CO')}</td>
                                         <td className="px-3 py-2">{row.salida ? new Date(row.salida).toLocaleString('es-CO') : 'Sin salida'}</td>
                                         <td className="px-3 py-2">{row.horasTrabajadas}</td>

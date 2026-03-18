@@ -21,8 +21,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Internal server error';
-    let error = 'Internal Server Error';
+    let message = 'Error interno del servidor';
+    let error = 'Error interno del servidor';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -48,7 +48,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
       error = exception.name;
     } else {
-      message = 'Unknown error occurred';
+      message = 'Error desconocido';
     }
 
     // Log del error

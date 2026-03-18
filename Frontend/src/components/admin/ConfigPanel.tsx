@@ -99,6 +99,32 @@ interface ParqueaderoEditable {
     cierre?: string;
 }
 
+type SeccionConfiguracion =
+    | 'menu'
+    | 'parametros-generales'
+    | 'tarifario-avanzado'
+    | 'sedes-parqueaderos';
+
+const etiquetasSeccion: Record<Exclude<SeccionConfiguracion, 'menu'>, { titulo: string; descripcion: string }> = {
+    'parametros-generales': {
+        titulo: 'Parámetros generales',
+        descripcion: 'Capacidades, horarios y políticas operativas',
+    },
+    'tarifario-avanzado': {
+        titulo: 'Tarifario avanzado',
+        descripcion: 'Gestiona montos hora, día y nocturnos por tipo',
+    },
+    'sedes-parqueaderos': {
+        titulo: 'Sedes y parqueaderos',
+        descripcion: 'Controla información por sede y su estado',
+    },
+};
+
+
+interface ConfigPanelProps {
+    seccionActiva: SeccionConfiguracion;
+}
+
 const configuracionVacia: ConfiguracionFormulario = {
     capacidadTotal: 0,
     capacidadPorTipo: [
@@ -174,7 +200,7 @@ const mensajeError = (error: unknown, fallback: string) => {
     return fallback;
 };
 
-const ConfigPanel = () => {
+const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
     const [cargando, setCargando] = useState(true);
     const [mensaje, setMensaje] = useState<MensajeEstado>({ texto: '', tipo: '' });
     const [configGeneral, setConfigGeneral] = useState<ConfiguracionFormulario>(configuracionVacia);
@@ -636,35 +662,68 @@ const ConfigPanel = () => {
                 </p>
             </header>
 
-            <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <p className="text-sm font-semibold text-slate-900">Permisos por perfil</p>
-                    <p className="text-xs text-slate-500">
-                        Configura qué pantallas puede visualizar cada rol y usuario.
-                    </p>
-                </div>
-                <Link
-                    to="/settings/permissions-profiles"
-                    className="btn-primary w-auto px-4 py-2 text-sm"
-                >
-                    Gestionar permisos
-                </Link>
-            </div>
+            {seccionActiva === 'menu' && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Link to="/dashboard/settings/parametros-generales" className="panel-card text-left space-y-3 hover:border-indigo-300 transition-colors block">
+                            <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                                <Save size={16} />
+                            </div>
+                            <h3 className="panel-card__title">Parámetros generales</h3>
+                            <p className="text-xs text-slate-500">Capacidades, horarios y políticas operativas.</p>
+                            <span className="btn-outline !w-auto px-3 py-2 text-xs">Abrir sección</span>
+                        </Link>
 
-            <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <p className="text-sm font-semibold text-slate-900">Auditoría</p>
-                    <p className="text-xs text-slate-500">
-                        Consulta eventos críticos, accesos y cambios sensibles del sistema.
-                    </p>
-                </div>
-                <Link
-                    to="/admin/auditoria"
-                    className="btn-outline !w-auto px-4 py-2 text-sm"
-                >
-                    Ver auditoría
-                </Link>
-            </div>
+                        <Link to="/dashboard/settings/tarifario-avanzado" className="panel-card text-left space-y-3 hover:border-indigo-300 transition-colors block">
+                            <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                                <Settings size={16} />
+                            </div>
+                            <h3 className="panel-card__title">Tarifario avanzado</h3>
+                            <p className="text-xs text-slate-500">Tarifas por tipo, jornada y sede.</p>
+                            <span className="btn-outline !w-auto px-3 py-2 text-xs">Abrir sección</span>
+                        </Link>
+
+                        <Link to="/dashboard/settings/sedes-parqueaderos" className="panel-card text-left space-y-3 hover:border-indigo-300 transition-colors block">
+                            <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                                <Building2 size={16} />
+                            </div>
+                            <h3 className="panel-card__title">Sedes y parqueaderos</h3>
+                            <p className="text-xs text-slate-500">Administración de sedes, estado y capacidad.</p>
+                            <span className="btn-outline !w-auto px-3 py-2 text-xs">Abrir sección</span>
+                        </Link>
+                    </div>
+
+                    <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-slate-900">Permisos por perfil</p>
+                            <p className="text-xs text-slate-500">
+                                Configura qué pantallas puede visualizar cada rol y usuario.
+                            </p>
+                        </div>
+                        <Link
+                            to="/settings/permissions-profiles"
+                            className="btn-primary w-auto px-4 py-2 text-sm"
+                        >
+                            Gestionar permisos
+                        </Link>
+                    </div>
+
+                    <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-slate-900">Auditoría</p>
+                            <p className="text-xs text-slate-500">
+                                Consulta eventos críticos, accesos y cambios sensibles del sistema.
+                            </p>
+                        </div>
+                        <Link
+                            to="/admin/auditoria"
+                            className="btn-outline !w-auto px-4 py-2 text-sm"
+                        >
+                            Ver auditoría
+                        </Link>
+                    </div>
+                </>
+            )}
 
             {mensaje.texto && (
                 <div
@@ -679,6 +738,20 @@ const ConfigPanel = () => {
                 </div>
             )}
 
+            {seccionActiva !== 'menu' && (
+                <div className="panel-card flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Configuración / Sección</p>
+                        <h3 className="panel-card__title mt-1">{etiquetasSeccion[seccionActiva].titulo}</h3>
+                        <p className="text-xs text-slate-500">{etiquetasSeccion[seccionActiva].descripcion}</p>
+                    </div>
+                    <Link to="/dashboard/settings" className="btn-outline !w-auto px-4 py-2 text-sm">
+                        Volver al menú de configuración
+                    </Link>
+                </div>
+            )}
+
+            {seccionActiva === 'parametros-generales' && (
             <form onSubmit={guardarConfiguracionGeneral} className="panel-card space-y-6">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
@@ -1059,7 +1132,9 @@ const ConfigPanel = () => {
                     </button>
                 </div>
             </form>
+            )}
 
+            {seccionActiva === 'tarifario-avanzado' && (
             <form onSubmit={guardarTarifas} className="panel-card space-y-6">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
@@ -1207,7 +1282,9 @@ const ConfigPanel = () => {
                     </button>
                 </div>
             </form>
+            )}
 
+            {seccionActiva === 'sedes-parqueaderos' && (
             <section className="panel-card space-y-6">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
@@ -1419,6 +1496,7 @@ const ConfigPanel = () => {
                     </div>
                 </form>
             </section>
+            )}
         </section>
     );
 };

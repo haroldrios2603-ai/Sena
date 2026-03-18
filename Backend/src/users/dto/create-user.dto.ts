@@ -6,9 +6,10 @@ import {
   Matches,
   IsEnum,
   IsNotEmpty,
+  IsOptional,
 } from 'class-validator';
 import { Transform, TransformFnParams } from 'class-transformer';
-import { Role } from '@prisma/client';
+import { Role, DocumentType } from '@prisma/client';
 
 /**
  * DTO para que un SUPER_ADMIN cree usuarios con rol asignado.
@@ -68,4 +69,23 @@ export class CreateUserDto {
    */
   @IsEnum(Role, { message: 'Rol inválido' })
   role: Role;
+
+  /**
+   * Tipo de documento de identidad.
+   */
+  @IsOptional()
+  @IsEnum(DocumentType, { message: 'Tipo de documento inválido' })
+  documentType?: DocumentType;
+
+  /**
+   * Número del documento de identidad.
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(20)
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  documentNumber?: string;
 }

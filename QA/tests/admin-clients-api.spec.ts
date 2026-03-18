@@ -94,12 +94,54 @@ test.describe.serial('Administración > Usuarios y Clientes (API)', () => {
         expect(updateJson.fullName).toBe('QA Operador Editado');
         expect(updateJson.contactPhone).toBe('+57 300 202 0202');
 
+        // Permisos por perfil: habilitar eliminación de usuarios para ADMIN_PARKING
+        const rolePermsRes = await api.get('/permissions/roles/ADMIN_PARKING');
+        expect(rolePermsRes.ok()).toBeTruthy();
+        const rolePerms = await rolePermsRes.json();
+        const permsPayload = rolePerms.map((item: { screenKey: string; canView: boolean }) => ({
+            screenKey: item.screenKey,
+            canView: item.screenKey === 'users-delete' ? true : item.canView,
+        }));
+        const saveRolePermsRes = await api.put('/permissions/roles/ADMIN_PARKING', {
+            data: { permissions: permsPayload },
+        });
+        expect(saveRolePermsRes.ok()).toBeTruthy();
+
         // Listar usuarios filtrando por rol
         const listRes = await api.get('/users?role=ADMIN_PARKING');
         expect(listRes.ok()).toBeTruthy();
         const listJson = await listRes.json();
-        const found = listJson.some((user: { email: string }) => user.email === email);
+        const found = listJson.some(
+            (user: { email: string }) => user.email === updateJson.email,
+        );
         expect(found).toBeTruthy();
+
+        // Archivar usuario
+        const deleteRes = await api.delete(`/users/${createdUser.id}`);
+        expect(deleteRes.ok()).toBeTruthy();
+        const deleteJson = await deleteRes.json();
+        expect(deleteJson.deleted).toBe(true);
+        expect(deleteJson.archived).toBe(true);
+
+        // Restaurar usuario
+        const restoreUserRes = await api.post(`/users/${createdUser.id}/restore`);
+        expect(restoreUserRes.ok()).toBeTruthy();
+        const restoreUserJson = await restoreUserRes.json();
+        expect(restoreUserJson.restored).toBe(true);
+
+        // Auditoría de archivado/restauración de usuario
+        const userAuditDeleteRes = await api.get(`/audit/logs?entity=users&recordId=${createdUser.id}&pageSize=10`);
+        expect(userAuditDeleteRes.ok()).toBeTruthy();
+        const userAuditDeleteJson = await userAuditDeleteRes.json();
+        const hasDeleteLog = Array.isArray(userAuditDeleteJson.items)
+            && userAuditDeleteJson.items.some((item: { operation: string }) => item.operation === 'DELETE');
+        const hasRestoreLog = Array.isArray(userAuditDeleteJson.items)
+            && userAuditDeleteJson.items.some(
+                (item: { operation: string; metadata?: { action?: string } }) =>
+                    item.operation === 'UPDATE' && item.metadata?.action === 'restore',
+            );
+        expect(hasDeleteLog).toBeTruthy();
+        expect(hasRestoreLog).toBeTruthy();
 
         await api.dispose();
     });
@@ -178,13 +220,35 @@ test.describe.serial('Administración > Usuarios y Clientes (API)', () => {
         expect(updated.user.fullName).toBe('Cliente QA Editado');
         expect(updated.planName).toBe('QA Editado');
 
+        // Archivar contrato/cliente
+        const deleteContractRes = await api.delete(`/clients/contracts/${contract.id}`);
+        expect(deleteContractRes.ok()).toBeTruthy();
+        const deleteContractJson = await deleteContractRes.json();
+        expect(deleteContractJson.deleted).toBe(true);
+        expect(deleteContractJson.archived).toBe(true);
+
+        // Restaurar contrato/cliente
+        const restoreContractRes = await api.post(`/clients/contracts/${contract.id}/restore`);
+        expect(restoreContractRes.ok()).toBeTruthy();
+        const restoreContractJson = await restoreContractRes.json();
+        expect(restoreContractJson.restored).toBe(true);
+
         // Auditoría de cambios en clientes
-        const auditRes = await api.get(`/audit/logs?entity=clients_contracts&recordId=${contract.id}&pageSize=5`);
+        const auditRes = await api.get(`/audit/logs?entity=clients_contracts&recordId=${contract.id}&pageSize=10`);
         expect(auditRes.ok()).toBeTruthy();
         const auditJson = await auditRes.json();
-        const hasUpdateLog = Array.isArray(auditJson.items)
-            && auditJson.items.some((item: { operation: string }) => item.operation === 'UPDATE');
-        expect(hasUpdateLog).toBeTruthy();
+        const operations = Array.isArray(auditJson.items)
+            ? auditJson.items.map((item: { operation: string }) => item.operation)
+            : [];
+        const hasRestoreOperation = Array.isArray(auditJson.items)
+            ? auditJson.items.some(
+                (item: { operation: string; metadata?: { action?: string } }) =>
+                    item.operation === 'UPDATE' && item.metadata?.action === 'restore',
+            )
+            : false;
+        expect(operations.includes('UPDATE')).toBeTruthy();
+        expect(operations.includes('DELETE')).toBeTruthy();
+        expect(hasRestoreOperation).toBeTruthy();
 
         await api.dispose();
     });

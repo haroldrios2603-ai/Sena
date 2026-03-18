@@ -9,7 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform, TransformFnParams } from 'class-transformer';
-import { Role } from '@prisma/client';
+import { Role, DocumentType } from '@prisma/client';
 
 /**
  * DTO para actualizar datos básicos de un usuario existente.
@@ -65,4 +65,23 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  /**
+   * Tipo de documento de identidad.
+   */
+  @IsOptional()
+  @IsEnum(DocumentType, { message: 'Tipo de documento inválido' })
+  documentType?: DocumentType;
+
+  /**
+   * Número del documento de identidad.
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(20)
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  documentNumber?: string;
 }

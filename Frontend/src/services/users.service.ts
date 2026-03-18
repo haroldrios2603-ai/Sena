@@ -1,5 +1,5 @@
 import api from '../api';
-import type { Role, User } from '../context/types';
+import type { Role, User, DocumentType } from '../context/types';
 
 export interface CreateUserPayload {
     fullName: string;
@@ -7,6 +7,8 @@ export interface CreateUserPayload {
     contactPhone: string;
     password: string;
     role: Role;
+    documentType?: DocumentType;
+    documentNumber?: string;
 }
 
 export interface UserFilters {
@@ -15,6 +17,7 @@ export interface UserFilters {
     fullName?: string;
     email?: string;
     contactPhone?: string;
+    documentNumber?: string;
 }
 
 export interface UpdateUserPayload {
@@ -23,6 +26,8 @@ export interface UpdateUserPayload {
     contactPhone?: string;
     role?: Role;
     isActive?: boolean;
+    documentType?: DocumentType | null;
+    documentNumber?: string | null;
 }
 
 const usersService = {
@@ -63,6 +68,22 @@ const usersService = {
      */
     async updateUser(userId: string, payload: UpdateUserPayload) {
         const response = await api.patch<User>(`/users/${userId}`, payload);
+        return response.data;
+    },
+
+    /**
+     * Archiva un usuario administrativo.
+     */
+    async deleteUser(userId: string) {
+        const response = await api.delete<{ id: string; deleted: boolean; archived: boolean }>(`/users/${userId}`);
+        return response.data;
+    },
+
+    /**
+     * Restaura un usuario archivado.
+     */
+    async restoreUser(userId: string) {
+        const response = await api.post<{ id: string; restored: boolean }>(`/users/${userId}/restore`);
         return response.data;
     },
 };

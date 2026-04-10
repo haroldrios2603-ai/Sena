@@ -27,6 +27,7 @@ import ReportsPanel from '../components/reports/ReportsPanel';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import { SETTINGS_UPDATED_EVENT } from '../utils/settingsRefresh';
+import { paymentsService, type ExitPaymentIntentResponse } from '../services/payments.service';
 
 type VehicleType = 'CAR' | 'MOTORCYCLE';
 
@@ -169,6 +170,8 @@ const Dashboard = () => {
     const [filtroBusqueda, setFiltroBusqueda] = useState('');
     const [filtroPlaca, setFiltroPlaca] = useState('');
     const [isSyncingSettings, setIsSyncingSettings] = useState(false);
+    const [exitPaymentIntent, setExitPaymentIntent] = useState<ExitPaymentIntentResponse | null>(null);
+    const [generatingExitPayment, setGeneratingExitPayment] = useState(false);
 
     const clearMessage = useCallback(() => setMessage({ text: '', type: '' }), []);
 
@@ -497,6 +500,7 @@ const Dashboard = () => {
         e.preventDefault();
         clearMessage();
         setLastExit(null);
+        setExitPaymentIntent(null);
 
         try {
             const res = await api.post<ExitResponse>('/parking/exit', { placa: plateExit });
@@ -509,6 +513,28 @@ const Dashboard = () => {
                 text: getErrorMessage(err, 'Error al registrar la salida'),
                 type: 'error',
             });
+        }
+    };
+
+    const handleCreateExitPaymentIntent = async () => {
+        const exitId = lastExit?.exit?.id;
+        if (!exitId) {
+            setMessage({ text: 'No hay una salida válida para generar el pago.', type: 'error' });
+            return;
+        }
+
+        try {
+            setGeneratingExitPayment(true);
+            const data = await paymentsService.createExitWompiIntent(exitId);
+            setExitPaymentIntent(data);
+            setMessage({ text: 'QR de pago generado correctamente.', type: 'success' });
+        } catch (err: unknown) {
+            setMessage({
+                text: getErrorMessage(err, 'No fue posible generar el QR de pago.'),
+                type: 'error',
+            });
+        } finally {
+            setGeneratingExitPayment(false);
         }
     };
 
@@ -802,6 +828,35 @@ const Dashboard = () => {
                                                 {formatCurrency(lastExit.exit?.totalAmount || 0)}
                                             </span>
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleCreateExitPaymentIntent()}
+                                            disabled={generatingExitPayment}
+                                            className="mt-2 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+                                        >
+                                            {generatingExitPayment
+                                                ? 'Generando QR de pago...'
+                                                : 'Generar QR de pago (Wompi Sandbox)'}
+                                        </button>
+
+                                        {exitPaymentIntent && (
+                                            <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700">
+                                                <p className="font-semibold text-slate-900">Link de pago para el cliente</p>
+                                                <a
+                                                    href={exitPaymentIntent.paymentPageUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="mt-1 block break-all text-emerald-700 underline"
+                                                >
+                                                    {exitPaymentIntent.paymentPageUrl}
+                                                </a>
+                                                <img
+                                                    src={exitPaymentIntent.qrImageUrl}
+                                                    alt="QR de pago"
+                                                    className="mx-auto mt-3 h-48 w-48 rounded-lg border border-slate-200"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <p className="mt-6 text-sm text-slate-400">

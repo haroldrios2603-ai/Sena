@@ -5,6 +5,7 @@ import PermissionRoute from './components/PermissionRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PermissionsProfiles from './pages/PermissionsProfiles';
+import PaymentCheckoutPage from './pages/PaymentCheckoutPage';
 import { SCREEN_KEYS } from './permissions';
 import './App.css';
 
@@ -19,6 +20,7 @@ function App() {
         <Routes>
           {/* Rutas Públicas */}
           <Route path="/login" element={<Login />} />
+          <Route path="/pago/:paymentId" element={<PaymentCheckoutPage />} />
 
           {/* Rutas Protegidas */}
           <Route element={<ProtectedRoute />}>

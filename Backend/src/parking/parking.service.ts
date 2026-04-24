@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { CreateParkingDto } from './dto/create-parking.dto';
@@ -11,6 +11,8 @@ import { TarifaConfigDto } from './dto/tarifa-config.dto';
  */
 @Injectable()
 export class ParkingService {
+  private readonly CONFIG_ID = 'configuracion-principal';
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -135,6 +137,27 @@ export class ParkingService {
    * Registra el ingreso de un vehículo.
    */
   async registerEntry(plate: string, vehicleType: string, parkingId: string) {
+    const existingActiveTicket = await this.prisma.ticket.findFirst({
+      where: {
+        vehicle: { plate },
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true,
+        ticketCode: true,
+        entryTime: true,
+      },
+      orderBy: {
+        entryTime: 'desc',
+      },
+    });
+
+    if (existingActiveTicket) {
+      throw new ConflictException(
+        `La placa ${plate} ya tiene un ingreso activo (ticket ${existingActiveTicket.ticketCode}). Debes registrar la salida antes de generar uno nuevo.`,
+      );
+    }
+
     // Buscar o crear vehículo
     const vehicle = await this.prisma.vehicle.upsert({
       where: { plate },
@@ -229,6 +252,8 @@ export class ParkingService {
    * Obtiene un resumen de tickets activos y cerrados para el dashboard operativo.
    */
   async obtenerResumenTickets() {
+    const fechaCierreJornada = await this.obtenerFechaCierreJornada();
+
     const [ticketsActivos, ticketsCerrados] = await Promise.all([
       this.prisma.ticket.findMany({
         where: { status: 'ACTIVE' },
@@ -239,7 +264,20 @@ export class ParkingService {
         },
       }),
       this.prisma.ticket.findMany({
-        where: { status: 'CLOSED' },
+        where: {
+          status: 'CLOSED',
+          ...(fechaCierreJornada
+            ? {
+                exit: {
+                  is: {
+                    exitTime: {
+                      gte: fechaCierreJornada,
+                    },
+                  },
+                },
+              }
+            : {}),
+        },
         orderBy: { entryTime: 'desc' },
         include: {
           vehicle: true,
@@ -252,6 +290,79 @@ export class ParkingService {
     return {
       activos: ticketsActivos,
       cerrados: ticketsCerrados,
+    };
+  }
+
+  /**
+   * Cierra la jornada operativa actual.
+   * Desde este punto, el listado de "Vehículos con salida" se reinicia,
+   * pero se conservan siempre los vehículos activos sin salida.
+   */
+  async cerrarJornadaOperativa(userId?: string) {
+    const now = new Date();
+    const config = await this.prisma.systemConfig.findUnique({
+      where: { id: this.CONFIG_ID },
+      select: { parametrosOperacion: true },
+    });
+
+    const fechaCierreAnterior = this.obtenerFechaCierreDesdeConfig(
+      config?.parametrosOperacion,
+    );
+
+    const [activosPendientes, salidasArchivadas] = await Promise.all([
+      this.prisma.ticket.count({
+        where: { status: 'ACTIVE' },
+      }),
+      this.prisma.ticket.count({
+        where: {
+          status: 'CLOSED',
+          exit: {
+            is: {
+              ...(fechaCierreAnterior
+                ? {
+                    exitTime: {
+                      gte: fechaCierreAnterior,
+                      lt: now,
+                    },
+                  }
+                : { exitTime: { lt: now } }),
+            },
+          },
+        },
+      }),
+    ]);
+
+    const parametrosActuales = this.extraerObjetoJson(
+      config?.parametrosOperacion,
+    );
+
+    const parametrosOperacion = {
+      ...parametrosActuales,
+      cierreJornadaAt: now.toISOString(),
+      cierreJornadaUserId: userId ?? null,
+    };
+
+    await this.prisma.systemConfig.upsert({
+      where: { id: this.CONFIG_ID },
+      update: {
+        parametrosOperacion: this.toJsonValue(parametrosOperacion),
+      },
+      create: {
+        id: this.CONFIG_ID,
+        capacidadTotal: 0,
+        minutosCortesia: 0,
+        parametrosOperacion: this.toJsonValue(parametrosOperacion),
+      },
+    });
+
+    return {
+      fechaCierre: now,
+      activosPendientes,
+      salidasArchivadas,
+      mensaje:
+        activosPendientes > 0
+          ? 'Jornada cerrada. Se limpió el listado de salidas, pero permanecen visibles los vehículos activos sin salida.'
+          : 'Jornada cerrada. El listado de salidas fue reiniciado.',
     };
   }
 
@@ -343,5 +454,35 @@ export class ParkingService {
       return Prisma.JsonNull as any;
     }
     return value as unknown as Prisma.InputJsonValue;
+  }
+
+  private async obtenerFechaCierreJornada() {
+    const config = await this.prisma.systemConfig.findUnique({
+      where: { id: this.CONFIG_ID },
+      select: { parametrosOperacion: true },
+    });
+    return this.obtenerFechaCierreDesdeConfig(config?.parametrosOperacion);
+  }
+
+  private obtenerFechaCierreDesdeConfig(value: Prisma.JsonValue | null | undefined) {
+    const parametros = this.extraerObjetoJson(value);
+    const cierre = parametros.cierreJornadaAt;
+    if (typeof cierre !== 'string') {
+      return null;
+    }
+
+    const fecha = new Date(cierre);
+    if (Number.isNaN(fecha.getTime())) {
+      return null;
+    }
+
+    return fecha;
+  }
+
+  private extraerObjetoJson(value: Prisma.JsonValue | null | undefined) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {} as Record<string, unknown>;
+    }
+    return value as Record<string, unknown>;
   }
 }

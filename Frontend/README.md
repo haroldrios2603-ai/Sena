@@ -1,73 +1,77 @@
-# React + TypeScript + Vite
+# Frontend RM Parking
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacion web principal de RM Parking. Incluye interfaz operativa, administracion, reportes y pantalla publica para pagos por QR.
 
-Currently, two official plugins are available:
+## Stack Tecnologico
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19
+- Vite
+- TypeScript
+- Tailwind CSS
+- Axios
 
-## React Compiler
+## Estructura Relevante
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `src/pages/`: paginas principales (login, dashboard, auditoria, pago QR).
+- `src/components/`: componentes por modulo.
+- `src/services/`: clientes HTTP para backend.
+- `src/context/`: estado de autenticacion.
+- `src/hooks/`: hooks reutilizables.
+- `src/utils/`: utilidades compartidas.
 
-## Expanding the ESLint configuration
+## Requisitos
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 18+
+- npm 10+
+- Backend disponible en `VITE_API_URL`
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Variables de Entorno
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `VITE_API_URL` (por defecto `http://localhost:3000`)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Ejecucion Local
+
+```bash
+npm install
+npm run dev -- --host
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Aplicacion disponible en:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `http://localhost:5173`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Scripts
+
+```bash
+# desarrollo
+npm run dev
+
+# build de produccion
+npm run build
+
+# previsualizar build
+npm run preview
+
+# lint
+npm run lint
 ```
+
+## Flujos Funcionales
+
+- Login y control de permisos por modulo.
+- Operacion de ingreso/salida de vehiculos.
+- Gestion de usuarios y clientes.
+- Configuracion de parametros, tarifas y metodos de pago.
+- Reportes administrativos.
+- Pantalla publica de pago QR: `/pago/:paymentId`.
+
+## Integracion con Backend
+
+- Cliente base en `src/api.ts`.
+- Interceptor de token JWT para rutas protegidas.
+- Servicios de dominio en `src/services/`.
+
+## Notas
+
+- Para desarrollo mixto recomendado: backend local + frontend local + base de datos en Docker.
+- Si cambias `VITE_API_URL`, reinicia el servidor de desarrollo de Vite.

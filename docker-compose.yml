@@ -51,7 +51,7 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
       - SMTP_FROM=${SMTP_FROM:-no-reply@rmparking.com}
-      - PASSWORD_RESET_DELIVERY_OVERRIDE=${PASSWORD_RESET_DELIVERY_OVERRIDE:-haroldrios2603@gmail.com}
+      - PASSWORD_RESET_DELIVERY_OVERRIDE=${PASSWORD_RESET_DELIVERY_OVERRIDE:-}
       - DB_HOST=db
       - DB_PORT=5432
       - POSTGRES_USER=${POSTGRES_USER:-postgres}

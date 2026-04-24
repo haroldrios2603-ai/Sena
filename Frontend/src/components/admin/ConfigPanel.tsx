@@ -19,6 +19,7 @@ import configService, {
 } from '../../services/config.service';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 import { announceSettingsUpdated } from '../../utils/settingsRefresh';
+import ConfirmActionModal from './ConfirmActionModal';
 
 interface MensajeEstado {
     texto: string;
@@ -104,6 +105,20 @@ type SeccionConfiguracion =
     | 'parametros-generales'
     | 'tarifario-avanzado'
     | 'sedes-parqueaderos';
+
+type EliminacionPendiente =
+    | {
+        tipo: 'capacidad';
+        index: number;
+    }
+    | {
+        tipo: 'tarifa-especial';
+        index: number;
+    }
+    | {
+        tipo: 'tarifa';
+        index: number;
+    };
 
 const etiquetasSeccion: Record<Exclude<SeccionConfiguracion, 'menu'>, { titulo: string; descripcion: string }> = {
     'parametros-generales': {
@@ -212,6 +227,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
     const [guardandoGeneral, setGuardandoGeneral] = useState(false);
     const [guardandoTarifas, setGuardandoTarifas] = useState(false);
     const [guardandoParqueadero, setGuardandoParqueadero] = useState(false);
+    const [eliminacionPendiente, setEliminacionPendiente] = useState<EliminacionPendiente | null>(null);
     const [nuevoParqueadero, setNuevoParqueadero] = useState<ParqueaderoEditable>({
         nombre: '',
         direccion: '',
@@ -367,6 +383,10 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
         }));
     };
 
+    const solicitarEliminacionCapacidad = (index: number) => {
+        setEliminacionPendiente({ tipo: 'capacidad', index });
+    };
+
     const agregarTarifaEspecial = () => {
         setConfigGeneral((prev) => ({
             ...prev,
@@ -393,6 +413,10 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
             ...prev,
             tarifasEspeciales: prev.tarifasEspeciales.filter((_, idx) => idx !== index),
         }));
+    };
+
+    const solicitarEliminacionTarifaEspecial = (index: number) => {
+        setEliminacionPendiente({ tipo: 'tarifa-especial', index });
     };
 
     const agregarTarifa = () => {
@@ -427,6 +451,87 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
     const eliminarTarifa = (index: number) => {
         setTarifas((prev) => prev.filter((_, idx) => idx !== index));
     };
+
+    const solicitarEliminacionTarifa = (index: number) => {
+        setEliminacionPendiente({ tipo: 'tarifa', index });
+    };
+
+    const cancelarEliminacionPendiente = () => {
+        if (!eliminacionPendiente) {
+            return;
+        }
+
+        setEliminacionPendiente(null);
+        setMensaje({
+            texto: 'No se eliminó el registro: operación cancelada por el operador.',
+            tipo: 'error',
+        });
+    };
+
+    const confirmarEliminacionPendiente = () => {
+        if (!eliminacionPendiente) {
+            return;
+        }
+
+        // ES: Resolvemos la acción de eliminación según el tipo de registro seleccionado en el modal.
+        const { tipo, index } = eliminacionPendiente;
+
+        if (tipo === 'capacidad') {
+            if (!configGeneral.capacidadPorTipo[index]) {
+                setMensaje({ texto: 'No se pudo eliminar el registro: capacidad no encontrada.', tipo: 'error' });
+                setEliminacionPendiente(null);
+                return;
+            }
+            eliminarCapacidad(index);
+            setMensaje({ texto: 'Registro eliminado correctamente.', tipo: 'success' });
+            setEliminacionPendiente(null);
+            return;
+        }
+
+        if (tipo === 'tarifa-especial') {
+            if (!configGeneral.tarifasEspeciales[index]) {
+                setMensaje({ texto: 'No se pudo eliminar el registro: tarifa especial no encontrada.', tipo: 'error' });
+                setEliminacionPendiente(null);
+                return;
+            }
+            eliminarTarifaEspecial(index);
+            setMensaje({ texto: 'Registro eliminado correctamente.', tipo: 'success' });
+            setEliminacionPendiente(null);
+            return;
+        }
+
+        if (!tarifas[index]) {
+            setMensaje({ texto: 'No se pudo eliminar el registro: tarifa no encontrada.', tipo: 'error' });
+            setEliminacionPendiente(null);
+            return;
+        }
+
+        eliminarTarifa(index);
+        setMensaje({ texto: 'Registro eliminado correctamente.', tipo: 'success' });
+        setEliminacionPendiente(null);
+    };
+
+    const mensajeEliminacionPendiente = useMemo(() => {
+        if (!eliminacionPendiente) {
+            return '';
+        }
+
+        if (eliminacionPendiente.tipo === 'capacidad') {
+            const registro = configGeneral.capacidadPorTipo[eliminacionPendiente.index];
+            const nombre = registro?.tipo || 'este tipo de capacidad';
+            return `¿Deseas eliminar el registro de capacidad ${nombre}?`;
+        }
+
+        if (eliminacionPendiente.tipo === 'tarifa-especial') {
+            const registro = configGeneral.tarifasEspeciales[eliminacionPendiente.index];
+            const nombre = registro?.nombre || 'esta tarifa especial';
+            return `¿Deseas eliminar la tarifa especial ${nombre}?`;
+        }
+
+        const registro = tarifas[eliminacionPendiente.index];
+        const nombre = registro?.tipoVehiculo || 'este tipo de tarifa';
+        return `¿Deseas eliminar la tarifa de ${nombre}?`;
+    }, [eliminacionPendiente, configGeneral.capacidadPorTipo, configGeneral.tarifasEspeciales, tarifas]);
 
     const actualizarMetodosPago = (campo: keyof ConfiguracionFormulario['metodosPago'], valor: string | boolean) => {
         setConfigGeneral((prev) => ({
@@ -831,7 +936,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                                     <button
                                         type="button"
                                         className="text-xs text-rose-600"
-                                        onClick={() => eliminarCapacidad(index)}
+                                        onClick={() => solicitarEliminacionCapacidad(index)}
                                     >
                                         Eliminar
                                     </button>
@@ -922,7 +1027,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                                 <button
                                     type="button"
                                     className="text-xs text-rose-600 md:col-span-3 text-left"
-                                    onClick={() => eliminarTarifaEspecial(index)}
+                                    onClick={() => solicitarEliminacionTarifaEspecial(index)}
                                 >
                                     Eliminar
                                 </button>
@@ -1187,7 +1292,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                                     <button
                                         type="button"
                                         className="text-xs text-rose-600"
-                                        onClick={() => eliminarTarifa(index)}
+                                        onClick={() => solicitarEliminacionTarifa(index)}
                                     >
                                         Eliminar
                                     </button>
@@ -1497,6 +1602,16 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                 </form>
             </section>
             )}
+
+            <ConfirmActionModal
+                isOpen={Boolean(eliminacionPendiente)}
+                title="Confirmar eliminación"
+                message={mensajeEliminacionPendiente}
+                confirmText="Aceptar"
+                cancelText="Cancelar"
+                onConfirm={confirmarEliminacionPendiente}
+                onCancel={cancelarEliminacionPendiente}
+            />
         </section>
     );
 };

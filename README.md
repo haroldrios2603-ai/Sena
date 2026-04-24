@@ -1,33 +1,98 @@
-# RM Parking - Sistema de Gestión de Parqueaderos
+# RM Parking - Sistema de Gestion de Parqueaderos
 
-Sistema integral para la administración de parqueaderos con soporte para IA, tickets QR y control financiero.
+Plataforma para administrar parqueaderos con modulos operativos, control de usuarios y clientes, auditoria, reportes y flujo de pagos por QR.
 
-## Estructura del Proyecto
+## Arquitectura del Monorepo
 
-- `/Backend`: API construida con NestJS y Prisma (PostgreSQL).
-- `/Frontend`: Interfaz de usuario construida con React + Vite + Tailwind CSS.
-- `/QA`: Entorno de pruebas con Playwright.
-- `/docs`: Documentación técnica y manuales.
+- `Backend/`: API REST (NestJS + Prisma + PostgreSQL).
+- `Frontend/`: Aplicacion web (React + Vite + TypeScript).
+- `QA/`: pruebas E2E y UX con Playwright.
+- `docs/`: tickets y documentacion tecnica de tareas.
+- `Documentador/`: manuales funcionales y guias operativas.
+- `ops/`: scripts de soporte operativo.
 
-## Requisitos Previos
+## Requisitos
 
-- Docker y Docker Compose
-- Node.js (v18+)
-- NPM o PNPM
+- Node.js 18 o superior.
+- npm 10 o superior.
+- Docker y Docker Compose.
 
-## Inicio Rápido
+## Variables de Entorno
 
-1. Clonar el repositorio.
-2. Configurar variables de entorno: `cp .env.example .env`.
-3. Levantar servicios: `docker-compose up -d`.
-4. El backend estará disponible en `http://localhost:3000/api/docs` (Swagger).
-5. El frontend estará disponible en `http://localhost:5173`.
+1. Usar `.env.example` como referencia de variables base.
+2. Para desarrollo local mixto (recomendado):
+	- Base de datos en Docker.
+	- Backend y Frontend en local.
+3. Variables importantes del backend:
+	- `DATABASE_URL`
+	- `JWT_SECRET`
+	- `FRONTEND_BASE_URL`
+	- `WOMPI_PUBLIC_KEY`
+	- `WOMPI_INTEGRITY_SECRET`
+
+## Levantar el Proyecto
+
+### Opcion A - Todo en Docker
+
+```bash
+docker compose up -d
+```
+
+### Opcion B - Mixto (DB en Docker y apps en local)
+
+```bash
+docker compose up -d db
+
+cd Backend
+npm install
+npm run start:dev
+
+cd ../Frontend
+npm install
+npm run dev -- --host
+```
+
+## URLs Locales
+
+- Backend (Swagger): `http://localhost:3000/api/docs`
+- Frontend: `http://localhost:5173`
+- Base de datos PostgreSQL: `localhost:5432`
+
+## Funcionalidades Implementadas
+
+- Autenticacion JWT y recuperacion de contrasena.
+- Gestion de usuarios, clientes y contratos.
+- Registro de ingreso/salida de vehiculos con calculo de cobro.
+- Auditoria de acciones de usuario.
+- Reportes operativos y exportables.
+- Configuracion general, tarifas y metodos de pago.
+- Flujo de pago QR con integracion Wompi Sandbox.
 
 ## Pruebas
 
-Para ejecutar las pruebas de QA:
+### Backend/Frontend (compilacion)
+
+```bash
+cd Backend
+npm run build
+
+cd ../Frontend
+npm run build
+```
+
+### QA E2E
+
 ```bash
 cd QA
 npm install
-npm test
+npx playwright install
+npx playwright test --reporter=line
 ```
+
+## Documentacion Complementaria
+
+- Manual administrativo: `Documentador/MANUAL_ADMIN.md`
+- Manual de operador: `Documentador/MANUAL_OPERADOR.md`
+- Arquitectura tecnica: `Documentador/Arquitectura_Tecnica.md`
+- Recuperacion de contrasena: `Documentador/AUTH_PASSWORD_RESET_API.md`
+- Tareas por sprint: `docs/tasks/`

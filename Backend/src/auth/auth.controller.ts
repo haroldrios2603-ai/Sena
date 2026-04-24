@@ -61,6 +61,25 @@ export class AuthController {
         }),
       });
 
+      if (result.attendanceAction === 'CHECK_IN_CREATED' && result.attendanceId) {
+        this.auditService.log({
+          operation: AuditOperation.CREATE,
+          entity: 'attendance',
+          recordId: result.attendanceId,
+          result: AuditResult.SUCCESS,
+          newValues: {
+            userId: decoded.sub,
+            email: decoded.email ?? loginDto.email,
+            checkIn: result.checkIn,
+          },
+          context: this.auditService.buildContextFromRequest(req as any, {
+            userId: decoded.sub,
+            userEmail: decoded.email ?? loginDto.email,
+          }),
+          metadata: { action: 'check_in' },
+        });
+      }
+
       return result;
     } catch (error) {
       this.auditService.log({
@@ -104,6 +123,22 @@ export class AuthController {
       result: AuditResult.SUCCESS,
       context: this.auditService.buildContextFromRequest(req as any),
     });
+
+    if (result.attendanceClosed && result.attendanceId) {
+      this.auditService.log({
+        operation: AuditOperation.UPDATE,
+        entity: 'attendance',
+        recordId: result.attendanceId,
+        result: AuditResult.SUCCESS,
+        newValues: {
+          userId: req.user.userId,
+          checkIn: result.checkIn,
+          checkOut: result.checkOut,
+        },
+        context: this.auditService.buildContextFromRequest(req as any),
+        metadata: { action: 'check_out' },
+      });
+    }
 
     return result;
   }

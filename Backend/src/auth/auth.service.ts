@@ -89,16 +89,39 @@ export class AuthService {
     // Generar token
     const payload = { sub: user.id, email: user.email, role: user.role };
 
-    // Registrar asistencia automáticamente (RF 1.7)
-    await this.prisma.attendance.create({
-      data: {
+    // ES: Evitamos check-in duplicado si el usuario ya tiene una sesión abierta.
+    const openAttendance = await this.prisma.attendance.findFirst({
+      where: {
         userId: user.id,
-        checkIn: new Date(),
+        checkOut: null,
+      },
+      orderBy: {
+        checkIn: 'desc',
       },
     });
 
+    let attendanceId = openAttendance?.id;
+    let checkIn = openAttendance?.checkIn;
+    let attendanceAction: 'CHECK_IN_CREATED' | 'CHECK_IN_REUSED' =
+      'CHECK_IN_REUSED';
+
+    if (!openAttendance) {
+      const createdAttendance = await this.prisma.attendance.create({
+        data: {
+          userId: user.id,
+          checkIn: new Date(),
+        },
+      });
+      attendanceId = createdAttendance.id;
+      checkIn = createdAttendance.checkIn;
+      attendanceAction = 'CHECK_IN_CREATED';
+    }
+
     return {
       accessToken: this.jwtService.sign(payload),
+      attendanceId,
+      checkIn,
+      attendanceAction,
     };
   }
 
@@ -152,13 +175,25 @@ export class AuthService {
     });
 
     if (attendance) {
+      const checkOut = new Date();
       await this.prisma.attendance.update({
         where: { id: attendance.id },
-        data: { checkOut: new Date() },
+        data: { checkOut },
       });
+
+      return {
+        message: 'Sesión cerrada y asistencia actualizada',
+        attendanceClosed: true,
+        attendanceId: attendance.id,
+        checkIn: attendance.checkIn,
+        checkOut,
+      };
     }
 
-    return { message: 'Sesión cerrada y asistencia actualizada' };
+    return {
+      message: 'Sesión cerrada y asistencia actualizada',
+      attendanceClosed: false,
+    };
   }
 
   /**

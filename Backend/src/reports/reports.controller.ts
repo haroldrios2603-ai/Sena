@@ -149,7 +149,19 @@ export class ReportsController {
     const exportConfig = this.buildExportConfig(dto.reportType, data);
     const rows = exportConfig.rows;
     const title = exportConfig.title;
-    const file = await this.reportsExportService.buildFile(dto.format, title, rows);
+    const generatedBy = await this.reportsService.resolveExportAuthor(
+      userId,
+      req.user?.email,
+    );
+    const file = await this.reportsExportService.buildFile(
+      dto.format,
+      title,
+      rows,
+      {
+        generatedBy,
+        generatedAt: new Date(),
+      },
+    );
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const fileName = `${dto.reportType}-${stamp}.${file.extension}`;
 

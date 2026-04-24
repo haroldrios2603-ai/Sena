@@ -19,7 +19,7 @@ Implementar un flujo seguro para recuperar contraseñas desde la API de autentic
    - **Body:** `{ "email": "usuario@dominio.com" }`.
    - Acciones: invalida códigos previos, genera uno nuevo y lo almacena hasheado.
    - Respuesta genérica para evitar filtrado de información.
-   - El envío real del código (email/SMS) queda pendiente de integrar con un proveedor externo; actualmente se registra en logs del backend.
+   - El envio del codigo depende de la configuracion de notificacion activa en backend. Si no hay proveedor SMTP disponible, se aplica fallback de desarrollo.
 
 2. `POST /auth/password/reset`
    - **Body:** `{ "email": "usuario@dominio.com", "code": "ABC123", "newPassword": "NuevaClave$2026" }`.
@@ -30,7 +30,7 @@ Implementar un flujo seguro para recuperar contraseñas desde la API de autentic
 - Los códigos se guardan con `bcrypt`, jamás en texto plano.
 - El mensaje del endpoint `/auth/password/request` siempre es el mismo, independiente de que el correo exista o no.
 - Se invalidan tokens previos activos para el usuario antes de crear uno nuevo.
-- Quedan pendientes límites de intentos y bloqueo temporal ante múltiples fallos; se documenta como mejora futura.
+- Limites de intentos y bloqueo temporal por abuso se mantienen como mejora recomendada para endurecimiento.
 
 ## Migraciones
 - Carpeta `Backend/prisma/migrations/20260129_password_reset` contiene el SQL para crear la tabla e índices.
@@ -38,6 +38,12 @@ Implementar un flujo seguro para recuperar contraseñas desde la API de autentic
 
 ## Pasos de verificación
 1. Solicitar un código: `curl -X POST http://localhost:3000/auth/password/request -d '{"email":"admin@rmparking.com"}' -H "Content-Type: application/json"`.
-2. Revisar logs del contenedor backend para obtener el código (temporal hasta integrar proveedor de correo).
+2. Verificar recepcion del codigo por el canal configurado (correo/notificacion) o por fallback de desarrollo.
 3. Confirmar el código: `curl -X POST http://localhost:3000/auth/password/reset ...` con los datos del paso anterior.
 4. Intentar iniciar sesión con la nueva contraseña y validar que el token se marcó con `usedAt`.
+
+## Estado actual
+
+- Endpoints implementados y operativos.
+- Flujo integrado en frontend de login.
+- Pendiente recomendado: politicas antiabuso (rate limit, lock temporal y alertas).

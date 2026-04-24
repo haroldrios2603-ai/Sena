@@ -140,6 +140,32 @@ export class ParkingController {
   }
 
   /**
+   * Cierra la jornada diaria y reinicia el listado de vehículos con salida.
+   * Los vehículos activos sin salida permanecen visibles en operación.
+   */
+  @Post('jornada/cerrar')
+  @RequireScreenPermission('operations-dashboard')
+  async cerrarJornada(@Request() req: any) {
+    const result = await this.parkingService.cerrarJornadaOperativa(
+      req?.user?.userId,
+    );
+
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'parking_daily_closure',
+      result: AuditResult.SUCCESS,
+      metadata: {
+        fechaCierre: result.fechaCierre,
+        activosPendientes: result.activosPendientes,
+        salidasArchivadas: result.salidasArchivadas,
+      },
+      context: this.auditService.buildContextFromRequest(req),
+    });
+
+    return result;
+  }
+
+  /**
    * Obtiene todos los parqueaderos registrados en el sistema.
    */
   @Get()

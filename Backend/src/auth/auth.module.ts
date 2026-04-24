@@ -23,7 +23,7 @@ import { PasswordRecoveryNotifierService } from './password-recovery-notifier.se
       secret:
         process.env.JWT_SECRET ||
         (process.env.NODE_ENV === 'development' ? 'dev-secret' : undefined),
-      signOptions: { expiresIn: '60m' },
+      signOptions: { expiresIn: '10h' },
     }),
   ],
   controllers: [AuthController],

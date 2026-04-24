@@ -10,7 +10,8 @@ export class ExitDto {
    */
   @IsString()
   @MinLength(6, { message: 'La placa debe tener exactamente 6 caracteres' })
-  @MaxLength(6, { message: 'La placa debe tener máximo 6 caracteres' })
+  // ES: Permitimos hasta 7 para resolver placas legadas ya registradas en operación.
+  @MaxLength(7, { message: 'La placa debe tener máximo 7 caracteres para salida' })
   @Transform(({ value }: { value: string }) => value?.toUpperCase().trim())
   placa: string;
 }

@@ -522,14 +522,17 @@ const Dashboard = () => {
 
     const formatCurrency = (value: number) => currencyFormatter.format(Math.max(0, value));
     const formatDateTime = (value: string) => fechaFormatter.format(new Date(value));
-    const normalizePlateInput = (value: string) => {
+    const normalizePlateInput = (value: string, maxLength: number, fieldLabel: 'entrada' | 'salida') => {
         const normalized = value.toUpperCase().replace(/\s+/g, '');
-        if (normalized.length > 6) {
+        if (normalized.length > maxLength) {
             setMessage({
-                text: 'El máximo de dígitos/caracteres permitidos para la placa es 6.',
+                text:
+                    fieldLabel === 'salida'
+                        ? 'Para salida, el máximo permitido es 7 caracteres (soporte para placas legadas).'
+                        : 'Para ingreso, el máximo de dígitos/caracteres permitidos para la placa es 6.',
                 type: 'info',
             });
-            return normalized.slice(0, 6);
+            return normalized.slice(0, maxLength);
         }
         return normalized;
     };
@@ -554,7 +557,22 @@ const Dashboard = () => {
         const avgBaseRate = totalSites > 0
             ? parkings.reduce((acc, parking) => acc + (parking.baseRate || 0), 0) / totalSites
             : 0;
-        const lastAmount = lastExit?.exit?.totalAmount ?? null;
+
+        const latestClosedTicket = ticketsCerrados.reduce<TicketConSalida | null>((latest, ticket) => {
+            if (!ticket.exit) {
+                return latest;
+            }
+
+            if (!latest?.exit) {
+                return ticket;
+            }
+
+            const currentExitTime = new Date(ticket.exit.exitTime).getTime();
+            const latestExitTime = new Date(latest.exit.exitTime).getTime();
+            return currentExitTime > latestExitTime ? ticket : latest;
+        }, null);
+
+        const lastAmount = latestClosedTicket?.exit?.totalAmount ?? lastExit?.exit?.totalAmount ?? null;
 
         return {
             totalSites,
@@ -562,7 +580,7 @@ const Dashboard = () => {
             avgBaseRate,
             lastAmount,
         };
-    }, [parkings, lastExit]);
+    }, [parkings, ticketsCerrados, lastExit]);
 
     const aplicarFiltroPlaca = () => setFiltroPlaca(filtroBusqueda.trim());
     const limpiarFiltroPlaca = () => {
@@ -911,7 +929,7 @@ const Dashboard = () => {
                                             type="text"
                                             value={plateEntry}
                                             onChange={(e) => {
-                                                setPlateEntry(normalizePlateInput(e.target.value));
+                                                setPlateEntry(normalizePlateInput(e.target.value, 6, 'entrada'));
                                             }}
                                             className="input-field uppercase tracking-widest"
                                             placeholder="ABC123"
@@ -979,11 +997,11 @@ const Dashboard = () => {
                                             type="text"
                                             value={plateExit}
                                             onChange={(e) => {
-                                                setPlateExit(normalizePlateInput(e.target.value));
+                                                setPlateExit(normalizePlateInput(e.target.value, 7, 'salida'));
                                             }}
                                             className="input-field uppercase tracking-widest"
                                             placeholder="ABC123"
-                                            maxLength={6}
+                                            maxLength={7}
                                             required
                                         />
                                     </div>

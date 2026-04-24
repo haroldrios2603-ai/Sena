@@ -225,6 +225,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
     const [aplicarTarifasEnTodos, setAplicarTarifasEnTodos] = useState(true);
     const [parqueaderoObjetivo, setParqueaderoObjetivo] = useState('');
     const [guardandoGeneral, setGuardandoGeneral] = useState(false);
+    const [guardandoMetodosPago, setGuardandoMetodosPago] = useState(false);
     const [guardandoTarifas, setGuardandoTarifas] = useState(false);
     const [guardandoParqueadero, setGuardandoParqueadero] = useState(false);
     const [eliminacionPendiente, setEliminacionPendiente] = useState<EliminacionPendiente | null>(null);
@@ -682,6 +683,21 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
         }
     };
 
+    const guardarMetodosPago = async () => {
+        setGuardandoMetodosPago(true);
+        setMensaje({ texto: '', tipo: '' });
+        try {
+            await configService.actualizarMetodosPago(configGeneral.metodosPago);
+            setMensaje({ texto: 'Métodos de pago guardados correctamente', tipo: 'success' });
+            await cargarConfiguracion();
+            announceSettingsUpdated();
+        } catch (error) {
+            setMensaje({ texto: mensajeError(error, 'No se pudieron guardar los métodos de pago'), tipo: 'error' });
+        } finally {
+            setGuardandoMetodosPago(false);
+        }
+    };
+
     const crearParqueadero = async (event: React.FormEvent) => {
         event.preventDefault();
         setGuardandoParqueadero(true);
@@ -1038,7 +1054,17 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
-                        <label className="form-label">Métodos de pago aceptados</label>
+                        <div className="flex items-center justify-between gap-3">
+                            <label className="form-label">Métodos de pago aceptados</label>
+                            <button
+                                type="button"
+                                className="btn-outline !w-auto px-3 py-2 text-xs"
+                                onClick={() => void guardarMetodosPago()}
+                                disabled={guardandoMetodosPago}
+                            >
+                                {guardandoMetodosPago && <Loader2 size={14} className="animate-spin" />} Guardar métodos
+                            </button>
+                        </div>
                         {[
                             { label: 'Efectivo en taquilla', campo: 'aceptaEfectivo' as const },
                             { label: 'Tarjeta física', campo: 'aceptaTarjeta' as const },

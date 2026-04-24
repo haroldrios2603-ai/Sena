@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import api from '../api';
 import {
+    AlertCircle,
     LogOut,
     Car,
     ArrowRightLeft,
@@ -28,7 +29,11 @@ import PermissionsProfiles from './PermissionsProfiles';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import { SETTINGS_UPDATED_EVENT } from '../utils/settingsRefresh';
-import { paymentsService, type ExitPaymentIntentResponse } from '../services/payments.service';
+import {
+    paymentsService,
+    type ExitCashPaymentResponse,
+    type ExitPaymentIntentResponse,
+} from '../services/payments.service';
 
 type VehicleType = 'CAR' | 'MOTORCYCLE';
 
@@ -73,6 +78,12 @@ type ExitResponse = {
     ticket: Ticket;
     exit: ExitRecord;
     message: string;
+    paymentOptions?: {
+        aceptaEfectivo?: boolean;
+        aceptaQr?: boolean;
+        aceptaTarjeta?: boolean;
+        aceptaEnLinea?: boolean;
+    };
 };
 
 type TicketConSalida = Ticket & { exit?: ExitRecord | null };
@@ -91,7 +102,7 @@ type CierreJornadaResponse = {
 
 type MessageState = {
     text: string;
-    type: 'success' | 'error' | '';
+    type: 'success' | 'error' | 'info' | '';
 };
 
 type ApiErrorResponse = {
@@ -179,7 +190,9 @@ const Dashboard = () => {
     const [filtroPlaca, setFiltroPlaca] = useState('');
     const [isSyncingSettings, setIsSyncingSettings] = useState(false);
     const [exitPaymentIntent, setExitPaymentIntent] = useState<ExitPaymentIntentResponse | null>(null);
+    const [exitCashPayment, setExitCashPayment] = useState<ExitCashPaymentResponse | null>(null);
     const [generatingExitPayment, setGeneratingExitPayment] = useState(false);
+    const [registeringCashPayment, setRegisteringCashPayment] = useState(false);
     const [cerrandoJornada, setCerrandoJornada] = useState(false);
 
     const clearMessage = useCallback(() => setMessage({ text: '', type: '' }), []);
@@ -509,6 +522,17 @@ const Dashboard = () => {
 
     const formatCurrency = (value: number) => currencyFormatter.format(Math.max(0, value));
     const formatDateTime = (value: string) => fechaFormatter.format(new Date(value));
+    const normalizePlateInput = (value: string) => {
+        const normalized = value.toUpperCase().replace(/\s+/g, '');
+        if (normalized.length > 6) {
+            setMessage({
+                text: 'El máximo de dígitos/caracteres permitidos para la placa es 6.',
+                type: 'info',
+            });
+            return normalized.slice(0, 6);
+        }
+        return normalized;
+    };
     const formatElapsedTime = (value: string) => {
         const diffMinutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / (1000 * 60)));
         const days = Math.floor(diffMinutes / (60 * 24));
@@ -596,6 +620,7 @@ const Dashboard = () => {
         clearMessage();
         setLastExit(null);
         setExitPaymentIntent(null);
+        setExitCashPayment(null);
 
         try {
             const res = await api.post<ExitResponse>('/parking/exit', { placa: plateExit });
@@ -633,6 +658,28 @@ const Dashboard = () => {
         }
     };
 
+    const handleRegisterCashPayment = async () => {
+        const exitId = lastExit?.exit?.id;
+        if (!exitId) {
+            setMessage({ text: 'No hay una salida válida para registrar el pago.', type: 'error' });
+            return;
+        }
+
+        try {
+            setRegisteringCashPayment(true);
+            const data = await paymentsService.registerExitCashPayment(exitId);
+            setExitCashPayment(data);
+            setMessage({ text: data.message || 'Pago en efectivo registrado correctamente.', type: 'success' });
+        } catch (err: unknown) {
+            setMessage({
+                text: getErrorMessage(err, 'No fue posible registrar el pago en efectivo.'),
+                type: 'error',
+            });
+        } finally {
+            setRegisteringCashPayment(false);
+        }
+    };
+
     const handleCerrarJornada = async () => {
         clearMessage();
 
@@ -661,6 +708,20 @@ const Dashboard = () => {
             setCerrandoJornada(false);
         }
     };
+
+    useEffect(() => {
+        if (exitCashPayment?.status !== 'COMPLETED') {
+            return;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setLastExit(null);
+            setExitCashPayment(null);
+            setExitPaymentIntent(null);
+        }, 5000);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [exitCashPayment]);
 
     return (
         <div className="min-h-screen bg-slate-100 flex">
@@ -823,10 +884,13 @@ const Dashboard = () => {
                                 className={`rounded-2xl border p-4 flex items-start gap-3 ${
                                     message.type === 'success'
                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                        : message.type === 'info'
+                                            ? 'border-sky-200 bg-sky-50 text-sky-900'
                                         : 'border-rose-200 bg-rose-50 text-rose-900'
                                 }`}
                             >
                                 {message.type === 'success' && <CheckCircle size={20} className="mt-0.5" />}
+                                {message.type === 'info' && <AlertCircle size={20} className="mt-0.5" />}
                                 <span className="text-sm font-medium leading-relaxed">{message.text}</span>
                             </div>
                         )}
@@ -847,12 +911,11 @@ const Dashboard = () => {
                                             type="text"
                                             value={plateEntry}
                                             onChange={(e) => {
-                                                clearMessage();
-                                                setPlateEntry(e.target.value.toUpperCase());
+                                                setPlateEntry(normalizePlateInput(e.target.value));
                                             }}
                                             className="input-field uppercase tracking-widest"
                                             placeholder="ABC123"
-                                            maxLength={8}
+                                            maxLength={6}
                                             required
                                         />
                                     </div>
@@ -916,12 +979,11 @@ const Dashboard = () => {
                                             type="text"
                                             value={plateExit}
                                             onChange={(e) => {
-                                                clearMessage();
-                                                setPlateExit(e.target.value.toUpperCase());
+                                                setPlateExit(normalizePlateInput(e.target.value));
                                             }}
                                             className="input-field uppercase tracking-widest"
                                             placeholder="ABC123"
-                                            maxLength={8}
+                                            maxLength={6}
                                             required
                                         />
                                     </div>
@@ -952,16 +1014,54 @@ const Dashboard = () => {
                                                 {formatCurrency(lastExit.exit?.totalAmount || 0)}
                                             </span>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => void handleCreateExitPaymentIntent()}
-                                            disabled={generatingExitPayment}
-                                            className="mt-2 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
-                                        >
-                                            {generatingExitPayment
-                                                ? 'Generando QR de pago...'
-                                                : 'Generar QR de pago (Wompi Sandbox)'}
-                                        </button>
+                                        {(lastExit.paymentOptions?.aceptaEfectivo ?? true) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void handleRegisterCashPayment()}
+                                                disabled={registeringCashPayment || exitCashPayment?.status === 'COMPLETED'}
+                                                className="mt-2 w-full rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+                                            >
+                                                {registeringCashPayment
+                                                    ? 'Registrando pago en efectivo...'
+                                                    : exitCashPayment?.status === 'COMPLETED'
+                                                        ? 'Pago en efectivo registrado'
+                                                        : 'Registrar pago recibido (efectivo)'}
+                                            </button>
+                                        )}
+
+                                        {lastExit.paymentOptions?.aceptaQr && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void handleCreateExitPaymentIntent()}
+                                                disabled={generatingExitPayment || exitCashPayment?.status === 'COMPLETED'}
+                                                className="mt-2 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+                                            >
+                                                {generatingExitPayment
+                                                    ? 'Generando QR de pago...'
+                                                    : 'Generar QR de pago (Wompi Sandbox)'}
+                                            </button>
+                                        )}
+
+                                        {!lastExit.paymentOptions?.aceptaQr && (
+                                            <p className="text-xs text-slate-500">
+                                                El pago por QR no está habilitado en configuración.
+                                            </p>
+                                        )}
+
+                                        {lastExit.paymentOptions?.aceptaEfectivo === false && (
+                                            <p className="text-xs text-slate-500">
+                                                El pago en efectivo no está habilitado en configuración.
+                                            </p>
+                                        )}
+
+                                        {exitCashPayment && (
+                                            <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700">
+                                                <p className="font-semibold text-slate-900">Pago confirmado en caja</p>
+                                                <p>Método: {exitCashPayment.method}</p>
+                                                <p>Estado: {exitCashPayment.status}</p>
+                                                <p>Monto: {formatCurrency(exitCashPayment.amount)}</p>
+                                            </div>
+                                        )}
 
                                         {exitPaymentIntent && (
                                             <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-sm text-slate-700">

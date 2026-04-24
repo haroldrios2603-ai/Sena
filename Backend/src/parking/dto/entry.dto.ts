@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsUUID } from 'class-validator';
+import { IsString, IsIn, IsUUID, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
@@ -9,6 +9,8 @@ export class EntryDto {
    * Placa del vehículo.
    */
   @IsString()
+  @MinLength(6, { message: 'La placa debe tener exactamente 6 caracteres' })
+  @MaxLength(6, { message: 'La placa debe tener máximo 6 caracteres' })
   @Transform(({ value }: { value: string }) => value?.toUpperCase().trim())
   placa: string;
 

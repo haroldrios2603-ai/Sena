@@ -140,7 +140,9 @@ export class ParkingService {
     const existingActiveTicket = await this.prisma.ticket.findFirst({
       where: {
         vehicle: { plate },
-        status: 'ACTIVE',
+        status: {
+          in: ['ACTIVE', 'PENDING_PAYMENT'],
+        },
       },
       select: {
         id: true,
@@ -235,16 +237,19 @@ export class ParkingService {
       },
     });
 
-    // Cerrar ticket
+    // ES: La salida queda pendiente de confirmación de pago.
     await this.prisma.ticket.update({
       where: { id: ticket.id },
-      data: { status: 'CLOSED' },
+      data: { status: 'PENDING_PAYMENT' },
     });
+
+    const paymentOptions = await this.getPaymentOptions();
 
     return {
       ticket,
       exit,
       message: 'Salida registrada con éxito',
+      paymentOptions,
     };
   }
 
@@ -454,6 +459,42 @@ export class ParkingService {
       return Prisma.JsonNull as any;
     }
     return value as unknown as Prisma.InputJsonValue;
+  }
+
+  private async getPaymentOptions() {
+    const defaults = {
+      aceptaEfectivo: true,
+      aceptaQr: false,
+      aceptaTarjeta: true,
+      aceptaEnLinea: false,
+    };
+
+    const config = await this.prisma.systemConfig.findUnique({
+      where: { id: this.CONFIG_ID },
+      select: { metodosPago: true },
+    });
+
+    if (!config?.metodosPago || typeof config.metodosPago !== 'object') {
+      return defaults;
+    }
+
+    const raw = config.metodosPago as Record<string, unknown>;
+    return {
+      aceptaEfectivo:
+        typeof raw.aceptaEfectivo === 'boolean'
+          ? raw.aceptaEfectivo
+          : defaults.aceptaEfectivo,
+      aceptaQr:
+        typeof raw.aceptaQr === 'boolean' ? raw.aceptaQr : defaults.aceptaQr,
+      aceptaTarjeta:
+        typeof raw.aceptaTarjeta === 'boolean'
+          ? raw.aceptaTarjeta
+          : defaults.aceptaTarjeta,
+      aceptaEnLinea:
+        typeof raw.aceptaEnLinea === 'boolean'
+          ? raw.aceptaEnLinea
+          : defaults.aceptaEnLinea,
+    };
   }
 
   private async obtenerFechaCierreJornada() {

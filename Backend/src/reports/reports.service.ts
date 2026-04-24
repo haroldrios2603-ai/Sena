@@ -53,7 +53,9 @@ export class ReportsService {
       orderBy: { checkIn: 'desc' },
     });
 
-    const present = attendances
+    const normalizedAttendances = this.removeDuplicateOpenRecords(attendances);
+
+    const present = normalizedAttendances
       .filter((item) => item.user.role !== 'CLIENT')
       .map((item) => ({
         attendanceId: item.id,
@@ -61,6 +63,9 @@ export class ReportsService {
         nombre: item.user.fullName,
         correo: item.user.email,
         rol: item.user.role,
+        documento: item.user.documentNumber
+          ? `${item.user.documentType || 'Doc'}: ${item.user.documentNumber}`
+          : 'Sin registro',
         ingreso: item.checkIn,
         salida: item.checkOut,
         presente: !item.checkOut,
@@ -361,7 +366,9 @@ export class ReportsService {
       orderBy: { checkIn: 'asc' },
     });
 
-    const detalles = records.map((record) => {
+    const normalizedRecords = this.removeDuplicateOpenRecords(records);
+
+    const detalles = normalizedRecords.map((record) => {
       const end = record.checkOut ?? new Date();
       const minutes = Math.max(0, Math.round((end.getTime() - record.checkIn.getTime()) / 60000));
 
@@ -391,6 +398,32 @@ export class ReportsService {
       totalHoras: Number(totalHoras.toFixed(2)),
       registros: detalles,
     };
+  }
+
+  private removeDuplicateOpenRecords<T extends { id: string; userId: string; checkIn: Date; checkOut: Date | null }>(
+    records: T[],
+  ): T[] {
+    const latestOpenByUser = new Map<string, T>();
+
+    records.forEach((record) => {
+      if (record.checkOut) {
+        return;
+      }
+
+      const existing = latestOpenByUser.get(record.userId);
+      if (!existing || record.checkIn.getTime() > existing.checkIn.getTime()) {
+        latestOpenByUser.set(record.userId, record);
+      }
+    });
+
+    return records.filter((record) => {
+      if (record.checkOut) {
+        return true;
+      }
+
+      const selected = latestOpenByUser.get(record.userId);
+      return selected?.id === record.id;
+    });
   }
 
   async getIncomeByVehicleType(dto: DateRangeDto) {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power, Pencil, Trash2, RotateCcw } from 'lucide-react';
+import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power, Pencil, Trash2 } from 'lucide-react';
 import usersService, {
     type UserFilters,
     type CreateUserPayload,
@@ -94,7 +94,7 @@ const UserManagementPanel = () => {
     const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
     const [creating, setCreating] = useState(false);
     const [roleFilter, setRoleFilter] = useState<'ALL' | Role>('ALL');
-    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ACTIVE');
     const [fullNameFilter, setFullNameFilter] = useState('');
     const [emailFilter, setEmailFilter] = useState('');
     const [contactPhoneFilter, setContactPhoneFilter] = useState('');
@@ -301,7 +301,7 @@ const UserManagementPanel = () => {
         try {
             await usersService.updateUserStatus(user.id, !user.isActive);
             setMessage({
-                text: user.isActive ? 'Usuario suspendido' : 'Usuario reactivado',
+                text: user.isActive ? 'Usuario inactivado correctamente' : 'Usuario activado correctamente',
                 type: 'success',
             });
             await loadUsers();
@@ -316,11 +316,15 @@ const UserManagementPanel = () => {
     };
 
     const handleDeleteUser = (user: User) => {
-        if (rowLoading || rowLoading === user.id) {
+        if (rowLoading && rowLoading !== user.id) {
+            setMessage({
+                text: 'Hay otra acción en progreso. Espera un momento e inténtalo de nuevo.',
+                type: 'error',
+            });
             return;
         }
 
-        // ES: Abrimos modal para confirmar archivo en lugar de usar confirm nativo del navegador.
+        // ES: Abrimos modal para confirmar eliminación en lugar de usar confirm nativo del navegador.
         setPendingDeleteUser(user);
     };
 
@@ -331,9 +335,10 @@ const UserManagementPanel = () => {
 
         setPendingDeleteUser(null);
         setMessage({
-            text: 'No se archivó el usuario: operación cancelada por el operador.',
+            text: 'No se eliminó el usuario: operación cancelada por el operador.',
             type: 'error',
         });
+        window.alert('No se eliminó el usuario: operación cancelada por el operador.');
     };
 
     const confirmDeleteUser = async () => {
@@ -346,43 +351,23 @@ const UserManagementPanel = () => {
         setMessage({ text: '', type: '' });
         try {
             await usersService.deleteUser(user.id);
-            setMessage({ text: 'Usuario archivado correctamente', type: 'success' });
-            await loadUsers();
+            // ES: Forzamos la vista principal de usuarios activos para ocultar inmediatamente el registro eliminado.
+            if (statusFilter !== 'ACTIVE') {
+                setStatusFilter('ACTIVE');
+            } else {
+                await loadUsers();
+            }
+            setMessage({ text: 'Usuario eliminado correctamente.', type: 'success' });
+            window.alert('Usuario eliminado correctamente.');
         } catch (error) {
+            const errorMessage = getErrorMessage(error, 'No se pudo eliminar el usuario');
             setMessage({
-                text: getErrorMessage(error, 'No se pudo archivar el usuario'),
+                text: errorMessage,
                 type: 'error',
             });
+            window.alert(`No se pudo eliminar el usuario: ${errorMessage}`);
         } finally {
             setPendingDeleteUser(null);
-            setRowLoading(null);
-        }
-    };
-
-    const handleRestoreUser = async (user: User) => {
-        if (rowLoading || rowLoading === user.id) {
-            return;
-        }
-
-        const shouldRestore = window.confirm(
-            `Vas a restaurar a ${user.fullName}. El usuario volverá a estar activo.`,
-        );
-        if (!shouldRestore) {
-            return;
-        }
-
-        setRowLoading(user.id);
-        setMessage({ text: '', type: '' });
-        try {
-            await usersService.restoreUser(user.id);
-            setMessage({ text: 'Usuario restaurado correctamente', type: 'success' });
-            await loadUsers();
-        } catch (error) {
-            setMessage({
-                text: getErrorMessage(error, 'No se pudo restaurar el usuario'),
-                type: 'error',
-            });
-        } finally {
             setRowLoading(null);
         }
     };
@@ -750,27 +735,6 @@ const UserManagementPanel = () => {
                                                     >
                                                         <Pencil size={13} /> Editar
                                                     </button>
-                                                    {canDeleteUsers && (
-                                                        user.isActive ? (
-                                                            <button
-                                                                type="button"
-                                                                className="btn-suspend btn-suspend--danger !w-auto px-3 text-xs"
-                                                                onClick={() => handleDeleteUser(user)}
-                                                                disabled={rowLoading === user.id}
-                                                            >
-                                                                <Trash2 size={13} /> Archivar
-                                                            </button>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                className="btn-suspend btn-suspend--success !w-auto px-3 text-xs"
-                                                                onClick={() => handleRestoreUser(user)}
-                                                                disabled={rowLoading === user.id}
-                                                            >
-                                                                <RotateCcw size={13} /> Restaurar
-                                                            </button>
-                                                        )
-                                                    )}
                                                     <button
                                                         type="button"
                                                         className={`btn-suspend !w-auto px-4 text-xs ${
@@ -782,11 +746,21 @@ const UserManagementPanel = () => {
                                                         {rowLoading === user.id ? (
                                                             <Loader2 size={14} className="animate-spin" />
                                                         ) : user.isActive ? (
-                                                            'Suspender'
+                                                            'Inactivar'
                                                         ) : (
-                                                            'Reactivar'
+                                                            'Activar'
                                                         )}
                                                     </button>
+                                                    {canDeleteUsers && (
+                                                        <button
+                                                            type="button"
+                                                            className="btn-suspend btn-suspend--danger !w-auto px-3 text-xs"
+                                                            onClick={() => handleDeleteUser(user)}
+                                                            disabled={rowLoading === user.id}
+                                                        >
+                                                            <Trash2 size={13} /> Eliminar
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -936,9 +910,9 @@ const UserManagementPanel = () => {
 
             <ConfirmActionModal
                 isOpen={Boolean(pendingDeleteUser)}
-                title="Confirmar archivo de usuario"
+                title="Confirmar eliminación de usuario"
                 message={pendingDeleteUser
-                    ? `¿Deseas archivar a ${pendingDeleteUser.fullName}? Podrás restaurarlo cuando lo necesites.`
+                    ? `¿Deseas eliminar a ${pendingDeleteUser.fullName}? Dejará de aparecer en el listado de usuarios registrados.`
                     : ''}
                 confirmText="Aceptar"
                 cancelText="Cancelar"

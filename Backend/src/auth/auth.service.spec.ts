@@ -32,7 +32,9 @@ describe('AuthService', () => {
       update: jest.fn(),
     },
     attendance: {
+      findFirst: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
     passwordResetToken: {
       updateMany: jest.fn(),
@@ -127,7 +129,7 @@ describe('AuthService', () => {
       const result = await service.register(registerDto);
 
       expect(result).toEqual({
-        message: 'User created successfully',
+        message: 'Usuario creado correctamente',
         userId: 'user-id',
       });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
@@ -171,12 +173,18 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(user);
       (compare as jest.Mock).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('jwt-token');
+      mockPrismaService.attendance.findFirst.mockResolvedValue(null);
+      mockPrismaService.attendance.create.mockResolvedValue({
+        id: 'attendance-created-1',
+        userId: user.id,
+        checkIn: new Date('2026-01-01T08:00:00.000Z'),
+        checkOut: null,
+      });
 
       const result = await service.login(loginDto);
 
-      expect(result).toEqual({
-        accessToken: 'jwt-token',
-      });
+        expect(result.accessToken).toBe('jwt-token');
+        expect(result.attendanceAction).toBe('CHECK_IN_CREATED');
       expect(mockPrismaService.attendance.create).toHaveBeenCalled();
       type AttendanceCreateArg = { data: { userId: string; checkIn: Date } };
       const mockCreate = mockPrismaService.attendance
@@ -217,6 +225,38 @@ describe('AuthService', () => {
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+    it('should reuse open attendance and avoid duplicate check-in', async () => {
+      const loginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
+
+      const user = {
+        id: 'user-id',
+        email: loginDto.email,
+        passwordHash: 'hashed-password',
+        role: 'OPERATOR',
+      };
+
+      const openAttendance = {
+        id: 'attendance-open-1',
+        userId: user.id,
+        checkIn: new Date('2026-01-01T08:00:00.000Z'),
+        checkOut: null,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(user);
+      mockPrismaService.attendance.findFirst.mockResolvedValue(openAttendance);
+      (compare as jest.Mock).mockResolvedValue(true);
+      mockJwtService.sign.mockReturnValue('jwt-token');
+
+      const result = await service.login(loginDto);
+
+      expect(result.accessToken).toBe('jwt-token');
+      expect(result.attendanceAction).toBe('CHECK_IN_REUSED');
+      expect(result.attendanceId).toBe(openAttendance.id);
+      expect(mockPrismaService.attendance.create).not.toHaveBeenCalled();
     });
   });
 

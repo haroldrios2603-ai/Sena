@@ -20,9 +20,15 @@ Crear un software integral de administración de parqueaderos que optimice la ge
 - **Operarios**: Usuarios del día a día (ingreso/salida).
 - **Clientes conductores**: Usuarios de la app móvil.
 
-## Cronograma Estimado
-- **Sprint 0** (Actual): Setup y planejamento.
-- **Sprint 1**: MVP Core (4 semanas).
-- **Sprint 2**: Funcionalidades mercado (3 semanas).
-- **Sprint 3**: IA y Optimización (2 semanas).
-- **Sprint 4**: Cierre y Entrega (2 semanas).
+## Estado Actual del Proyecto (24-04-2026)
+
+- **Sprint 0**: Completado.
+- **Sprint 1**: Funcionalidad core operativa implementada (autenticacion, ingreso/salida, gestion, auditoria y reportes).
+- **Pagos QR (Wompi Sandbox)**: Integracion tecnica implementada y disponible en entorno de desarrollo.
+- **Pendiente de configuracion final**: claves sandbox reales y validacion de firma de webhook para endurecimiento de seguridad.
+
+## Cronograma de Referencia
+
+- **Fase 1 (Completada)**: Setup tecnico, arquitectura base y modulos nucleares.
+- **Fase 2 (En curso)**: estabilizacion funcional, pruebas E2E y cierre de brechas documentales.
+- **Fase 3 (Planificada)**: optimizacion, mejoras de seguridad y despliegue productivo.

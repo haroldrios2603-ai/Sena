@@ -22,6 +22,7 @@ import type { DocumentType } from '../../context/types';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 import { useAuth } from '../../context/useAuth';
 import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
+import ConfirmActionModal from './ConfirmActionModal';
 
 interface ClientManagementPanelProps {
     parkings: Array<{ id: string; name: string }>;
@@ -144,6 +145,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         monthlyFee: '',
     });
     const [editingContract, setEditingContract] = useState<ContractRecord | null>(null);
+    const [pendingDeleteContract, setPendingDeleteContract] = useState<ContractRecord | null>(null);
     const [editData, setEditData] = useState<UpdateContractPayload>({});
     const canDeleteClients = hasScreenPermission(
         sessionUser?.role,
@@ -385,17 +387,33 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         }
     };
 
-    const handleDeleteContract = async (contract: ContractRecord) => {
+    const handleDeleteContract = (contract: ContractRecord) => {
         if (savingEdit) {
             return;
         }
 
-        const shouldDelete = window.confirm(
-            `Vas a archivar el contrato de ${contract.user.fullName}. Luego podrás restaurarlo.`,
-        );
-        if (!shouldDelete) {
+        // ES: Confirmamos la eliminación con modal para evitar borrados accidentales.
+        setPendingDeleteContract(contract);
+    };
+
+    const cancelDeleteContract = () => {
+        if (!pendingDeleteContract || savingEdit) {
             return;
         }
+
+        setPendingDeleteContract(null);
+        setMessage({
+            text: 'No se archivó el contrato: operación cancelada por el operador.',
+            type: 'error',
+        });
+    };
+
+    const confirmDeleteContract = async () => {
+        if (!pendingDeleteContract) {
+            return;
+        }
+
+        const contract = pendingDeleteContract;
 
         setSavingEdit(true);
         setMessage({ text: '', type: '' });
@@ -409,6 +427,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                 type: 'error',
             });
         } finally {
+            setPendingDeleteContract(null);
             setSavingEdit(false);
         }
     };
@@ -1151,6 +1170,19 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                     </div>
                 </div>
             )}
+
+            <ConfirmActionModal
+                isOpen={Boolean(pendingDeleteContract)}
+                title="Confirmar archivo de contrato"
+                message={pendingDeleteContract
+                    ? `¿Deseas archivar el contrato de ${pendingDeleteContract.user.fullName}? Podrás restaurarlo más adelante.`
+                    : ''}
+                confirmText="Aceptar"
+                cancelText="Cancelar"
+                isProcessing={savingEdit}
+                onConfirm={confirmDeleteContract}
+                onCancel={cancelDeleteContract}
+            />
         </section>
     );
 };

@@ -10,6 +10,7 @@ import type { Role, User, DocumentType } from '../../context/types';
 import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 import { useAuth } from '../../context/useAuth';
 import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
+import ConfirmActionModal from './ConfirmActionModal';
 
 interface MessageState {
     text: string;
@@ -108,6 +109,7 @@ const UserManagementPanel = () => {
         documentNumber: '',
     });
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [pendingDeleteUser, setPendingDeleteUser] = useState<User | null>(null);
     const [savingEdit, setSavingEdit] = useState(false);
     const [editForm, setEditForm] = useState<UpdateUserPayload>({
         fullName: '',
@@ -313,18 +315,33 @@ const UserManagementPanel = () => {
         }
     };
 
-    const handleDeleteUser = async (user: User) => {
+    const handleDeleteUser = (user: User) => {
         if (rowLoading || rowLoading === user.id) {
             return;
         }
 
-        const shouldDelete = window.confirm(
-            `Vas a archivar a ${user.fullName}. Luego podrás restaurarlo cuando lo necesites.`,
-        );
-        if (!shouldDelete) {
+        // ES: Abrimos modal para confirmar archivo en lugar de usar confirm nativo del navegador.
+        setPendingDeleteUser(user);
+    };
+
+    const cancelDeleteUser = () => {
+        if (!pendingDeleteUser || rowLoading === pendingDeleteUser.id) {
             return;
         }
 
+        setPendingDeleteUser(null);
+        setMessage({
+            text: 'No se archivó el usuario: operación cancelada por el operador.',
+            type: 'error',
+        });
+    };
+
+    const confirmDeleteUser = async () => {
+        if (!pendingDeleteUser) {
+            return;
+        }
+
+        const user = pendingDeleteUser;
         setRowLoading(user.id);
         setMessage({ text: '', type: '' });
         try {
@@ -337,6 +354,7 @@ const UserManagementPanel = () => {
                 type: 'error',
             });
         } finally {
+            setPendingDeleteUser(null);
             setRowLoading(null);
         }
     };
@@ -915,6 +933,19 @@ const UserManagementPanel = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmActionModal
+                isOpen={Boolean(pendingDeleteUser)}
+                title="Confirmar archivo de usuario"
+                message={pendingDeleteUser
+                    ? `¿Deseas archivar a ${pendingDeleteUser.fullName}? Podrás restaurarlo cuando lo necesites.`
+                    : ''}
+                confirmText="Aceptar"
+                cancelText="Cancelar"
+                isProcessing={Boolean(pendingDeleteUser && rowLoading === pendingDeleteUser.id)}
+                onConfirm={confirmDeleteUser}
+                onCancel={cancelDeleteUser}
+            />
         </section>
     );
 };

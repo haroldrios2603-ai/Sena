@@ -81,6 +81,13 @@ type ResumenTicketsResponse = {
     cerrados: TicketConSalida[];
 };
 
+type CierreJornadaResponse = {
+    fechaCierre: string;
+    activosPendientes: number;
+    salidasArchivadas: number;
+    mensaje: string;
+};
+
 type MessageState = {
     text: string;
     type: 'success' | 'error' | '';
@@ -172,6 +179,7 @@ const Dashboard = () => {
     const [isSyncingSettings, setIsSyncingSettings] = useState(false);
     const [exitPaymentIntent, setExitPaymentIntent] = useState<ExitPaymentIntentResponse | null>(null);
     const [generatingExitPayment, setGeneratingExitPayment] = useState(false);
+    const [cerrandoJornada, setCerrandoJornada] = useState(false);
 
     const clearMessage = useCallback(() => setMessage({ text: '', type: '' }), []);
 
@@ -538,6 +546,35 @@ const Dashboard = () => {
         }
     };
 
+    const handleCerrarJornada = async () => {
+        clearMessage();
+
+        try {
+            setCerrandoJornada(true);
+            // ES: Cierra la jornada diaria para reiniciar el listado de salidas
+            // sin afectar los vehículos que aún siguen activos en parqueadero.
+            const response = await api.post<CierreJornadaResponse>('/parking/jornada/cerrar');
+            await cargarResumenTickets();
+
+            const detallePendientes =
+                response.data.activosPendientes > 0
+                    ? ` Quedan ${response.data.activosPendientes} vehículo(s) sin salida registrada.`
+                    : '';
+
+            setMessage({
+                text: `${response.data.mensaje}${detallePendientes}`,
+                type: 'success',
+            });
+        } catch (err: unknown) {
+            setMessage({
+                text: getErrorMessage(err, 'No fue posible cerrar la jornada.'),
+                type: 'error',
+            });
+        } finally {
+            setCerrandoJornada(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 flex">
             {sidebarOpen && (
@@ -872,6 +909,14 @@ const Dashboard = () => {
                                     <span className="pill"><Car size={16} /> Seguimiento</span>
                                     <h2 className="panel-card__title mt-2">Estado de vehículos</h2>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => void handleCerrarJornada()}
+                                    disabled={cerrandoJornada}
+                                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                >
+                                    {cerrandoJornada ? 'Cerrando jornada...' : 'Cerrar jornada'}
+                                </button>
                             </div>
                             <div className="space-y-3">
                                 <label className="form-label">Buscar por placa</label>

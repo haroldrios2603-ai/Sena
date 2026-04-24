@@ -29,6 +29,7 @@ import PermissionsProfiles from './PermissionsProfiles';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import { SETTINGS_UPDATED_EVENT } from '../utils/settingsRefresh';
+import { DATA_UPDATED_EVENT } from '../utils/dataRefresh';
 import {
     paymentsService,
     type ExitCashPaymentResponse,
@@ -505,10 +506,12 @@ const Dashboard = () => {
         }
 
         window.addEventListener(SETTINGS_UPDATED_EVENT, refreshOperationalData);
+        window.addEventListener(DATA_UPDATED_EVENT, refreshOperationalData);
 
         return () => {
             isMounted = false;
             window.removeEventListener(SETTINGS_UPDATED_EVENT, refreshOperationalData);
+            window.removeEventListener(DATA_UPDATED_EVENT, refreshOperationalData);
         };
     }, [canManageClients, canManageSettings, canViewOperations, cargarResumenTickets]);
 

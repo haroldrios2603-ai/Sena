@@ -11,6 +11,7 @@ import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 import { useAuth } from '../../context/useAuth';
 import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
 import ConfirmActionModal from './ConfirmActionModal';
+import { DATA_UPDATED_EVENT } from '../../utils/dataRefresh';
 
 interface MessageState {
     text: string;
@@ -188,6 +189,15 @@ const UserManagementPanel = () => {
 
     useEffect(() => {
         loadUsers();
+    }, [loadUsers]);
+
+    useEffect(() => {
+        const handleDataUpdated = () => {
+            void loadUsers();
+        };
+
+        window.addEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+        return () => window.removeEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
     }, [loadUsers]);
 
     useEffect(() => {

@@ -4,7 +4,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import PermissionsProfiles from './pages/PermissionsProfiles';
 import PaymentCheckoutPage from './pages/PaymentCheckoutPage';
 import { SCREEN_KEYS } from './permissions';
 import './App.css';
@@ -25,12 +24,16 @@ function App() {
           {/* Rutas Protegidas */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/operations" element={<Dashboard />} />
+            <Route path="/dashboard/reports" element={<Dashboard />} />
+            <Route path="/dashboard/users" element={<Dashboard />} />
+            <Route path="/dashboard/clients" element={<Dashboard />} />
             <Route path="/dashboard/settings" element={<Dashboard />} />
             <Route path="/dashboard/settings/:section" element={<Dashboard />} />
           </Route>
 
           <Route element={<PermissionRoute requiredScreen={SCREEN_KEYS.PERMISSIONS_PROFILES} />}>
-            <Route path="/settings/permissions-profiles" element={<PermissionsProfiles />} />
+            <Route path="/settings/permissions-profiles" element={<Navigate to="/dashboard/settings/permissions-profiles" replace />} />
           </Route>
 
           <Route element={<PermissionRoute requiredScreen={SCREEN_KEYS.AUDIT_LOGS} />}>

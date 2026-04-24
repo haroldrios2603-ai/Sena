@@ -24,6 +24,7 @@ import ClientManagementPanel from '../components/admin/ClientManagementPanel';
 import ConfigPanel from '../components/admin/ConfigPanel';
 import AuditLogs from './AuditLogs';
 import ReportsPanel from '../components/reports/ReportsPanel';
+import PermissionsProfiles from './PermissionsProfiles';
 import { hasScreenPermission, SCREEN_KEYS } from '../permissions';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import { SETTINGS_UPDATED_EVENT } from '../utils/settingsRefresh';
@@ -97,7 +98,7 @@ type ApiErrorResponse = {
     message?: string;
 };
 
-type DashboardView = 'operations' | 'config' | 'users' | 'clients' | 'audit' | 'reports';
+type DashboardView = 'operations' | 'config' | 'users' | 'clients' | 'audit' | 'reports' | 'permissions-profiles';
 type ConfigSection = 'menu' | 'parametros-generales' | 'tarifario-avanzado' | 'sedes-parqueaderos';
 
 type MenuItem = {
@@ -248,8 +249,17 @@ const Dashboard = () => {
         if (canManageClients) views.push('clients');
         if (canViewAuditLogs) views.push('audit');
         if (canAccessReports) views.push('reports');
+        if (canManagePermissionsProfiles) views.push('permissions-profiles');
         return views;
-    }, [canAccessReports, canManageClients, canManageSettings, canManageUsers, canViewAuditLogs, canViewOperations]);
+    }, [
+        canAccessReports,
+        canManageClients,
+        canManagePermissionsProfiles,
+        canManageSettings,
+        canManageUsers,
+        canViewAuditLogs,
+        canViewOperations,
+    ]);
 
     useEffect(() => {
         if (!availableViews.includes(activeView)) {
@@ -306,30 +316,91 @@ const Dashboard = () => {
             icon: <DollarSign size={16} />,
             accent: 'text-cyan-700',
         },
+        'permissions-profiles': {
+            label: 'Permisos por perfil',
+            description: 'Control de visualización por rol y usuario',
+            icon: <Shield size={16} />,
+            accent: 'text-indigo-700',
+        },
     };
 
     const menuItems: MenuItem[] = availableViews.map((view) => ({
         key: view,
         view,
         ...viewMeta[view],
-        route: view === 'config' ? '/dashboard/settings' : undefined,
+        route:
+            view === 'operations'
+                ? '/dashboard'
+                : view === 'config'
+                    ? '/dashboard/settings'
+                    : view === 'users'
+                        ? '/dashboard/users'
+                        : view === 'clients'
+                            ? '/dashboard/clients'
+                            : view === 'reports'
+                                ? '/dashboard/reports'
+                                    : view === 'permissions-profiles'
+                                        ? '/dashboard/settings/permissions-profiles'
+                                : undefined,
     }));
-
-    if (canManagePermissionsProfiles) {
-        menuItems.push({
-            key: 'permissions-profiles',
-            view: 'config',
-            label: 'Permisos por perfil',
-            description: 'Control de visualización por rol y usuario',
-            icon: <Shield size={16} />,
-            accent: 'text-indigo-700',
-            route: '/settings/permissions-profiles',
-        });
-    }
 
     useEffect(() => {
         if (location.pathname === '/admin/auditoria' && canViewAuditLogs) {
             setActiveView('audit');
+            return;
+        }
+
+        if (
+            location.pathname === '/dashboard' ||
+            location.pathname === '/dashboard/' ||
+            location.pathname === '/dashboard/operations'
+        ) {
+            if (!canViewOperations) {
+                setMessage({ text: 'No tienes permisos para acceder a Operación diaria.', type: 'error' });
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+            setActiveView('operations');
+            return;
+        }
+
+        if (location.pathname === '/dashboard/reports') {
+            if (!canAccessReports) {
+                setMessage({ text: 'No tienes permisos para acceder a Reportes.', type: 'error' });
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+            setActiveView('reports');
+            return;
+        }
+
+        if (location.pathname === '/dashboard/users') {
+            if (!canManageUsers) {
+                setMessage({ text: 'No tienes permisos para acceder a Usuarios.', type: 'error' });
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+            setActiveView('users');
+            return;
+        }
+
+        if (location.pathname === '/dashboard/clients') {
+            if (!canManageClients) {
+                setMessage({ text: 'No tienes permisos para acceder a Clientes.', type: 'error' });
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+            setActiveView('clients');
+            return;
+        }
+
+        if (location.pathname === '/dashboard/settings/permissions-profiles') {
+            if (!canManagePermissionsProfiles) {
+                setMessage({ text: 'No tienes permisos para acceder a Permisos por perfil.', type: 'error' });
+                navigate('/dashboard', { replace: true });
+                return;
+            }
+            setActiveView('permissions-profiles');
             return;
         }
 
@@ -349,8 +420,24 @@ const Dashboard = () => {
             }
 
             setActiveView('config');
+            return;
         }
-    }, [canManageSettings, canViewAuditLogs, location.pathname, navigate]);
+
+        if (location.pathname.startsWith('/dashboard')) {
+            setActiveView(availableViews[0] ?? 'operations');
+        }
+    }, [
+        availableViews,
+        canAccessReports,
+        canManageClients,
+        canManagePermissionsProfiles,
+        canManageSettings,
+        canManageUsers,
+        canViewAuditLogs,
+        canViewOperations,
+        location.pathname,
+        navigate,
+    ]);
 
     useEffect(() => {
         let isMounted = true;
@@ -1102,6 +1189,8 @@ const Dashboard = () => {
                 {activeView === 'audit' && canViewAuditLogs && <AuditLogs embedded />}
 
                 {activeView === 'reports' && canAccessReports && <ReportsPanel />}
+
+                {activeView === 'permissions-profiles' && canManagePermissionsProfiles && <PermissionsProfiles embedded />}
 
                 {!availableViews.length && (
                     <section className="panel-card">

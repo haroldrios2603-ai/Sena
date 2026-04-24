@@ -27,7 +27,11 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
 };
 
-const PermissionsProfiles = () => {
+interface PermissionsProfilesProps {
+    embedded?: boolean;
+}
+
+const PermissionsProfiles = ({ embedded = false }: PermissionsProfilesProps) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<TabType>('roles');
     const [loading, setLoading] = useState(true);
@@ -178,8 +182,8 @@ const PermissionsProfiles = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 py-8">
-            <div className="dashboard-shell space-y-6">
+        <div className={embedded ? 'space-y-6' : 'min-h-screen bg-slate-100 py-8'}>
+            <div className={embedded ? 'space-y-6' : 'dashboard-shell space-y-6'}>
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <span className="pill bg-indigo-100 text-indigo-700">
@@ -190,12 +194,14 @@ const PermissionsProfiles = () => {
                             {t('permissionsProfiles.subtitle')}
                         </p>
                     </div>
-                    <Link
-                        to="/dashboard"
-                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                    >
-                        <ArrowLeft size={16} /> {t('permissionsProfiles.backToDashboard')}
-                    </Link>
+                    {!embedded && (
+                        <Link
+                            to="/dashboard"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                        >
+                            <ArrowLeft size={16} /> {t('permissionsProfiles.backToDashboard')}
+                        </Link>
+                    )}
                 </div>
 
                 <section className="panel-card space-y-6">

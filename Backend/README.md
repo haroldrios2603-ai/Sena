@@ -34,6 +34,12 @@ API REST para la plataforma RM Parking. Incluye autenticacion, operacion de parq
 - `JWT_SECRET`
 - `PORT` (por defecto 3000)
 - `FRONTEND_BASE_URL`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `PASSWORD_RESET_DELIVERY_OVERRIDE` (opcional, solo pruebas)
 - `WOMPI_PUBLIC_KEY`
 - `WOMPI_INTEGRITY_SECRET`
 

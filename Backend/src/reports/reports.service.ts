@@ -12,6 +12,26 @@ type Range = { from: Date; to: Date };
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async resolveExportAuthor(userId: string, fallbackEmail?: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        fullName: true,
+        email: true,
+      },
+    });
+
+    if (user?.fullName?.trim()) {
+      return user.fullName.trim();
+    }
+
+    if (fallbackEmail?.trim()) {
+      return fallbackEmail.trim();
+    }
+
+    return 'Usuario no identificado';
+  }
+
   async listClientOptions() {
     return this.prisma.user.findMany({
       where: { role: 'CLIENT', isActive: true },

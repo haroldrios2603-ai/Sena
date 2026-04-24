@@ -14,6 +14,11 @@ import {
 
 export type ExportFormat = 'excel' | 'pdf' | 'word';
 
+type ExportMetadata = {
+  generatedBy: string;
+  generatedAt: Date;
+};
+
 @Injectable()
 export class ReportsExportService {
   private readonly reportBrandTitle = 'RM Parking';
@@ -23,9 +28,10 @@ export class ReportsExportService {
     format: ExportFormat,
     title: string,
     rows: Array<Record<string, unknown>>,
+    metadata: ExportMetadata,
   ): Promise<{ contentType: string; body: Buffer; extension: string }> {
     if (format === 'excel') {
-      const body = await this.buildExcel(title, rows);
+      const body = await this.buildExcel(title, rows, metadata);
       return {
         contentType:
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -35,7 +41,7 @@ export class ReportsExportService {
     }
 
     if (format === 'pdf') {
-      const body = await this.buildPdf(title, rows);
+      const body = await this.buildPdf(title, rows, metadata);
       return {
         contentType: 'application/pdf',
         body,
@@ -43,7 +49,7 @@ export class ReportsExportService {
       };
     }
 
-    const body = await this.buildWord(title, rows);
+    const body = await this.buildWord(title, rows, metadata);
     return {
       contentType:
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -55,6 +61,7 @@ export class ReportsExportService {
   private async buildExcel(
     title: string,
     rows: Array<Record<string, unknown>>,
+    metadata: ExportMetadata,
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Reporte');
@@ -63,15 +70,18 @@ export class ReportsExportService {
     worksheet.addRow([this.reportBrandTitle]);
     worksheet.addRow([this.reportBrandSubtitle]);
     worksheet.addRow([title]);
+    worksheet.addRow([`Generado por: ${metadata.generatedBy}`]);
+    worksheet.addRow([`Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`]);
     worksheet.addRow([]);
 
     if (headers.length > 0) {
+      const headerRowIndex = worksheet.lastRow ? worksheet.lastRow.number + 1 : 1;
       worksheet.addRow(headers);
       for (const row of rows) {
         worksheet.addRow(headers.map((header) => this.toCellValue(row[header])));
       }
 
-      const headerRow = worksheet.getRow(5);
+      const headerRow = worksheet.getRow(headerRowIndex);
       headerRow.font = { bold: true };
 
       headers.forEach((header, idx) => {
@@ -90,6 +100,7 @@ export class ReportsExportService {
   private buildPdf(
     title: string,
     rows: Array<Record<string, unknown>>,
+    metadata: ExportMetadata,
   ): Promise<Buffer> {
     return new Promise((resolve) => {
       const doc = new PDFDocument({ margin: 36, size: 'A4' });
@@ -102,6 +113,12 @@ export class ReportsExportService {
       doc.fontSize(10).fillColor('#4B5563').text(this.reportBrandSubtitle);
       doc.moveDown(0.5);
       doc.fillColor('#111827').fontSize(12).text(title);
+      doc.moveDown(0.3);
+      doc.fontSize(9).fillColor('#374151').text(`Generado por: ${metadata.generatedBy}`);
+      doc
+        .fontSize(9)
+        .fillColor('#374151')
+        .text(`Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`);
       doc.moveDown(0.8);
 
       const headers = this.getHeaders(rows);
@@ -181,6 +198,7 @@ export class ReportsExportService {
   private async buildWord(
     title: string,
     rows: Array<Record<string, unknown>>,
+    metadata: ExportMetadata,
   ): Promise<Buffer> {
     const headers = this.getHeaders(rows);
 
@@ -225,6 +243,19 @@ export class ReportsExportService {
             }),
             new Paragraph({
               children: [new TextRun({ text: title, bold: true, size: 24 })],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `Generado por: ${metadata.generatedBy}`, size: 20 }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`,
+                  size: 20,
+                }),
+              ],
             }),
             new Paragraph(''),
             ...(headers.length
@@ -334,5 +365,16 @@ export class ReportsExportService {
       return JSON.stringify(value);
     }
     return String(value);
+  }
+
+  private formatDateTime(value: Date) {
+    return new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(value);
   }
 }

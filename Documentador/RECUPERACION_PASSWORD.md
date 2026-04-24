@@ -17,6 +17,16 @@
 - Los nuevos campos y botones sólo aparecen cuando el código ha sido solicitado exitosamente.
 - Todo el código relacionado incluye comentarios en español.
 
+## Configuración obligatoria para entorno real
+- Definir variables SMTP en `Backend/.env`:
+	- `SMTP_HOST`
+	- `SMTP_PORT`
+	- `SMTP_USER`
+	- `SMTP_PASS`
+	- `SMTP_FROM`
+- En pruebas controladas se puede usar `PASSWORD_RESET_DELIVERY_OVERRIDE` para redirigir todos los correos a una sola bandeja.
+- Si `PASSWORD_RESET_DELIVERY_OVERRIDE` está vacío, cada código se envía al correo real solicitado por el usuario.
+
 ## Mejoras recomendadas de backend
 1. Agregar límites de intentos y rate limiting para evitar abuso del endpoint.
 2. Añadir bloqueo temporal por múltiples intentos fallidos.

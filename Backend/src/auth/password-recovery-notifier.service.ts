@@ -16,12 +16,13 @@ export class PasswordRecoveryNotifierService {
       process.env.SMTP_USER ??
       'no-reply@rmparking.local';
 
-    // ES: En desarrollo permitimos forzar un buzón destino para pruebas controladas.
+    // ES: Permite forzar un buzón destino para pruebas controladas.
     const envOverride = process.env.PASSWORD_RESET_DELIVERY_OVERRIDE?.trim();
     if (envOverride) {
       this.forcedRecipient = envOverride;
-    } else if (process.env.NODE_ENV !== 'production') {
-      this.forcedRecipient = 'haroldrios2603@gmail.com';
+      this.logger.warn(
+        `PASSWORD_RESET_DELIVERY_OVERRIDE activo. Todos los correos de recuperacion se enviaran a ${envOverride}.`,
+      );
     }
   }
 

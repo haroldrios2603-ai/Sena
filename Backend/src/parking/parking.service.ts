@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { CreateParkingDto } from './dto/create-parking.dto';
@@ -137,6 +137,27 @@ export class ParkingService {
    * Registra el ingreso de un vehículo.
    */
   async registerEntry(plate: string, vehicleType: string, parkingId: string) {
+    const existingActiveTicket = await this.prisma.ticket.findFirst({
+      where: {
+        vehicle: { plate },
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true,
+        ticketCode: true,
+        entryTime: true,
+      },
+      orderBy: {
+        entryTime: 'desc',
+      },
+    });
+
+    if (existingActiveTicket) {
+      throw new ConflictException(
+        `La placa ${plate} ya tiene un ingreso activo (ticket ${existingActiveTicket.ticketCode}). Debes registrar la salida antes de generar uno nuevo.`,
+      );
+    }
+
     // Buscar o crear vehículo
     const vehicle = await this.prisma.vehicle.upsert({
       where: { plate },

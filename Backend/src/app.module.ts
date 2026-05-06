@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -15,6 +17,13 @@ import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
+    // Rate limiting/throttling para proteger endpoints críticos
+    ThrottlerModule.forRoot([
+      {
+        ttl: 900000, // 15 minutos (configuración por defecto)
+        limit: 5, // 5 requests por 15 minutos
+      },
+    ]),
     DatabaseModule,
     AuthModule,
     ParkingModule,
@@ -27,6 +36,12 @@ import { PaymentsModule } from './payments/payments.module';
     PaymentsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -7,6 +7,7 @@ import {
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -29,7 +30,9 @@ export class AuthController {
 
   /**
    * Endpoint para registrar un nuevo usuario.
+   * Limitado a 5 intentos por 15 minutos por IP
    */
+  @Throttle({})
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
@@ -37,7 +40,9 @@ export class AuthController {
 
   /**
    * Endpoint para iniciar sesión.
+   * Limitado a 5 intentos por 15 minutos por IP
    */
+  @Throttle({})
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,
@@ -145,7 +150,9 @@ export class AuthController {
 
   /**
    * Endpoint público para solicitar código de recuperación.
+   * Limitado a 5 intentos por 15 minutos por IP
    */
+  @Throttle({})
   @Post('password/request')
   async requestPassword(@Body() passwordRequestDto: PasswordRequestDto) {
     const result = await this.authService.requestPasswordReset(passwordRequestDto);
@@ -162,7 +169,9 @@ export class AuthController {
 
   /**
    * Endpoint público para confirmar código y registrar nueva contraseña.
+   * Limitado a 5 intentos por 15 minutos por IP
    */
+  @Throttle({})
   @Post('password/reset')
   async resetPassword(@Body() passwordResetDto: PasswordResetDto) {
     const result = await this.authService.confirmPasswordReset(passwordResetDto);

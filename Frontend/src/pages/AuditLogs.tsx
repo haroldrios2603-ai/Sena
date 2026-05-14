@@ -9,6 +9,7 @@ import auditService, {
     type AuditResult,
 } from '../services/audit.service';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
+import { DATA_UPDATED_EVENT } from '../utils/dataRefresh';
 
 type MessageState = {
     text: string;
@@ -91,6 +92,15 @@ const AuditLogs = ({ embedded = false }: AuditLogsProps) => {
 
     useEffect(() => {
         void loadLogs();
+    }, [loadLogs]);
+
+    useEffect(() => {
+        const handleDataUpdated = () => {
+            void loadLogs();
+        };
+
+        window.addEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+        return () => window.removeEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
     }, [loadLogs]);
 
     const onExport = async (format: 'csv' | 'json') => {

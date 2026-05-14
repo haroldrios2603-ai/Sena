@@ -23,6 +23,7 @@ import { useAutoDismiss } from '../../hooks/useAutoDismiss';
 import { useAuth } from '../../context/useAuth';
 import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
 import ConfirmActionModal from './ConfirmActionModal';
+import { DATA_UPDATED_EVENT } from '../../utils/dataRefresh';
 
 interface ClientManagementPanelProps {
     parkings: Array<{ id: string; name: string }>;
@@ -189,6 +190,15 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
         loadContracts();
         loadAlerts();
     }, [loadContracts, loadAlerts]);
+
+    useEffect(() => {
+        const handleDataUpdated = () => {
+            void Promise.all([loadContracts(contractFilters), loadAlerts()]);
+        };
+
+        window.addEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+        return () => window.removeEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+    }, [contractFilters, loadAlerts, loadContracts]);
 
     useEffect(() => {
         if (parkings.length && !newClientData.parkingId) {

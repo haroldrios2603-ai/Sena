@@ -28,10 +28,26 @@ export type PublicCheckoutResponse = {
   checkoutUrl: string;
 };
 
+export type ExitCashPaymentResponse = {
+  paymentId: string;
+  amount: number;
+  method: string;
+  status: string;
+  message: string;
+};
+
 export const paymentsService = {
   async createExitWompiIntent(exitId: string) {
     const { data } = await api.post<ExitPaymentIntentResponse>(
       `/payments/wompi/exit/${exitId}/intent`,
+      {},
+    );
+    return data;
+  },
+
+  async registerExitCashPayment(exitId: string) {
+    const { data } = await api.post<ExitCashPaymentResponse>(
+      `/payments/exit/${exitId}/cash`,
       {},
     );
     return data;

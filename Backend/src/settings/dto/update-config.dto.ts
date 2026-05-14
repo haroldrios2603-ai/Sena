@@ -215,3 +215,9 @@ export class UpdateTarifasDto {
   @Type(() => TarifaConfigDto)
   tarifas: TarifaConfigDto[];
 }
+
+export class UpdateMetodosPagoDto {
+  @ValidateNested()
+  @Type(() => MetodosPagoDto)
+  metodosPago: MetodosPagoDto;
+}

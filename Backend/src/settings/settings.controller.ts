@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Put, Request, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import {
+  UpdateMetodosPagoDto,
   UpdateGeneralConfigDto,
   UpdateTarifasDto,
 } from './dto/update-config.dto';
@@ -72,6 +73,29 @@ export class SettingsController {
       result: AuditResult.SUCCESS,
       context: this.auditService.buildContextFromRequest(req),
     });
+    return result;
+  }
+
+  /**
+   * Actualiza únicamente la configuración de métodos de pago.
+   */
+  @Put('metodos-pago')
+  async actualizarMetodosPago(
+    @Body() dto: UpdateMetodosPagoDto,
+    @Request() req: any,
+  ) {
+    const before = await this.settingsService.obtenerConfiguracionCompleta();
+    const result = await this.settingsService.actualizarMetodosPago(dto);
+
+    this.auditService.log({
+      operation: AuditOperation.UPDATE,
+      entity: 'settings_payment_methods',
+      previousValues: before.configuracion.metodosPago,
+      newValues: result.metodosPago,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+
     return result;
   }
 }

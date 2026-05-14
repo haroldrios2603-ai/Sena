@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Role, AuditOperation, AuditResult } from '@prisma/client';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RequireScreenPermission } from '../common/decorators/screen-permission.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';

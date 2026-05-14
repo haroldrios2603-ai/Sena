@@ -18,6 +18,7 @@ import {
 import reportsService, { type ReportExportFormat, type ReportExportType } from '../../services/reports.service';
 import { useAuth } from '../../context/useAuth';
 import { hasScreenPermission, SCREEN_KEYS } from '../../permissions';
+import { DATA_UPDATED_EVENT } from '../../utils/dataRefresh';
 
 type ReportsTab =
     | 'trabajadores'
@@ -209,6 +210,15 @@ const ReportsPanel = () => {
             void loadClients();
         }
     }, [activeTab, canViewBilling]);
+
+    useEffect(() => {
+        const handleDataUpdated = () => {
+            void consultar();
+        };
+
+        window.addEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+        return () => window.removeEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+    }, [activeTab, from, to, period, periodDate, status, userId, documentNumberFilter, clientId]);
 
     if (!tabs.length) {
         return (

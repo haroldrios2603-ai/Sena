@@ -24,6 +24,13 @@ type WompiWebhookPayload = {
   };
 };
 
+type PaymentMethodsConfig = {
+  aceptaEfectivo: boolean;
+  aceptaTarjeta: boolean;
+  aceptaEnLinea: boolean;
+  aceptaQr: boolean;
+};
+
 @Injectable()
 export class PaymentsService {
   private readonly frontendBaseUrl =
@@ -37,6 +44,13 @@ export class PaymentsService {
     userId: string | undefined,
     dto: CreateExitPaymentIntentDto,
   ) {
+    const paymentMethods = await this.getPaymentMethodsConfig();
+    if (!paymentMethods.aceptaQr) {
+      throw new BadRequestException(
+        'El pago por QR no está habilitado en la configuración actual.',
+      );
+    }
+
     const exit = await this.prisma.exit.findUnique({
       where: { id: exitId },
       include: {
@@ -49,6 +63,7 @@ export class PaymentsService {
     }
 
     if (exit.payment && exit.payment.status === 'COMPLETED') {
+      await this.closeTicketAfterPayment(exit.id);
       return this.buildIntentResponse(
         exit.payment.id,
         exit.payment.amount,
@@ -84,6 +99,82 @@ export class PaymentsService {
     );
   }
 
+  async registerExitCashPayment(exitId: string, userId: string | undefined) {
+    const paymentMethods = await this.getPaymentMethodsConfig();
+    if (!paymentMethods.aceptaEfectivo) {
+      throw new BadRequestException(
+        'El pago en efectivo no está habilitado en la configuración actual.',
+      );
+    }
+
+    const exit = await this.prisma.exit.findUnique({
+      where: { id: exitId },
+      include: {
+        payment: true,
+      },
+    });
+
+    if (!exit) {
+      throw new NotFoundException('No se encontró la salida indicada');
+    }
+
+    if (exit.payment && exit.payment.status === 'COMPLETED') {
+      await this.closeTicketAfterPayment(exit.id);
+      return {
+        paymentId: exit.payment.id,
+        amount: exit.payment.amount,
+        method: exit.payment.method,
+        status: exit.payment.status,
+        message: 'El pago ya se encontraba registrado como completado.',
+      };
+    }
+
+    if (exit.payment) {
+      const updated = await this.prisma.payment.update({
+        where: { id: exit.payment.id },
+        data: {
+          status: 'COMPLETED',
+          method: 'CASH',
+          ...(userId ? { userId } : {}),
+        },
+      });
+
+      await this.closeTicketAfterPayment(exit.id);
+
+      return {
+        paymentId: updated.id,
+        amount: updated.amount,
+        method: updated.method,
+        status: updated.status,
+        message: 'Pago en efectivo registrado correctamente.',
+      };
+    }
+
+    const payment = await this.prisma.payment.create({
+      data: {
+        amount: this.resolveAmount(exit.totalAmount),
+        method: 'CASH',
+        status: 'COMPLETED',
+        ...(userId ? { userId } : {}),
+      },
+    });
+
+    await this.prisma.exit.update({
+      where: { id: exit.id },
+      data: { paymentId: payment.id },
+    });
+
+    await this.closeTicketAfterPayment(exit.id);
+
+    return {
+      paymentId: payment.id,
+      amount: payment.amount,
+      method: payment.method,
+      status: payment.status,
+      message: 'Pago en efectivo registrado correctamente.',
+    };
+  }
+
   async getPublicPayment(paymentId: string) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
@@ -109,6 +200,13 @@ export class PaymentsService {
   }
 
   async createPublicCheckout(paymentId: string, dto: CreatePublicCheckoutDto) {
+    const paymentMethods = await this.getPaymentMethodsConfig();
+    if (!paymentMethods.aceptaQr) {
+      throw new BadRequestException(
+        'El pago por QR no está habilitado en la configuración actual.',
+      );
+    }
+
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       select: {
@@ -208,6 +306,17 @@ export class PaymentsService {
       },
     });
 
+    if (nextStatus === 'COMPLETED') {
+      const exit = await this.prisma.exit.findFirst({
+        where: { paymentId: payment.id },
+        select: { id: true },
+      });
+
+      if (exit) {
+        await this.closeTicketAfterPayment(exit.id);
+      }
+    }
+
     return {
       received: true,
       updated: true,
@@ -304,5 +413,59 @@ export class PaymentsService {
     if (normalized.includes('CARD')) return 'CARD';
 
     return method;
+  }
+
+  private async closeTicketAfterPayment(exitId: string) {
+    const exit = await this.prisma.exit.findUnique({
+      where: { id: exitId },
+      select: {
+        ticketId: true,
+      },
+    });
+
+    if (!exit?.ticketId) {
+      return;
+    }
+
+    await this.prisma.ticket.update({
+      where: { id: exit.ticketId },
+      data: { status: 'CLOSED' },
+    });
+  }
+
+  private async getPaymentMethodsConfig(): Promise<PaymentMethodsConfig> {
+    const config = await this.prisma.systemConfig.findUnique({
+      where: { id: 'configuracion-principal' },
+      select: { metodosPago: true },
+    });
+
+    const defaults: PaymentMethodsConfig = {
+      aceptaEfectivo: true,
+      aceptaTarjeta: true,
+      aceptaEnLinea: false,
+      aceptaQr: false,
+    };
+
+    if (!config?.metodosPago || typeof config.metodosPago !== 'object') {
+      return defaults;
+    }
+
+    const raw = config.metodosPago as Record<string, unknown>;
+    return {
+      aceptaEfectivo:
+        typeof raw.aceptaEfectivo === 'boolean'
+          ? raw.aceptaEfectivo
+          : defaults.aceptaEfectivo,
+      aceptaTarjeta:
+        typeof raw.aceptaTarjeta === 'boolean'
+          ? raw.aceptaTarjeta
+          : defaults.aceptaTarjeta,
+      aceptaEnLinea:
+        typeof raw.aceptaEnLinea === 'boolean'
+          ? raw.aceptaEnLinea
+          : defaults.aceptaEnLinea,
+      aceptaQr:
+        typeof raw.aceptaQr === 'boolean' ? raw.aceptaQr : defaults.aceptaQr,
+    };
   }
 }

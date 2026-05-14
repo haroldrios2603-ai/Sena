@@ -107,6 +107,14 @@ export interface ConfiguracionGeneralPayload {
     };
 }
 
+export interface MetodosPagoPayload {
+    aceptaEfectivo: boolean;
+    aceptaTarjeta: boolean;
+    aceptaEnLinea: boolean;
+    aceptaQr: boolean;
+    notas?: string;
+}
+
 export interface ActualizarTarifasPayload {
     aplicarATodos: boolean;
     parkingId?: string;
@@ -129,6 +137,10 @@ const configService = {
     },
     async actualizarConfiguracion(payload: ConfiguracionGeneralPayload) {
         const response = await api.put('/settings/general', payload);
+        return response.data;
+    },
+    async actualizarMetodosPago(payload: MetodosPagoPayload) {
+        const response = await api.put('/settings/metodos-pago', { metodosPago: payload });
         return response.data;
     },
     async actualizarTarifas(payload: ActualizarTarifasPayload) {

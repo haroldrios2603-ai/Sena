@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { announceDataUpdated } from './utils/dataRefresh';
 
 // Obtener URL del API desde variables de entorno o valor local por defecto
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -24,5 +25,20 @@ api.interceptors.request.use((config) => {
     }
     return config;
 });
+
+api.interceptors.response.use(
+    (response) => {
+        const method = response.config.method?.toUpperCase();
+        if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            announceDataUpdated({
+                method,
+                url: response.config.url,
+                status: response.status,
+            });
+        }
+        return response;
+    },
+    (error) => Promise.reject(error),
+);
 
 export default api;

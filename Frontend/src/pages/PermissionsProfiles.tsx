@@ -10,6 +10,7 @@ import permissionsService, {
 } from '../services/permissions.service';
 import usersService from '../services/users.service';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
+import { DATA_UPDATED_EVENT } from '../utils/dataRefresh';
 
 const roleOptions: Role[] = ['SUPER_ADMIN', 'ADMIN_PARKING', 'OPERATOR', 'AUDITOR', 'CLIENT'];
 
@@ -117,6 +118,28 @@ const PermissionsProfiles = ({ embedded = false }: PermissionsProfilesProps) => 
         };
         void init();
     }, [t]);
+
+    useEffect(() => {
+        const refreshPermissions = async () => {
+            try {
+                await Promise.all([loadScreens(), loadUsers()]);
+                if (activeTab === 'roles') {
+                    await loadRolePermissions(selectedRole);
+                } else if (selectedUserId) {
+                    await loadUserPermissions(selectedUserId);
+                }
+            } catch {
+                // ES: El flujo principal ya reporta errores; aquí evitamos ruido por refrescos automáticos.
+            }
+        };
+
+        const handleDataUpdated = () => {
+            void refreshPermissions();
+        };
+
+        window.addEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+        return () => window.removeEventListener(DATA_UPDATED_EVENT, handleDataUpdated);
+    }, [activeTab, selectedRole, selectedUserId, screens.length, users.length]);
 
     useEffect(() => {
         if (!screens.length) {

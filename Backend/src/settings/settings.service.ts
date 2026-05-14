@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import {
+  UpdateMetodosPagoDto,
   UpdateGeneralConfigDto,
   UpdateTarifasDto,
 } from './dto/update-config.dto';
@@ -79,6 +80,20 @@ export class SettingsService {
     return this.prisma.tariff.findMany({
       where: { parkingId: { in: parkingIds } },
       orderBy: [{ parkingId: 'asc' }, { vehicleType: 'asc' }],
+    });
+  }
+
+  /**
+   * Actualiza únicamente los métodos de pago aceptados.
+   */
+  async actualizarMetodosPago(dto: UpdateMetodosPagoDto) {
+    await this.ensureConfig();
+
+    return this.prisma.systemConfig.update({
+      where: { id: this.CONFIG_ID },
+      data: {
+        metodosPago: this.toJsonValue(dto.metodosPago),
+      },
     });
   }
 

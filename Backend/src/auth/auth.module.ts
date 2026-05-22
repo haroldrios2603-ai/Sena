@@ -8,11 +8,12 @@ import { JwtStrategy } from './jwt.strategy';
 import { PasswordRecoveryNotifierService } from './password-recovery-notifier.service';
 
 /**
- * Module that encapsulates all Authentication components.
- * Imports JwtModule and PassportModule.
+ * Módulo que encapsula todos los componentes de Autenticación.
  *
- * ES: Módulo que encapsula todos los componentes de Autenticación.
- * Importa JwtModule y PassportModule.
+ * Responsabilidades:
+ * - Proveer `AuthService` para registro, login y gestión de sesiones.
+ * - Configurar `JwtModule` para firmar tokens JWT.
+ * - Registrar la estrategia `JwtStrategy` y el notificador de recuperación de contraseña.
  */
 @Module({
   imports: [

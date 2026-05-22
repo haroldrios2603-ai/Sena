@@ -8,6 +8,16 @@ import { VehiclesPeriodDto } from './dto/vehicles-period.dto';
 
 type Range = { from: Date; to: Date };
 
+/**
+ * Servicio encargado de generación de reportes y consultas agregadas.
+ *
+ * Provee funciones para:
+ * - Obtener totales de facturación y transacciones por rango de fechas.
+ * - Consultas de asistencia y cálculo de horas trabajadas.
+ * - Agrupaciones de tickets por periodos (día/semana/mes) y tipo de vehículo.
+ *
+ * Todas las funciones retornan estructuras ya listas para consumo por el frontend.
+ */
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}

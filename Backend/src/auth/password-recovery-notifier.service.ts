@@ -78,3 +78,7 @@ export class PasswordRecoveryNotifierService {
     });
   }
 }
+
+// Notas sobre uso:
+// - Si no se configuran `SMTP_HOST` y `SMTP_PORT` el servicio no enviará correos y retornará false.
+// - `PASSWORD_RESET_DELIVERY_OVERRIDE` permite redirigir temporalmente todos los envíos a una cuenta de pruebas.

@@ -1,9 +1,21 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
  * Objeto de Transferencia de Datos para Inicio de Sesión.
  * Valida y sanitiza las credenciales de login.
+ */
+/**
+ * Clase LoginDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase LoginDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase LoginDto que implementa la lógica principal de dto.
  */
 export class LoginDto {
   /**

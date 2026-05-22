@@ -1,8 +1,20 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import { IsEmail, IsString, MaxLength, MinLength, Matches } from 'class-validator';
 import { Transform, TransformFnParams } from 'class-transformer';
 
 /**
  * DTO para confirmar código y definir nueva contraseña.
+ */
+/**
+ * Clase PasswordResetDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase PasswordResetDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase PasswordResetDto que implementa la lógica principal de dto.
  */
 export class PasswordResetDto {
   /**

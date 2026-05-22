@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   ArrayNotEmpty,
   IsArray,
@@ -27,6 +30,15 @@ class HorarioOperacionDto {
 
 /**
  * DTO para crear nuevas sedes o parqueaderos operativos.
+ */
+/**
+ * Clase CreateParkingDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CreateParkingDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CreateParkingDto que implementa la lógica principal de dto.
  */
 export class CreateParkingDto {
   @IsString()

@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para audit.
+ */
 import { AuditModule } from './audit.module';
 
 describe('AuditModule', () => {

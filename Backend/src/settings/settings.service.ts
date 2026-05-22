@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para settings.
+ */
 import {
   BadRequestException,
   Injectable,
@@ -12,6 +15,15 @@ import {
 } from './dto/update-config.dto';
 import { ParkingService } from '../parking/parking.service';
 
+/**
+ * Clase SettingsService que implementa la lógica principal de settings.
+ */
+/**
+ * Clase SettingsService que implementa la lógica principal de settings.
+ */
+/**
+ * Clase SettingsService que implementa la lógica principal de settings.
+ */
 @Injectable()
 export class SettingsService {
   private readonly CONFIG_ID = 'configuracion-principal';

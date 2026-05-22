@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {

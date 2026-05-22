@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con auth.
+ */
 import {
   Controller,
   Post,
@@ -24,6 +27,15 @@ import { AuditOperation, AuditResult } from '@prisma/client';
  * Notas:
  * - Los endpoints públicos aplican throttling para mitigar intentos masivos.
  * - Se registran eventos de auditoría vía `AuditService` en acciones críticas.
+ */
+/**
+ * Clase AuthController que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthController que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthController que implementa la lógica principal de auth.
  */
 @Controller('auth')
 export class AuthController {

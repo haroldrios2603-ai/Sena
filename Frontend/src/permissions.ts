@@ -1,5 +1,17 @@
+/**
+ * Define constantes de permisos y claves de pantalla para la aplicación.
+ */
 import type { Role } from './context/types';
 
+/**
+ * Constante SCREEN_KEYS utilizada en la configuración o la lógica de src.
+ */
+/**
+ * Constante SCREEN_KEYS utilizada en la configuración o la lógica de src.
+ */
+/**
+ * Constante SCREEN_KEYS utilizada en la configuración o la lógica de src.
+ */
 export const SCREEN_KEYS = {
     OPERATIONS: 'operations-dashboard',
     SETTINGS: 'settings-config',
@@ -49,6 +61,15 @@ const LEGACY_ROLE_DEFAULTS: Record<Role, string[]> = {
     CLIENT: [],
 };
 
+/**
+ * Constante hasScreenPermission utilizada en la configuración o la lógica de src.
+ */
+/**
+ * Constante hasScreenPermission utilizada en la configuración o la lógica de src.
+ */
+/**
+ * Constante hasScreenPermission utilizada en la configuración o la lógica de src.
+ */
 export const hasScreenPermission = (
     role: Role | undefined,
     explicitPermissions: string[] | undefined,

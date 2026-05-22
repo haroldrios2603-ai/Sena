@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para payments.
+ */
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database.module';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -10,4 +13,13 @@ import { PaymentsService } from './payments.service';
   providers: [PaymentsService, RolesGuard],
   exports: [PaymentsService],
 })
+/**
+ * Clase PaymentsModule que implementa la lógica principal de payments.
+ */
+/**
+ * Clase PaymentsModule que implementa la lógica principal de payments.
+ */
+/**
+ * Clase PaymentsModule que implementa la lógica principal de payments.
+ */
 export class PaymentsModule {}

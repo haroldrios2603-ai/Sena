@@ -1,6 +1,18 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 import type { DocumentType } from '../context/types';
 
+/**
+ * Interfaz CreateClientPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz CreateClientPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz CreateClientPayload que define la forma de datos usada en services.
+ */
 export interface CreateClientPayload {
     fullName: string;
     email: string;
@@ -14,6 +26,15 @@ export interface CreateClientPayload {
     documentNumber?: string;
 }
 
+/**
+ * Interfaz ContractFilters que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ContractFilters que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ContractFilters que define la forma de datos usada en services.
+ */
 export interface ContractFilters {
     fullName?: string;
     email?: string;
@@ -25,12 +46,30 @@ export interface ContractFilters {
     documentNumber?: string;
 }
 
+/**
+ * Interfaz RenewContractPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz RenewContractPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz RenewContractPayload que define la forma de datos usada en services.
+ */
 export interface RenewContractPayload {
     newEndDate: string;
     paymentDate: string;
     monthlyFee?: number;
 }
 
+/**
+ * Interfaz UpdateContractPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UpdateContractPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UpdateContractPayload que define la forma de datos usada en services.
+ */
 export interface UpdateContractPayload {
     fullName?: string;
     email?: string;
@@ -47,6 +86,15 @@ export interface UpdateContractPayload {
     documentNumber?: string | null;
 }
 
+/**
+ * Interfaz ContractAlert que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ContractAlert que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ContractAlert que define la forma de datos usada en services.
+ */
 export interface ContractAlert {
     id: string;
     alertType: string;
@@ -56,6 +104,15 @@ export interface ContractAlert {
     resolvedAt?: string | null;
 }
 
+/**
+ * Interfaz ContractRecord que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ContractRecord que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ContractRecord que define la forma de datos usada en services.
+ */
 export interface ContractRecord {
     id: string;
     parkingId: string;
@@ -84,6 +141,15 @@ export interface ContractRecord {
     alerts: ContractAlert[];
 }
 
+/**
+ * Interfaz AlertRecord que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AlertRecord que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AlertRecord que define la forma de datos usada en services.
+ */
 export interface AlertRecord extends ContractAlert {
     contract: ContractRecord;
 }

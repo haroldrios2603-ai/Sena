@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';

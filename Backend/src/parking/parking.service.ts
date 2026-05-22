@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para parking.
+ */
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
@@ -8,6 +11,15 @@ import { TarifaConfigDto } from './dto/tarifa-config.dto';
 /**
  * Servicio principal para la gestión de parqueaderos y operaciones de flujo.
  * Centraliza la creación de sedes, gestión de tarifas y lógica de entrada/salida.
+ */
+/**
+ * Clase ParkingService que implementa la lógica principal de parking.
+ */
+/**
+ * Clase ParkingService que implementa la lógica principal de parking.
+ */
+/**
+ * Clase ParkingService que implementa la lógica principal de parking.
  */
 @Injectable()
 export class ParkingService {

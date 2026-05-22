@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 interface ConfirmActionModalProps {
     isOpen: boolean;
     title: string;

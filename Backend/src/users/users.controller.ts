@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con users.
+ */
 import {
   Body,
   Controller,
@@ -25,6 +28,15 @@ import { AuditService } from '../audit/audit.service';
 
 /**
  * Controlador para tareas administrativas de usuarios.
+ */
+/**
+ * Clase UsersController que implementa la lógica principal de users.
+ */
+/**
+ * Clase UsersController que implementa la lógica principal de users.
+ */
+/**
+ * Clase UsersController que implementa la lógica principal de users.
  */
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), RolesGuard)

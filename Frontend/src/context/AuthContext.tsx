@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import authService from '../services/auth.service';
@@ -14,6 +17,15 @@ interface AuthProviderProps {
     children: ReactNode;
 }
 
+/**
+ * Constante AuthProvider utilizada en la configuración o la lógica de context.
+ */
+/**
+ * Constante AuthProvider utilizada en la configuración o la lógica de context.
+ */
+/**
+ * Constante AuthProvider utilizada en la configuración o la lógica de context.
+ */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);

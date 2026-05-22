@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsArray,
   IsBoolean,
@@ -26,6 +29,15 @@ class HorarioOperacionDto {
 
 /**
  * DTO para actualizar los datos generales de una sede existente.
+ */
+/**
+ * Clase UpdateParkingDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateParkingDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateParkingDto que implementa la lógica principal de dto.
  */
 export class UpdateParkingDto {
   @IsOptional()

@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con payments.
+ */
 import {
   Body,
   Controller,
@@ -19,6 +22,15 @@ import { AuditOperation, AuditResult } from '@prisma/client';
 
 type WompiWebhookInput = Parameters<PaymentsService['processWompiWebhook']>[0];
 
+/**
+ * Clase PaymentsController que implementa la lógica principal de payments.
+ */
+/**
+ * Clase PaymentsController que implementa la lógica principal de payments.
+ */
+/**
+ * Clase PaymentsController que implementa la lógica principal de payments.
+ */
 @Controller('payments')
 export class PaymentsController {
   constructor(

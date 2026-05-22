@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Loader2, ShieldCheck, UserPlus, RefreshCw, Power, Pencil, Trash2 } from 'lucide-react';

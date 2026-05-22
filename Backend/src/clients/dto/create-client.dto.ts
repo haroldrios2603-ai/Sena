@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsEmail,
   IsNumber,
@@ -15,6 +18,15 @@ import { DocumentType } from '@prisma/client';
 
 /**
  * DTO para registrar clientes con mensualidad.
+ */
+/**
+ * Clase CreateClientDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CreateClientDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CreateClientDto que implementa la lógica principal de dto.
  */
 export class CreateClientDto {
   @IsString()

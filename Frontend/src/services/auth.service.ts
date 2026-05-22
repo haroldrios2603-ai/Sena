@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 
 type PasswordResetRequestResponse = {

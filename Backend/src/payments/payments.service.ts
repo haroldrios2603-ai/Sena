@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para payments.
+ */
 import {
   BadRequestException,
   Injectable,
@@ -31,6 +34,15 @@ type PaymentMethodsConfig = {
   aceptaQr: boolean;
 };
 
+/**
+ * Clase PaymentsService que implementa la lógica principal de payments.
+ */
+/**
+ * Clase PaymentsService que implementa la lógica principal de payments.
+ */
+/**
+ * Clase PaymentsService que implementa la lógica principal de payments.
+ */
 @Injectable()
 export class PaymentsService {
   private readonly frontendBaseUrl =

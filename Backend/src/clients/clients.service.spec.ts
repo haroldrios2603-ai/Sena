@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para clients.
+ */
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';

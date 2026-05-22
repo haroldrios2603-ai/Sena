@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para src.
+ */
 import { Injectable } from '@nestjs/common';
 
 // Servicio principal de la aplicación.

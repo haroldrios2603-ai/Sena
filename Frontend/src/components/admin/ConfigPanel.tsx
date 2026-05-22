@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Link } from 'react-router-dom';

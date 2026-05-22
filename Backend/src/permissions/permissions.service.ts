@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para permissions.
+ */
 import {
   BadRequestException,
   Injectable,
@@ -10,6 +13,15 @@ import {
   DEFAULT_ROLE_SCREEN_PERMISSIONS,
 } from './permissions.constants';
 
+/**
+ * Clase PermissionsService que implementa la lógica principal de permissions.
+ */
+/**
+ * Clase PermissionsService que implementa la lógica principal de permissions.
+ */
+/**
+ * Clase PermissionsService que implementa la lógica principal de permissions.
+ */
 @Injectable()
 export class PermissionsService {
   constructor(private readonly prisma: PrismaService) {}

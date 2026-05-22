@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para audit.
+ */
 import {
   Injectable,
   Logger,
@@ -10,6 +13,15 @@ import { ExportAuditLogsDto } from './dto/export-audit-logs.dto';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { AuditContext, AuditLogInput } from './audit.types';
 
+/**
+ * Clase AuditService que implementa la lógica principal de audit.
+ */
+/**
+ * Clase AuditService que implementa la lógica principal de audit.
+ */
+/**
+ * Clase AuditService que implementa la lógica principal de audit.
+ */
 @Injectable()
 export class AuditService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AuditService.name);

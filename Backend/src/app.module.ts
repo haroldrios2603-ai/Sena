@@ -1,3 +1,6 @@
+/**
+ * Módulo raíz que carga y configura todos los módulos de la aplicación.
+ */
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -44,4 +47,13 @@ import { PaymentsModule } from './payments/payments.module';
     },
   ],
 })
+/**
+ * Clase AppModule que implementa la lógica principal de src.
+ */
+/**
+ * Clase AppModule que implementa la lógica principal de src.
+ */
+/**
+ * Clase AppModule que implementa la lógica principal de src.
+ */
 export class AppModule {}

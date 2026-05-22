@@ -1,7 +1,19 @@
+/**
+ * Servicio que contiene la lógica de negocio para auth.
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
+/**
+ * Clase PasswordRecoveryNotifierService que implementa la lógica principal de auth.
+ */
+/**
+ * Clase PasswordRecoveryNotifierService que implementa la lógica principal de auth.
+ */
+/**
+ * Clase PasswordRecoveryNotifierService que implementa la lógica principal de auth.
+ */
 @Injectable()
 export class PasswordRecoveryNotifierService {
   private readonly logger = new Logger(PasswordRecoveryNotifierService.name);

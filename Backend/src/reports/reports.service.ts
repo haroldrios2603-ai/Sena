@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para reports.
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { AttendanceReportDto } from './dto/attendance-report.dto';
@@ -17,6 +20,15 @@ type Range = { from: Date; to: Date };
  * - Agrupaciones de tickets por periodos (día/semana/mes) y tipo de vehículo.
  *
  * Todas las funciones retornan estructuras ya listas para consumo por el frontend.
+ */
+/**
+ * Clase ReportsService que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsService que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsService que implementa la lógica principal de reports.
  */
 @Injectable()
 export class ReportsService {

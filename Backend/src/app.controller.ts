@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con src.
+ */
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 

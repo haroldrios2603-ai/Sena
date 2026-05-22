@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsString,
   IsEmail,
@@ -13,6 +16,15 @@ import { Role } from '@prisma/client';
 /**
  * Objeto de Transferencia de Datos para Registro de Usuario.
  * Valida y sanitiza la carga útil para crear un nuevo usuario.
+ */
+/**
+ * Clase RegisterDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase RegisterDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase RegisterDto que implementa la lógica principal de dto.
  */
 export class RegisterDto {
   /**

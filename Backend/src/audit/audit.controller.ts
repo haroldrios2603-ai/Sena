@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con audit.
+ */
 import {
   Controller,
   Get,
@@ -18,6 +21,15 @@ import { AuditService } from './audit.service';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 import { ExportAuditLogsDto } from './dto/export-audit-logs.dto';
 
+/**
+ * Clase AuditController que implementa la lógica principal de audit.
+ */
+/**
+ * Clase AuditController que implementa la lógica principal de audit.
+ */
+/**
+ * Clase AuditController que implementa la lógica principal de audit.
+ */
 @Controller('audit')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.SUPER_ADMIN, Role.AUDITOR)

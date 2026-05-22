@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para reports.
+ */
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
@@ -12,6 +15,15 @@ import {
   WidthType,
 } from 'docx';
 
+/**
+ * Tipo ExportFormat para definir la estructura de datos utilizada en reports.
+ */
+/**
+ * Tipo ExportFormat para definir la estructura de datos utilizada en reports.
+ */
+/**
+ * Tipo ExportFormat para definir la estructura de datos utilizada en reports.
+ */
 export type ExportFormat = 'excel' | 'pdf' | 'word';
 
 type ExportMetadata = {
@@ -19,6 +31,15 @@ type ExportMetadata = {
   generatedAt: Date;
 };
 
+/**
+ * Clase ReportsExportService que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsExportService que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsExportService que implementa la lógica principal de reports.
+ */
 @Injectable()
 export class ReportsExportService {
   private readonly reportBrandTitle = 'RM Parking';

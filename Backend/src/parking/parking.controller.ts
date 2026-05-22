@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con parking.
+ */
 import {
   Controller,
   Post,
@@ -24,6 +27,15 @@ import { AuditService } from '../audit/audit.service';
 /**
  * Controlador encargado de gestionar las operaciones de parqueadero.
  * Todas las rutas están protegidas por JWT.
+ */
+/**
+ * Clase ParkingController que implementa la lógica principal de parking.
+ */
+/**
+ * Clase ParkingController que implementa la lógica principal de parking.
+ */
+/**
+ * Clase ParkingController que implementa la lógica principal de parking.
  */
 @Controller('parking')
 @UseGuards(AuthGuard('jwt'), RolesGuard)

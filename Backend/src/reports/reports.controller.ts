@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con reports.
+ */
 import {
   BadRequestException,
   Controller,
@@ -25,6 +28,15 @@ import { VehiclesPeriodDto } from './dto/vehicles-period.dto';
 import { ReportsExportService } from './reports-export.service';
 import { ReportsService } from './reports.service';
 
+/**
+ * Clase ReportsController que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsController que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsController que implementa la lógica principal de reports.
+ */
 @Controller('reports')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING, Role.OPERATOR, Role.AUDITOR)

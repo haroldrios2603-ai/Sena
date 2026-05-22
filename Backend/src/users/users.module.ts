@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para users.
+ */
 import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
@@ -13,4 +16,13 @@ import { PassportModule } from '@nestjs/passport';
   controllers: [UsersController],
   providers: [UsersService, RolesGuard],
 })
+/**
+ * Clase UsersModule que implementa la lógica principal de users.
+ */
+/**
+ * Clase UsersModule que implementa la lógica principal de users.
+ */
+/**
+ * Clase UsersModule que implementa la lógica principal de users.
+ */
 export class UsersModule {}

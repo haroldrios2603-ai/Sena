@@ -1,7 +1,28 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 
+/**
+ * Tipo PublicPaymentMethod para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo PublicPaymentMethod para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo PublicPaymentMethod para definir la estructura de datos utilizada en services.
+ */
 export type PublicPaymentMethod = 'NEQUI' | 'CARD' | 'BANK_ACCOUNT';
 
+/**
+ * Tipo ExitPaymentIntentResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ExitPaymentIntentResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ExitPaymentIntentResponse para definir la estructura de datos utilizada en services.
+ */
 export type ExitPaymentIntentResponse = {
   paymentId: string;
   amount: number;
@@ -12,6 +33,15 @@ export type ExitPaymentIntentResponse = {
   qrImageUrl: string;
 };
 
+/**
+ * Tipo PublicPaymentResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo PublicPaymentResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo PublicPaymentResponse para definir la estructura de datos utilizada en services.
+ */
 export type PublicPaymentResponse = {
   id: string;
   amount: number;
@@ -23,11 +53,29 @@ export type PublicPaymentResponse = {
   availableMethods: PublicPaymentMethod[];
 };
 
+/**
+ * Tipo PublicCheckoutResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo PublicCheckoutResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo PublicCheckoutResponse para definir la estructura de datos utilizada en services.
+ */
 export type PublicCheckoutResponse = {
   paymentId: string;
   checkoutUrl: string;
 };
 
+/**
+ * Tipo ExitCashPaymentResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ExitCashPaymentResponse para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ExitCashPaymentResponse para definir la estructura de datos utilizada en services.
+ */
 export type ExitCashPaymentResponse = {
   paymentId: string;
   amount: number;
@@ -36,6 +84,15 @@ export type ExitCashPaymentResponse = {
   message: string;
 };
 
+/**
+ * Constante paymentsService utilizada en la configuración o la lógica de services.
+ */
+/**
+ * Constante paymentsService utilizada en la configuración o la lógica de services.
+ */
+/**
+ * Constante paymentsService utilizada en la configuración o la lógica de services.
+ */
 export const paymentsService = {
   async createExitWompiIntent(exitId: string) {
     const { data } = await api.post<ExitPaymentIntentResponse>(

@@ -1,3 +1,6 @@
+/**
+ * Página React que representa una ruta del frontend.
+ */
 import { useEffect, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useParams } from 'react-router-dom';

@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsString,
   IsEmail,
@@ -13,6 +16,15 @@ import { Role, DocumentType } from '@prisma/client';
 
 /**
  * DTO para que un SUPER_ADMIN cree usuarios con rol asignado.
+ */
+/**
+ * Clase CreateUserDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CreateUserDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CreateUserDto que implementa la lógica principal de dto.
  */
 export class CreateUserDto {
   /**

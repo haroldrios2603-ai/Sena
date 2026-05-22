@@ -1,5 +1,17 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 
+/**
+ * Tipo ReportExportType para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ReportExportType para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ReportExportType para definir la estructura de datos utilizada en services.
+ */
 export type ReportExportType =
     | 'trabajadores'
     | 'vehiculos'
@@ -10,6 +22,15 @@ export type ReportExportType =
     | 'ingresos-por-tipo'
     | 'horas-pico';
 
+/**
+ * Tipo ReportExportFormat para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ReportExportFormat para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo ReportExportFormat para definir la estructura de datos utilizada en services.
+ */
 export type ReportExportFormat = 'excel' | 'pdf' | 'word';
 
 const reportsService = {

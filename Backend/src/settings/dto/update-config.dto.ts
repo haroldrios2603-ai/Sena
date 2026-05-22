@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsArray,
   IsBoolean,
@@ -13,6 +16,15 @@ import {
 import { Type } from 'class-transformer';
 import { TarifaConfigDto } from '../../parking/dto/tarifa-config.dto';
 
+/**
+ * Clase HorarioAtencionDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase HorarioAtencionDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase HorarioAtencionDto que implementa la lógica principal de dto.
+ */
 export class HorarioAtencionDto {
   @IsString()
   @MinLength(4)
@@ -25,6 +37,15 @@ export class HorarioAtencionDto {
   cierre: string;
 }
 
+/**
+ * Clase CapacidadPorTipoDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CapacidadPorTipoDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase CapacidadPorTipoDto que implementa la lógica principal de dto.
+ */
 export class CapacidadPorTipoDto {
   @IsString()
   @MinLength(2)
@@ -35,6 +56,15 @@ export class CapacidadPorTipoDto {
   capacidad: number;
 }
 
+/**
+ * Clase TarifaEspecialDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase TarifaEspecialDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase TarifaEspecialDto que implementa la lógica principal de dto.
+ */
 export class TarifaEspecialDto {
   @IsString()
   @MinLength(3)
@@ -49,6 +79,15 @@ export class TarifaEspecialDto {
   recargoPorcentaje: number;
 }
 
+/**
+ * Clase MetodosPagoDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase MetodosPagoDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase MetodosPagoDto que implementa la lógica principal de dto.
+ */
 export class MetodosPagoDto {
   @IsBoolean()
   aceptaEfectivo: boolean;
@@ -67,6 +106,15 @@ export class MetodosPagoDto {
   notas?: string;
 }
 
+/**
+ * Clase PoliticaFacturacionDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase PoliticaFacturacionDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase PoliticaFacturacionDto que implementa la lógica principal de dto.
+ */
 export class PoliticaFacturacionDto {
   @IsString()
   @MinLength(5)
@@ -95,6 +143,15 @@ export class PoliticaFacturacionDto {
   retencionPorcentaje?: number;
 }
 
+/**
+ * Clase MensajesOperativosDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase MensajesOperativosDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase MensajesOperativosDto que implementa la lógica principal de dto.
+ */
 export class MensajesOperativosDto {
   @IsString()
   @MinLength(3)
@@ -109,6 +166,15 @@ export class MensajesOperativosDto {
   avisoLegal?: string;
 }
 
+/**
+ * Clase ParametrosOperacionDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ParametrosOperacionDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ParametrosOperacionDto que implementa la lógica principal de dto.
+ */
 export class ParametrosOperacionDto {
   @IsInt()
   @Min(1)
@@ -123,6 +189,15 @@ export class ParametrosOperacionDto {
   alertaAforoPorcentaje: number;
 }
 
+/**
+ * Clase SeguridadDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase SeguridadDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase SeguridadDto que implementa la lógica principal de dto.
+ */
 export class SeguridadDto {
   @IsBoolean()
   permiteEdicionOperadores: boolean;
@@ -132,6 +207,15 @@ export class SeguridadDto {
   expiracionSesionMinutos: number;
 }
 
+/**
+ * Clase IntegracionesDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase IntegracionesDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase IntegracionesDto que implementa la lógica principal de dto.
+ */
 export class IntegracionesDto {
   @IsOptional()
   @IsString()
@@ -146,6 +230,15 @@ export class IntegracionesDto {
   webhookVigilancia?: string;
 }
 
+/**
+ * Clase UpdateGeneralConfigDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateGeneralConfigDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateGeneralConfigDto que implementa la lógica principal de dto.
+ */
 export class UpdateGeneralConfigDto {
   @IsInt()
   @Min(1)
@@ -203,6 +296,15 @@ export class UpdateGeneralConfigDto {
   integraciones?: IntegracionesDto;
 }
 
+/**
+ * Clase UpdateTarifasDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateTarifasDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateTarifasDto que implementa la lógica principal de dto.
+ */
 export class UpdateTarifasDto {
   @IsBoolean()
   aplicarATodos: boolean;
@@ -216,6 +318,15 @@ export class UpdateTarifasDto {
   tarifas: TarifaConfigDto[];
 }
 
+/**
+ * Clase UpdateMetodosPagoDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateMetodosPagoDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateMetodosPagoDto que implementa la lógica principal de dto.
+ */
 export class UpdateMetodosPagoDto {
   @ValidateNested()
   @Type(() => MetodosPagoDto)

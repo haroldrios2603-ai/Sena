@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para audit.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma.service';
 import { AuditService } from './audit.service';

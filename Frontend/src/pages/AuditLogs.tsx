@@ -1,3 +1,6 @@
+/**
+ * Página React que representa una ruta del frontend.
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Download, FileSearch, Loader2, ShieldAlert } from 'lucide-react';

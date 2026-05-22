@@ -1,3 +1,6 @@
+/**
+ * Página React que representa una ruta del frontend.
+ */
 import React, { useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../context/useAuth';

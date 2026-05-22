@@ -1,6 +1,18 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 import type { Role, User, DocumentType } from '../context/types';
 
+/**
+ * Interfaz CreateUserPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz CreateUserPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz CreateUserPayload que define la forma de datos usada en services.
+ */
 export interface CreateUserPayload {
     fullName: string;
     email: string;
@@ -11,6 +23,15 @@ export interface CreateUserPayload {
     documentNumber?: string;
 }
 
+/**
+ * Interfaz UserFilters que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UserFilters que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UserFilters que define la forma de datos usada en services.
+ */
 export interface UserFilters {
     role?: Role;
     isActive?: 'true' | 'false';
@@ -20,6 +41,15 @@ export interface UserFilters {
     documentNumber?: string;
 }
 
+/**
+ * Interfaz UpdateUserPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UpdateUserPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UpdateUserPayload que define la forma de datos usada en services.
+ */
 export interface UpdateUserPayload {
     fullName?: string;
     email?: string;

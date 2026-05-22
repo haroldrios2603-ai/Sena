@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para auth.
+ */
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -31,4 +34,13 @@ import { PasswordRecoveryNotifierService } from './password-recovery-notifier.se
   providers: [AuthService, JwtStrategy, PasswordRecoveryNotifierService],
   exports: [AuthService],
 })
+/**
+ * Clase AuthModule que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthModule que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthModule que implementa la lógica principal de auth.
+ */
 export class AuthModule {}

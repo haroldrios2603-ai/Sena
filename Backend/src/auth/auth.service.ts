@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para auth.
+ */
 import {
   Injectable,
   UnauthorizedException,
@@ -18,6 +21,15 @@ import { PasswordRecoveryNotifierService } from './password-recovery-notifier.se
 /**
  * Servicio responsable de la lógica de Autenticación.
  * Maneja el Registro, Inicio de Sesión y Generación de Tokens JWT.
+ */
+/**
+ * Clase AuthService que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthService que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthService que implementa la lógica principal de auth.
  */
 @Injectable()
 export class AuthService {

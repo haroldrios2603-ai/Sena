@@ -1,3 +1,6 @@
+/**
+ * Filtro global para capturar y formatear excepciones HTTP y de servidor.
+ */
 import {
   ExceptionFilter,
   Catch,
@@ -10,6 +13,15 @@ import { Request, Response } from 'express';
 
 /**
  * Filtro global de excepciones para manejar errores de manera centralizada.
+ */
+/**
+ * Clase AllExceptionsFilter que implementa la lógica principal de filters.
+ */
+/**
+ * Clase AllExceptionsFilter que implementa la lógica principal de filters.
+ */
+/**
+ * Clase AllExceptionsFilter que implementa la lógica principal de filters.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {

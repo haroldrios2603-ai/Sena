@@ -1,8 +1,20 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import { IsEnum, IsOptional, IsBooleanString, IsString } from 'class-validator';
 import { Role } from '@prisma/client';
 
 /**
  * DTO para filtrar la vista de usuarios.
+ */
+/**
+ * Clase ListUsersDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ListUsersDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ListUsersDto que implementa la lógica principal de dto.
  */
 export class ListUsersDto {
   /**

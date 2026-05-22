@@ -1,5 +1,17 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 
+/**
+ * Tipo AuditOperation para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo AuditOperation para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo AuditOperation para definir la estructura de datos utilizada en services.
+ */
 export type AuditOperation =
     | 'CREATE'
     | 'UPDATE'
@@ -12,8 +24,26 @@ export type AuditOperation =
     | 'PASSWORD_CHANGE'
     | 'EXPORT';
 
+/**
+ * Tipo AuditResult para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo AuditResult para definir la estructura de datos utilizada en services.
+ */
+/**
+ * Tipo AuditResult para definir la estructura de datos utilizada en services.
+ */
 export type AuditResult = 'SUCCESS' | 'FAILURE';
 
+/**
+ * Interfaz AuditLogItem que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AuditLogItem que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AuditLogItem que define la forma de datos usada en services.
+ */
 export interface AuditLogItem {
     id: string;
     timestamp: string;
@@ -36,6 +66,15 @@ export interface AuditLogItem {
     metadata?: unknown;
 }
 
+/**
+ * Interfaz AuditListResponse que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AuditListResponse que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AuditListResponse que define la forma de datos usada en services.
+ */
 export interface AuditListResponse {
     items: AuditLogItem[];
     total: number;
@@ -44,6 +83,15 @@ export interface AuditListResponse {
     totalPages: number;
 }
 
+/**
+ * Interfaz AuditFilters que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AuditFilters que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AuditFilters que define la forma de datos usada en services.
+ */
 export interface AuditFilters {
     from?: string;
     to?: string;

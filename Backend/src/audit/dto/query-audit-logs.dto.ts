@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsDateString,
   IsEnum,
@@ -10,6 +13,15 @@ import {
 import { Type } from 'class-transformer';
 import { AuditOperation, AuditResult } from '@prisma/client';
 
+/**
+ * Clase QueryAuditLogsDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase QueryAuditLogsDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase QueryAuditLogsDto que implementa la lógica principal de dto.
+ */
 export class QueryAuditLogsDto {
   @IsOptional()
   @IsDateString()

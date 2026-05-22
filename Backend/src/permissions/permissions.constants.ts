@@ -1,5 +1,17 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import { Role } from '@prisma/client';
 
+/**
+ * Tipo ScreenDefinition para definir la estructura de datos utilizada en permissions.
+ */
+/**
+ * Tipo ScreenDefinition para definir la estructura de datos utilizada en permissions.
+ */
+/**
+ * Tipo ScreenDefinition para definir la estructura de datos utilizada en permissions.
+ */
 export type ScreenDefinition = {
   key: string;
   name: string;
@@ -7,6 +19,15 @@ export type ScreenDefinition = {
   route: string;
 };
 
+/**
+ * Constante APP_SCREEN_DEFINITIONS utilizada en la configuración o la lógica de permissions.
+ */
+/**
+ * Constante APP_SCREEN_DEFINITIONS utilizada en la configuración o la lógica de permissions.
+ */
+/**
+ * Constante APP_SCREEN_DEFINITIONS utilizada en la configuración o la lógica de permissions.
+ */
 export const APP_SCREEN_DEFINITIONS: ScreenDefinition[] = [
   {
     key: 'operations-dashboard',
@@ -106,6 +127,15 @@ export const APP_SCREEN_DEFINITIONS: ScreenDefinition[] = [
   },
 ];
 
+/**
+ * Constante DEFAULT_ROLE_SCREEN_PERMISSIONS utilizada en la configuración o la lógica de permissions.
+ */
+/**
+ * Constante DEFAULT_ROLE_SCREEN_PERMISSIONS utilizada en la configuración o la lógica de permissions.
+ */
+/**
+ * Constante DEFAULT_ROLE_SCREEN_PERMISSIONS utilizada en la configuración o la lógica de permissions.
+ */
 export const DEFAULT_ROLE_SCREEN_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: APP_SCREEN_DEFINITIONS.map((screen) => screen.key),
   ADMIN_PARKING: [

@@ -1,8 +1,20 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import { IsString, IsIn, IsUUID, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
  * DTO para registrar la entrada de un vehículo.
+ */
+/**
+ * Clase EntryDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase EntryDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase EntryDto que implementa la lógica principal de dto.
  */
 export class EntryDto {
   /**

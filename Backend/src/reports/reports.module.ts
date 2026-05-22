@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para reports.
+ */
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '../database.module';
@@ -11,4 +14,13 @@ import { ReportsService } from './reports.service';
   controllers: [ReportsController],
   providers: [ReportsService, ReportsExportService, RolesGuard],
 })
+/**
+ * Clase ReportsModule que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsModule que implementa la lógica principal de reports.
+ */
+/**
+ * Clase ReportsModule que implementa la lógica principal de reports.
+ */
 export class ReportsModule {}

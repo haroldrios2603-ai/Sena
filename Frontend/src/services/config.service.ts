@@ -1,5 +1,17 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 
+/**
+ * Interfaz TarifaConfigurada que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz TarifaConfigurada que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz TarifaConfigurada que define la forma de datos usada en services.
+ */
 export interface TarifaConfigurada {
     id?: string;
     parkingId?: string;
@@ -13,6 +25,15 @@ export interface TarifaConfigurada {
     flatRate?: number | null;
 }
 
+/**
+ * Interfaz ParqueaderoConfigurado que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ParqueaderoConfigurado que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ParqueaderoConfigurado que define la forma de datos usada en services.
+ */
 export interface ParqueaderoConfigurado {
     id: string;
     name: string;
@@ -26,6 +47,15 @@ export interface ParqueaderoConfigurado {
     tariffs: TarifaConfigurada[];
 }
 
+/**
+ * Interfaz ConfiguracionSistema que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ConfiguracionSistema que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ConfiguracionSistema que define la forma de datos usada en services.
+ */
 export interface ConfiguracionSistema {
     id: string;
     capacidadTotal: number;
@@ -41,12 +71,30 @@ export interface ConfiguracionSistema {
     integraciones?: unknown;
 }
 
+/**
+ * Interfaz RespuestaConfiguracion que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz RespuestaConfiguracion que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz RespuestaConfiguracion que define la forma de datos usada en services.
+ */
 export interface RespuestaConfiguracion {
     configuracion: ConfiguracionSistema;
     parkings: ParqueaderoConfigurado[];
     tarifas: TarifaConfigurada[];
 }
 
+/**
+ * Interfaz CrearParqueaderoPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz CrearParqueaderoPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz CrearParqueaderoPayload que define la forma de datos usada en services.
+ */
 export interface CrearParqueaderoPayload {
     nombre: string;
     direccion: string;
@@ -56,6 +104,15 @@ export interface CrearParqueaderoPayload {
     horario?: { apertura: string; cierre: string };
 }
 
+/**
+ * Interfaz ActualizarParqueaderoPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ActualizarParqueaderoPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ActualizarParqueaderoPayload que define la forma de datos usada en services.
+ */
 export interface ActualizarParqueaderoPayload {
     nombre?: string;
     direccion?: string;
@@ -65,6 +122,15 @@ export interface ActualizarParqueaderoPayload {
     horario?: { apertura: string; cierre: string };
 }
 
+/**
+ * Interfaz ConfiguracionGeneralPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ConfiguracionGeneralPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ConfiguracionGeneralPayload que define la forma de datos usada en services.
+ */
 export interface ConfiguracionGeneralPayload {
     capacidadTotal: number;
     capacidadPorTipo?: Array<{ tipo: string; capacidad: number }>;
@@ -107,6 +173,15 @@ export interface ConfiguracionGeneralPayload {
     };
 }
 
+/**
+ * Interfaz MetodosPagoPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz MetodosPagoPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz MetodosPagoPayload que define la forma de datos usada en services.
+ */
 export interface MetodosPagoPayload {
     aceptaEfectivo: boolean;
     aceptaTarjeta: boolean;
@@ -115,6 +190,15 @@ export interface MetodosPagoPayload {
     notas?: string;
 }
 
+/**
+ * Interfaz ActualizarTarifasPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ActualizarTarifasPayload que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ActualizarTarifasPayload que define la forma de datos usada en services.
+ */
 export interface ActualizarTarifasPayload {
     aplicarATodos: boolean;
     parkingId?: string;

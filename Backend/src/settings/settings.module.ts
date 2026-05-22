@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para settings.
+ */
 import { Module } from '@nestjs/common';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
@@ -10,4 +13,13 @@ import { RolesGuard } from '../common/guards/roles.guard';
   controllers: [SettingsController],
   providers: [SettingsService, RolesGuard],
 })
+/**
+ * Clase SettingsModule que implementa la lógica principal de settings.
+ */
+/**
+ * Clase SettingsModule que implementa la lógica principal de settings.
+ */
+/**
+ * Clase SettingsModule que implementa la lógica principal de settings.
+ */
 export class SettingsModule {}

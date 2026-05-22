@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para auth.
+ */
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -8,11 +11,12 @@ import { JwtStrategy } from './jwt.strategy';
 import { PasswordRecoveryNotifierService } from './password-recovery-notifier.service';
 
 /**
- * Module that encapsulates all Authentication components.
- * Imports JwtModule and PassportModule.
+ * Módulo que encapsula todos los componentes de Autenticación.
  *
- * ES: Módulo que encapsula todos los componentes de Autenticación.
- * Importa JwtModule y PassportModule.
+ * Responsabilidades:
+ * - Proveer `AuthService` para registro, login y gestión de sesiones.
+ * - Configurar `JwtModule` para firmar tokens JWT.
+ * - Registrar la estrategia `JwtStrategy` y el notificador de recuperación de contraseña.
  */
 @Module({
   imports: [
@@ -30,4 +34,13 @@ import { PasswordRecoveryNotifierService } from './password-recovery-notifier.se
   providers: [AuthService, JwtStrategy, PasswordRecoveryNotifierService],
   exports: [AuthService],
 })
+/**
+ * Clase AuthModule que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthModule que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthModule que implementa la lógica principal de auth.
+ */
 export class AuthModule {}

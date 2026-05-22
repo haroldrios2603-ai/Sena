@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con permissions.
+ */
 import {
   BadRequestException,
   Body,
@@ -17,6 +20,15 @@ import { PermissionsService } from './permissions.service';
 import { UpdateScreenPermissionsDto } from './dto/update-screen-permissions.dto';
 import { AuditService } from '../audit/audit.service';
 
+/**
+ * Clase PermissionsController que implementa la lógica principal de permissions.
+ */
+/**
+ * Clase PermissionsController que implementa la lógica principal de permissions.
+ */
+/**
+ * Clase PermissionsController que implementa la lógica principal de permissions.
+ */
 @Controller('permissions')
 @UseGuards(AuthGuard('jwt'))
 export class PermissionsController {

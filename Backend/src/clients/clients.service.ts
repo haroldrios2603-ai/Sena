@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para clients.
+ */
 import {
   BadRequestException,
   ConflictException,
@@ -14,6 +17,15 @@ import { ListContractsDto } from './dto/list-contracts.dto';
 
 /**
  * Servicio para gestionar clientes con mensualidades y alertas.
+ */
+/**
+ * Clase ClientsService que implementa la lógica principal de clients.
+ */
+/**
+ * Clase ClientsService que implementa la lógica principal de clients.
+ */
+/**
+ * Clase ClientsService que implementa la lógica principal de clients.
  */
 @Injectable()
 export class ClientsService {

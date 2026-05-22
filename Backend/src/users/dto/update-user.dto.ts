@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsBoolean,
   IsEmail,
@@ -13,6 +16,15 @@ import { Role, DocumentType } from '@prisma/client';
 
 /**
  * DTO para actualizar datos básicos de un usuario existente.
+ */
+/**
+ * Clase UpdateUserDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateUserDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateUserDto que implementa la lógica principal de dto.
  */
 export class UpdateUserDto {
   /**

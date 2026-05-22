@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para users.
+ */
 import {
   BadRequestException,
   ConflictException,

@@ -1,6 +1,18 @@
+/**
+ * Servicio que contiene la lógica de negocio para services.
+ */
 import api from '../api';
 import type { Role } from '../context/types';
 
+/**
+ * Interfaz AppScreen que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AppScreen que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz AppScreen que define la forma de datos usada en services.
+ */
 export interface AppScreen {
     key: string;
     name: string;
@@ -9,6 +21,15 @@ export interface AppScreen {
     isActive: boolean;
 }
 
+/**
+ * Interfaz ScreenPermission que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ScreenPermission que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz ScreenPermission que define la forma de datos usada en services.
+ */
 export interface ScreenPermission {
     screenKey: string;
     screenName?: string;
@@ -18,6 +39,15 @@ export interface ScreenPermission {
     inherited?: boolean;
 }
 
+/**
+ * Interfaz UserPermissionsResponse que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UserPermissionsResponse que define la forma de datos usada en services.
+ */
+/**
+ * Interfaz UserPermissionsResponse que define la forma de datos usada en services.
+ */
 export interface UserPermissionsResponse {
     user: {
         id: string;

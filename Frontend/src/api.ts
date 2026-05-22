@@ -1,3 +1,6 @@
+/**
+ * Configuración del cliente HTTP Axios para comunicarse con la API backend.
+ */
 import axios from 'axios';
 import { announceDataUpdated } from './utils/dataRefresh';
 

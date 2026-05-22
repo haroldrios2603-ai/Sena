@@ -1,3 +1,6 @@
+/**
+ * Módulo que expone el servicio de Prisma para acceso a la base de datos.
+ */
 import { Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 
@@ -9,4 +12,13 @@ import { PrismaService } from './prisma.service';
   providers: [PrismaService],
   exports: [PrismaService],
 })
+/**
+ * Clase DatabaseModule que implementa la lógica principal de src.
+ */
+/**
+ * Clase DatabaseModule que implementa la lógica principal de src.
+ */
+/**
+ * Clase DatabaseModule que implementa la lógica principal de src.
+ */
 export class DatabaseModule {}

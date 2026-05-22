@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para permissions.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma.service';

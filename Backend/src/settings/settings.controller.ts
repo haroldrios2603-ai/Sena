@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con settings.
+ */
 import { Body, Controller, Get, Put, Request, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import {
@@ -14,6 +17,15 @@ import { AuditService } from '../audit/audit.service';
 
 /**
  * Expone los endpoints administrativos para configurar el sistema.
+ */
+/**
+ * Clase SettingsController que implementa la lógica principal de settings.
+ */
+/**
+ * Clase SettingsController que implementa la lógica principal de settings.
+ */
+/**
+ * Clase SettingsController que implementa la lógica principal de settings.
  */
 @Controller('settings')
 @UseGuards(AuthGuard('jwt'), RolesGuard)

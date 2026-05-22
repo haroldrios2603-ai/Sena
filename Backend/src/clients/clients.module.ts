@@ -1,3 +1,6 @@
+/**
+ * Módulo que agrupa providers y controladores para clients.
+ */
 import { Module } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { ClientsController } from './clients.controller';
@@ -13,4 +16,13 @@ import { PassportModule } from '@nestjs/passport';
   controllers: [ClientsController],
   providers: [ClientsService, RolesGuard],
 })
+/**
+ * Clase ClientsModule que implementa la lógica principal de clients.
+ */
+/**
+ * Clase ClientsModule que implementa la lógica principal de clients.
+ */
+/**
+ * Clase ClientsModule que implementa la lógica principal de clients.
+ */
 export class ClientsModule {}

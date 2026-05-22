@@ -1,3 +1,6 @@
+/**
+ * Guardia que protege rutas según roles de usuario.
+ */
 import {
   CanActivate,
   ExecutionContext,
@@ -13,6 +16,15 @@ import { AuditService } from '../../audit/audit.service';
 
 /**
  * Guardián que valida si el usuario autenticado posee alguno de los roles requeridos.
+ */
+/**
+ * Clase RolesGuard que implementa la lógica principal de guards.
+ */
+/**
+ * Clase RolesGuard que implementa la lógica principal de guards.
+ */
+/**
+ * Clase RolesGuard que implementa la lógica principal de guards.
  */
 @Injectable()
 export class RolesGuard implements CanActivate {

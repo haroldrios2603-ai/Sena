@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsBoolean,
   IsDateString,
@@ -16,6 +19,15 @@ import { DocumentType } from '@prisma/client';
 
 /**
  * DTO para actualizar datos editables de cliente y contrato.
+ */
+/**
+ * Clase UpdateContractDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateContractDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase UpdateContractDto que implementa la lógica principal de dto.
  */
 export class UpdateContractDto {
   @IsOptional()

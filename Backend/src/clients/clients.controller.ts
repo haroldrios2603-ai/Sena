@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con clients.
+ */
 import {
   Body,
   Controller,
@@ -24,6 +27,15 @@ import { ListContractsDto } from './dto/list-contracts.dto';
 
 /**
  * Controlador para gestión de clientes con mensualidades.
+ */
+/**
+ * Clase ClientsController que implementa la lógica principal de clients.
+ */
+/**
+ * Clase ClientsController que implementa la lógica principal de clients.
+ */
+/**
+ * Clase ClientsController que implementa la lógica principal de clients.
  */
 @Controller('clients')
 @UseGuards(AuthGuard('jwt'), RolesGuard)

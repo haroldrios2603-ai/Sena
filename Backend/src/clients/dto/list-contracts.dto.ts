@@ -1,8 +1,20 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import { IsIn, IsOptional, IsString } from 'class-validator';
 import { Transform, TransformFnParams } from 'class-transformer';
 
 /**
  * Filtros para inventario de contratos de clientes.
+ */
+/**
+ * Clase ListContractsDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ListContractsDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ListContractsDto que implementa la lógica principal de dto.
  */
 export class ListContractsDto {
   @IsOptional()

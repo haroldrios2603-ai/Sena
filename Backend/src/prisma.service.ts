@@ -1,9 +1,21 @@
+/**
+ * Servicio que maneja la conexión Prisma con la base de datos.
+ */
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 /**
  * Servicio para manejar la conexión a la base de datos usando Prisma Client.
  * Implementa hooks de ciclo de vida para conectar/desconectar automáticamente.
+ */
+/**
+ * Clase PrismaService que implementa la lógica principal de src.
+ */
+/**
+ * Clase PrismaService que implementa la lógica principal de src.
+ */
+/**
+ * Clase PrismaService que implementa la lógica principal de src.
  */
 @Injectable()
 export class PrismaService

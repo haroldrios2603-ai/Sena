@@ -1,8 +1,20 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import { IsString, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
  * DTO para registrar la salida de un vehículo.
+ */
+/**
+ * Clase ExitDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ExitDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase ExitDto que implementa la lógica principal de dto.
  */
 export class ExitDto {
   /**

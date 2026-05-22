@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para users.
+ */
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -10,6 +13,15 @@ import { User } from '@prisma/client';
 
 /**
  * Servicio para administración de usuarios y asignación de roles.
+ */
+/**
+ * Clase UsersService que implementa la lógica principal de users.
+ */
+/**
+ * Clase UsersService que implementa la lógica principal de users.
+ */
+/**
+ * Clase UsersService que implementa la lógica principal de users.
  */
 @Injectable()
 export class UsersService {

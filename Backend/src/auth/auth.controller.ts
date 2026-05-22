@@ -1,3 +1,6 @@
+/**
+ * Controlador que maneja rutas HTTP relacionadas con auth.
+ */
 import {
   Controller,
   Post,
@@ -19,7 +22,20 @@ import { AuditOperation, AuditResult } from '@prisma/client';
 
 /**
  * Controlador para manejar peticiones de autenticación.
- * Expone endpoints para Registro e Inicio de Sesión.
+ * Expone endpoints para Registro, Inicio de Sesión, recuperación de contraseña y perfil.
+ *
+ * Notas:
+ * - Los endpoints públicos aplican throttling para mitigar intentos masivos.
+ * - Se registran eventos de auditoría vía `AuditService` en acciones críticas.
+ */
+/**
+ * Clase AuthController que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthController que implementa la lógica principal de auth.
+ */
+/**
+ * Clase AuthController que implementa la lógica principal de auth.
  */
 @Controller('auth')
 export class AuthController {
@@ -30,7 +46,8 @@ export class AuthController {
 
   /**
    * Endpoint para registrar un nuevo usuario.
-   * Limitado a 5 intentos por 15 minutos por IP
+   * Aplica throttling para limitar intentos desde la misma IP.
+   * Recibe `RegisterDto` y delega la creación en `AuthService`.
    */
   @Throttle({})
   @Post('register')
@@ -40,7 +57,9 @@ export class AuthController {
 
   /**
    * Endpoint para iniciar sesión.
-   * Limitado a 5 intentos por 15 minutos por IP
+   * - Valida credenciales mediante `AuthService.login`.
+   * - Registra eventos de auditoría: login exitoso, fallo y creación/reutilización de asistencia.
+   * - Retorna token JWT y metadatos de asistencia si aplica.
    */
   @Throttle({})
   @Post('login')
@@ -115,7 +134,8 @@ export class AuthController {
 
   /**
    * Endpoint protegido para cerrar sesión y registrar checkOut de asistencia.
-   * ES: Actualiza el último registro de asistencia sin cerrar.
+   * - Cierra la asistencia activa del usuario si existe.
+   * - Registra eventos de auditoría asociados al logout y al registro de salida.
    */
   @UseGuards(AuthGuard('jwt'))
   @Post('logout')
@@ -149,8 +169,9 @@ export class AuthController {
   }
 
   /**
-   * Endpoint público para solicitar código de recuperación.
-   * Limitado a 5 intentos por 15 minutos por IP
+   * Endpoint público para solicitar código de recuperación de contraseña.
+   * - Genera y persiste un token de recuperación (no devuelve el código en producción).
+   * - Envía notificación por correo mediante `PasswordRecoveryNotifierService`.
    */
   @Throttle({})
   @Post('password/request')
@@ -168,8 +189,8 @@ export class AuthController {
   }
 
   /**
-   * Endpoint público para confirmar código y registrar nueva contraseña.
-   * Limitado a 5 intentos por 15 minutos por IP
+   * Endpoint público para confirmar un código de recuperación y establecer nueva contraseña.
+   * - Valida token, hashea la nueva contraseña y marca tokens previos como usados.
    */
   @Throttle({})
   @Post('password/reset')

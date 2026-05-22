@@ -1,6 +1,18 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import { useContext } from 'react';
 import { AuthContext } from './authContextInstance';
 
+/**
+ * Constante useAuth utilizada en la configuración o la lógica de context.
+ */
+/**
+ * Constante useAuth utilizada en la configuración o la lógica de context.
+ */
+/**
+ * Constante useAuth utilizada en la configuración o la lógica de context.
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
 

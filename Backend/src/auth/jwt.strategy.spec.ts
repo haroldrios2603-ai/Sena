@@ -1,3 +1,6 @@
+/**
+ * Archivo fuente que requiere comentarios descriptivos.
+ */
 import { UnauthorizedException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtStrategy } from './jwt.strategy';

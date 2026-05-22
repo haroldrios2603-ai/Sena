@@ -1,3 +1,6 @@
+/**
+ * Servicio que contiene la lógica de negocio para auth.
+ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma.service';

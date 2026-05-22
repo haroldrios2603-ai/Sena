@@ -1,7 +1,19 @@
+/**
+ * Hook React para cerrar notificaciones automáticamente tras un tiempo.
+ */
 import { useEffect, useRef } from 'react';
 
 /**
  * Cierra automáticamente banners de estado (éxito/error) tras un tiempo.
+ */
+/**
+ * Constante useAutoDismiss utilizada en la configuración o la lógica de hooks.
+ */
+/**
+ * Constante useAutoDismiss utilizada en la configuración o la lógica de hooks.
+ */
+/**
+ * Constante useAutoDismiss utilizada en la configuración o la lógica de hooks.
  */
 export const useAutoDismiss = (
     shouldDismiss: boolean,

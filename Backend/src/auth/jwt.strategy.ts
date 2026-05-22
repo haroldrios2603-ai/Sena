@@ -1,3 +1,6 @@
+/**
+ * Estrategia JWT que valida y verifica tokens de autenticación.
+ */
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
@@ -5,6 +8,15 @@ import { Role } from '@prisma/client';
 
 /**
  * Estrategia para validar tokens JWT usando Passport.
+ */
+/**
+ * Clase JwtStrategy que implementa la lógica principal de auth.
+ */
+/**
+ * Clase JwtStrategy que implementa la lógica principal de auth.
+ */
+/**
+ * Clase JwtStrategy que implementa la lógica principal de auth.
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

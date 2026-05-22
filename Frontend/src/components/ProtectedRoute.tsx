@@ -1,3 +1,6 @@
+/**
+ * Componente React de interfaz de usuario.
+ */
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 

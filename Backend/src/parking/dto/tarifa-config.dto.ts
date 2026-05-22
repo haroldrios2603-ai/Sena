@@ -1,3 +1,6 @@
+/**
+ * Data Transfer Object que define la forma y validaciones del payload para dto.
+ */
 import {
   IsNumber,
   IsOptional,
@@ -9,6 +12,15 @@ import {
 
 /**
  * DTO reutilizable para definir tarifas por tipo de vehículo.
+ */
+/**
+ * Clase TarifaConfigDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase TarifaConfigDto que implementa la lógica principal de dto.
+ */
+/**
+ * Clase TarifaConfigDto que implementa la lógica principal de dto.
  */
 export class TarifaConfigDto {
   @IsString()

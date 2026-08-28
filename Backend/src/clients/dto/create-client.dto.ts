@@ -12,6 +12,7 @@ import {
   IsOptional,
   IsDateString,
   IsEnum,
+  IsNotEmpty,
 } from 'class-validator';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
 import { DocumentType } from '@prisma/client';
@@ -67,16 +68,16 @@ export class CreateClientDto {
   @IsString()
   planName?: string;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'Debes seleccionar el tipo de documento' })
   @IsEnum(DocumentType, { message: 'Tipo de documento inválido' })
-  documentType?: DocumentType;
+  documentType: DocumentType;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'El número de documento es obligatorio' })
   @IsString()
-  @MinLength(3)
-  @MaxLength(20)
+  @MinLength(3, { message: 'El número de documento debe tener al menos 3 caracteres' })
+  @MaxLength(20, { message: 'El número de documento no puede exceder 20 caracteres' })
   @Transform(({ value }: TransformFnParams) =>
     typeof value === 'string' ? value.trim() : value,
   )
-  documentNumber?: string;
+  documentNumber: string;
 }

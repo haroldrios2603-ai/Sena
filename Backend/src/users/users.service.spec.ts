@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Role } from '@prisma/client';
+import { DocumentType, Role } from '@prisma/client';
 import { compare } from 'bcrypt';
 import { PrismaService } from '../prisma.service';
 import { UsersService } from './users.service';
@@ -74,6 +74,8 @@ describe('UsersService', () => {
       contactPhone: '+57 300 123 4567',
       password: 'Strong1!',
       role: Role.OPERATOR,
+      documentType: DocumentType.CEDULA,
+      documentNumber: '1234567890',
     });
 
     expect(prismaMock.user.create).toHaveBeenCalled();
@@ -94,6 +96,34 @@ describe('UsersService', () => {
         contactPhone: '+57 300 000 0000',
         password: 'Strong1!',
         role: Role.OPERATOR,
+        documentType: DocumentType.CEDULA,
+        documentNumber: '111222333',
+      }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('should reject duplicate document number on createUser', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.findMany.mockResolvedValue([
+      {
+        id: 'existing-user',
+        email: 'otro@rmparking.com',
+        fullName: 'Usuario existente',
+        documentType: DocumentType.CEDULA,
+        documentNumber: '12345678',
+        role: Role.CLIENT,
+      },
+    ]);
+
+    await expect(
+      service.createUser({
+        fullName: 'Duplicado',
+        email: 'nuevo@rmparking.com',
+        contactPhone: '+57 300 000 0000',
+        password: 'Strong1!',
+        role: Role.OPERATOR,
+        documentType: DocumentType.CEDULA,
+        documentNumber: '12345678',
       }),
     ).rejects.toThrow(ConflictException);
   });

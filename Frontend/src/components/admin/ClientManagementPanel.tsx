@@ -258,6 +258,10 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
             setMessage({ text: 'Selecciona un parqueadero para continuar', type: 'error' });
             return;
         }
+        if (!newClientData.documentType || !newClientData.documentNumber.trim()) {
+            setMessage({ text: 'Debes seleccionar el tipo de documento e ingresar el número de documento.', type: 'error' });
+            return;
+        }
         setCreating(true);
         try {
             await clientsService.createClient({
@@ -528,6 +532,7 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                             onChange={(event) =>
                                 setNewClientData({ ...newClientData, documentType: event.target.value as DocumentType | '' })
                             }
+                            required
                         >
                             <option value="">Sin documento</option>
                             {documentTypes.map((dt) => (
@@ -545,6 +550,8 @@ const ClientManagementPanel = ({ parkings, loadingParkings }: ClientManagementPa
                             placeholder="Ej. 1234567890"
                             value={newClientData.documentNumber}
                             onChange={(event) => setNewClientData({ ...newClientData, documentNumber: event.target.value })}
+                            disabled={!newClientData.documentType}
+                            required={Boolean(newClientData.documentType)}
                         />
                     </div>
                     <div>

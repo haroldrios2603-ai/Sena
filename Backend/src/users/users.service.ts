@@ -39,6 +39,14 @@ export class UsersService {
       throw new ConflictException('El correo ya está registrado');
     }
 
+    if (!createUserDto.documentType || !this.normalizeDocumentNumber(createUserDto.documentNumber)) {
+      throw new BadRequestException(
+        'Debes seleccionar el tipo de documento e ingresar el número de documento.',
+      );
+    }
+
+    await this.ensureDocumentNumberIsUnique(createUserDto.documentNumber, undefined);
+
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
 
     const user = await this.prisma.user.create({
@@ -48,8 +56,8 @@ export class UsersService {
         contactPhone: createUserDto.contactPhone,
         passwordHash,
         role: createUserDto.role,
-        ...(createUserDto.documentType ? { documentType: createUserDto.documentType } : {}),
-        ...(createUserDto.documentNumber ? { documentNumber: createUserDto.documentNumber } : {}),
+        documentType: createUserDto.documentType,
+        documentNumber: createUserDto.documentNumber.trim(),
       },
     });
 
@@ -138,6 +146,25 @@ export class UsersService {
       if (existingUser && existingUser.id !== userId) {
         throw new ConflictException('El correo ya está registrado');
       }
+    }
+
+    const nextDocumentType =
+      typeof updateUserDto.documentType !== 'undefined'
+        ? updateUserDto.documentType
+        : currentUser.documentType ?? undefined;
+    const nextDocumentNumber =
+      typeof updateUserDto.documentNumber !== 'undefined'
+        ? updateUserDto.documentNumber
+        : currentUser.documentNumber ?? undefined;
+
+    if (nextDocumentType || nextDocumentNumber) {
+      if (!nextDocumentType || !this.normalizeDocumentNumber(nextDocumentNumber)) {
+        throw new BadRequestException(
+          'Si se registra un documento, debe indicarse el tipo y el número.',
+        );
+      }
+
+      await this.ensureDocumentNumberIsUnique(nextDocumentNumber, userId);
     }
 
     const user = await this.prisma.user.update({
@@ -241,6 +268,45 @@ export class UsersService {
   /**
    * Elimina campos sensibles antes de responder.
    */
+  private normalizeDocumentNumber(value: string | null | undefined) {
+    return value?.trim().replace(/\s+/g, '').toUpperCase() ?? '';
+  }
+
+  private async ensureDocumentNumberIsUnique(
+    documentNumber: string | null | undefined,
+    currentUserId?: string,
+  ) {
+    const normalized = this.normalizeDocumentNumber(documentNumber);
+
+    if (!normalized) {
+      return;
+    }
+
+    const existingUsers =
+      (await this.prisma.user.findMany({
+        where: { documentNumber: { not: null } },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          documentNumber: true,
+        },
+      })) ?? [];
+
+    const duplicate = existingUsers.find((user) => {
+      return (
+        user.id !== currentUserId &&
+        this.normalizeDocumentNumber(user.documentNumber) === normalized
+      );
+    });
+
+    if (duplicate) {
+      throw new ConflictException(
+        `El número de documento ${documentNumber.trim()} ya está registrado para ${duplicate.fullName || duplicate.email}.`,
+      );
+    }
+  }
+
   private sanitizeUser(user: User): Omit<User, 'passwordHash'> {
     const safeUser: Partial<User> = { ...user };
     delete safeUser.passwordHash;

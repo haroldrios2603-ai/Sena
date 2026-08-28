@@ -382,6 +382,36 @@ export class ClientsService {
     createClientDto: CreateClientDto,
     tx: Prisma.TransactionClient,
   ) {
+    const normalizedDocumentNumber = this.normalizeDocumentNumber(createClientDto.documentNumber);
+    if (!createClientDto.documentType || !normalizedDocumentNumber) {
+      throw new BadRequestException(
+        'Debes seleccionar el tipo de documento e ingresar el número de documento.',
+      );
+    }
+
+    const duplicateDocumentUsers =
+      (await tx.user.findMany({
+        where: {
+          documentNumber: { not: null },
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          documentNumber: true,
+        },
+      })) ?? [];
+
+    const duplicateDocumentUser = duplicateDocumentUsers.find((user) => {
+      return this.normalizeDocumentNumber(user.documentNumber) === normalizedDocumentNumber;
+    });
+
+    if (duplicateDocumentUser) {
+      throw new ConflictException(
+        `El número de documento ${createClientDto.documentNumber.trim()} ya está registrado para ${duplicateDocumentUser.fullName || duplicateDocumentUser.email}.`,
+      );
+    }
+
     const existingUser = await tx.user.findUnique({
       where: { email: createClientDto.email },
     });
@@ -398,8 +428,8 @@ export class ClientsService {
         data: {
           fullName: createClientDto.fullName,
           contactPhone: createClientDto.contactPhone,
-          ...(createClientDto.documentType ? { documentType: createClientDto.documentType } : {}),
-          ...(createClientDto.documentNumber ? { documentNumber: createClientDto.documentNumber } : {}),
+          documentType: createClientDto.documentType,
+          documentNumber: createClientDto.documentNumber.trim(),
         },
       });
     }
@@ -414,10 +444,14 @@ export class ClientsService {
         contactPhone: createClientDto.contactPhone,
         passwordHash,
         role: Role.CLIENT,
-        ...(createClientDto.documentType ? { documentType: createClientDto.documentType } : {}),
-        ...(createClientDto.documentNumber ? { documentNumber: createClientDto.documentNumber } : {}),
+        documentType: createClientDto.documentType,
+        documentNumber: createClientDto.documentNumber.trim(),
       },
     });
+  }
+
+  private normalizeDocumentNumber(value: string | null | undefined) {
+    return value?.trim().replace(/\s+/g, '').toUpperCase() ?? '';
   }
 
   private buildContractWhere(filters: ListContractsDto) {

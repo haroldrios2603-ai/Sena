@@ -27,6 +27,7 @@ import { MonthlyStatusDto } from './dto/monthly-status.dto';
 import { VehiclesPeriodDto } from './dto/vehicles-period.dto';
 import { ReportsExportService } from './reports-export.service';
 import { ReportsService } from './reports.service';
+import { toNumericCode } from '../common/utils/numeric-code.util';
 
 /**
  * Clase ReportsController que implementa la lógica principal de reports.
@@ -277,7 +278,8 @@ export class ReportsController {
       return {
         title: 'Reporte de facturacion total',
         rows: (data.detalle ?? []).map((row: any) => ({
-          transaccionId: row.id,
+          // ES: Se fuerza una referencia numérica para que el archivo exportado no muestre IDs alfanuméricos.
+          transaccionId: toNumericCode(row.id),
           fechaSalida: row.exitTime,
           valorCobrado: row.totalAmount,
         })),

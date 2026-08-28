@@ -4,6 +4,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
+import { toNumericCode } from '../common/utils/numeric-code.util';
 import { CreateParkingDto } from './dto/create-parking.dto';
 import { UpdateParkingDto } from './dto/update-parking.dto';
 import { TarifaConfigDto } from './dto/tarifa-config.dto';
@@ -179,9 +180,9 @@ export class ParkingService {
       create: { plate, type: vehicleType },
     });
 
-    // Generar código único de ticket usando UUID
+    // ES: Se genera un código visible totalmente numérico para evitar valores alfanuméricos en tickets y reportes.
     const { randomUUID } = await import('crypto');
-    const ticketCode = `TK-${randomUUID()}`;
+    const ticketCode = toNumericCode(randomUUID());
 
     // Crear ticket
     const ticket = await this.prisma.ticket.create({

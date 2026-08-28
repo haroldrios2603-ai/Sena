@@ -14,6 +14,7 @@ import {
 } from './dto/create-public-checkout.dto';
 import { createHash } from 'crypto';
 import { CreateExitPaymentIntentDto } from './dto/create-exit-payment-intent.dto';
+import { fromNumericCode, toNumericCode } from '../common/utils/numeric-code.util';
 
 type WompiWebhookPayload = {
   event?: string;
@@ -384,11 +385,22 @@ export class PaymentsService {
   }
 
   private buildReference(paymentId: string) {
-    return `RM-${paymentId}`;
+    // ES: Se mantiene el identificador interno UUID intacto, pero la referencia visible para usuarios y reportes es numérica.
+    return toNumericCode(paymentId);
   }
 
   private getPaymentIdFromReference(reference: string) {
-    return reference.startsWith('RM-') ? reference.slice(3) : reference;
+    const normalizedReference = reference.trim();
+    if (!normalizedReference) {
+      return reference;
+    }
+
+    const candidate = normalizedReference.replace(/\D/g, '');
+    if (!candidate) {
+      return reference;
+    }
+
+    return fromNumericCode(candidate);
   }
 
   private buildIntegritySignature(

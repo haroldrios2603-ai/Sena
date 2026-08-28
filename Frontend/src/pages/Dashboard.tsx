@@ -139,6 +139,15 @@ const currencyFormatter = new Intl.NumberFormat('es-CO', {
     minimumFractionDigits: 0,
 });
 
+const formatNumericCode = (value?: string | null) => {
+    if (!value) {
+        return 'N/D';
+    }
+
+    const digitsOnly = value.replace(/\D/g, '');
+    return digitsOnly || 'N/D';
+};
+
 const roleLabelMap: Record<string, string> = {
     SUPER_ADMIN: 'Super admin',
     ADMIN_PARKING: 'Administrador sede',
@@ -1265,7 +1274,7 @@ const Dashboard = () => {
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Ticket</span>
                                             <span className="font-semibold text-slate-900">
-                                                {lastExit.ticket?.ticketCode || 'N/D'}
+                                                {formatNumericCode(lastExit.ticket?.ticketCode)}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">

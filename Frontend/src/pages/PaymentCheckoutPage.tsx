@@ -38,6 +38,15 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const formatNumericCode = (value?: string | null) => {
+  if (!value) {
+    return 'N/D';
+  }
+
+  const digitsOnly = value.replace(/\D/g, '');
+  return digitsOnly || 'N/D';
+};
+
 const PaymentCheckoutPage = () => {
   const { paymentId } = useParams<{ paymentId: string }>();
   const [payment, setPayment] = useState<PublicPaymentResponse | null>(null);
@@ -145,7 +154,7 @@ const PaymentCheckoutPage = () => {
           <div className="mt-6 space-y-5">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs text-slate-500">Referencia</p>
-              <p className="font-semibold text-slate-900">{payment.reference}</p>
+              <p className="font-semibold text-slate-900">{formatNumericCode(payment.reference)}</p>
               <p className="mt-3 text-xs text-slate-500">Valor</p>
               <p className="text-2xl font-semibold text-slate-900">
                 {currencyFormatter.format(payment.amount)}

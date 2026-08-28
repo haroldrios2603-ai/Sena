@@ -21,22 +21,21 @@ import { Role } from '@prisma/client';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
-    // Obtener secreto JWT de variables de entorno.
-    // ES: En producción se requiere obligatoriamente JWT_SECRET.
+    const jwtSecret = process.env.JWT_SECRET?.trim();
     const secret =
-      process.env.JWT_SECRET ||
-      (process.env.NODE_ENV === 'development' ? 'dev-secret' : undefined);
-    if (!secret) {
-      throw new Error(
-        'JWT_SECRET no definido. Configure la variable de entorno para ejecutar en producción.',
-      );
-    }
+      jwtSecret && jwtSecret.length >= 32
+        ? jwtSecret
+        : process.env.NODE_ENV === 'production'
+          ? (() => {
+              throw new Error(
+                'JWT_SECRET no definido o demasiado corto. Debe tener al menos 32 caracteres en producción.',
+              );
+            })()
+          : 'dev-secret-rm-parking-32-chars-minimum';
 
     super({
-      // Extraer token del encabezado Auth (Bearer)
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // La clave secreta debe coincidir con la usada para firmar
       secretOrKey: secret,
     });
   }

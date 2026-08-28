@@ -25,14 +25,21 @@ async function bootstrap() {
     }),
   );
 
-  // Configurar CORS con orígenes permitidos
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173']
-        : ['http://localhost:5173', 'http://localhost:3000'], // Permitir frontend en desarrollo
-    credentials: true, // Permitir cookies si se usan en el futuro
-    // ES: Exponemos cabeceras de descarga para que el navegador lea nombre/extension del archivo.
+        ? allowedOrigins.length > 0
+          ? allowedOrigins
+          : ['http://localhost:5173']
+        : ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-WOMPI-SIGNATURE'],
     exposedHeaders: ['Content-Disposition', 'Content-Type'],
   });
 

@@ -22,11 +22,21 @@ import { PasswordRecoveryNotifierService } from './password-recovery-notifier.se
   imports: [
     DatabaseModule,
     PassportModule,
-    // ES: En producción se requiere JWT_SECRET. En desarrollo se permite un secreto por defecto.
     JwtModule.register({
-      secret:
-        process.env.JWT_SECRET ||
-        (process.env.NODE_ENV === 'development' ? 'dev-secret' : undefined),
+      secret: (() => {
+        const secret = process.env.JWT_SECRET?.trim();
+        if (secret && secret.length >= 32) {
+          return secret;
+        }
+
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error(
+            'JWT_SECRET no está definido o es demasiado corto. Debe tener al menos 32 caracteres.',
+          );
+        }
+
+        return 'dev-secret-rm-parking-32-chars-minimum';
+      })(),
       signOptions: { expiresIn: '10h' },
     }),
   ],

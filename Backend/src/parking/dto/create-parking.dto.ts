@@ -1,5 +1,6 @@
 /**
- * Data Transfer Object que define la forma y validaciones del payload para dto.
+ * DTO para definir el payload de creación de parqueaderos.
+ * Mantiene la validación de entradas sin alterar la lógica de negocio.
  */
 import {
   ArrayNotEmpty,
@@ -16,48 +17,42 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+/**
+ * DTO interno para describir el horario de operación del parqueadero.
+ */
 class HorarioOperacionDto {
   @IsString()
   @MinLength(4)
   @MaxLength(5)
-  apertura: string;
+  apertura!: string;
 
   @IsString()
   @MinLength(4)
   @MaxLength(5)
-  cierre: string;
+  cierre!: string;
 }
 
 /**
  * DTO para crear nuevas sedes o parqueaderos operativos.
  */
-/**
- * Clase CreateParkingDto que implementa la lógica principal de dto.
- */
-/**
- * Clase CreateParkingDto que implementa la lógica principal de dto.
- */
-/**
- * Clase CreateParkingDto que implementa la lógica principal de dto.
- */
 export class CreateParkingDto {
   @IsString()
   @MinLength(3)
   @MaxLength(120)
-  nombre: string;
+  nombre!: string;
 
   @IsString()
   @MinLength(5)
   @MaxLength(180)
-  direccion: string;
+  direccion!: string;
 
   @IsInt()
   @Min(1)
-  capacidad: number;
+  capacidad!: number;
 
   @IsNumber()
   @Min(0)
-  tarifaBase: number;
+  tarifaBase!: number;
 
   @IsOptional()
   @IsBoolean()

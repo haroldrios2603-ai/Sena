@@ -297,6 +297,10 @@ export class PaymentsService {
       return { received: true, updated: false };
     }
 
+    if (!transaction?.status && payload.event !== 'transaction.updated') {
+      return { received: true, updated: false };
+    }
+
     const paymentId = this.getPaymentIdFromReference(reference);
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },

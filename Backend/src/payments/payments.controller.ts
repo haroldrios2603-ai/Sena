@@ -2,13 +2,16 @@
  * Controlador que maneja rutas HTTP relacionadas con payments.
  */
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Request,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,6 +22,7 @@ import { CreateExitPaymentIntentDto } from './dto/create-exit-payment-intent.dto
 import { CreatePublicCheckoutDto } from './dto/create-public-checkout.dto';
 import { AuditService } from '../audit/audit.service';
 import { AuditOperation, AuditResult } from '@prisma/client';
+import { WompiValidatorService } from './wompi.validator';
 
 type WompiWebhookInput = Parameters<PaymentsService['processWompiWebhook']>[0];
 
@@ -36,6 +40,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly auditService: AuditService,
+    private readonly wompiValidator: WompiValidatorService,
   ) {}
 
   @Post('wompi/exit/:exitId/intent')
@@ -128,7 +133,14 @@ export class PaymentsController {
   }
 
   @Post('wompi/webhook')
-  async handleWompiWebhook(@Body() payload: unknown) {
+  async handleWompiWebhook(
+    @Body() payload: unknown,
+    @Headers('x-wompi-signature') signature: string | undefined,
+  ) {
+    if (!this.wompiValidator.validateWebhookSignature(payload, signature)) {
+      throw new UnauthorizedException('Firma de webhook inválida');
+    }
+
     return this.paymentsService.processWompiWebhook(payload as WompiWebhookInput);
   }
 }

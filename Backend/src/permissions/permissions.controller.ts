@@ -141,7 +141,7 @@ export class PermissionsController {
   private parseRole(role: string): Role {
     const normalized = role.toUpperCase();
     if (!Object.values(Role).includes(normalized as Role)) {
-      throw new BadRequestException('Rol no válido');
+      throw new BadRequestException('El rol proporcionado no es válido.');
     }
     return normalized as Role;
   }

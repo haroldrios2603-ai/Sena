@@ -145,7 +145,7 @@ export class ReportsController {
     const role = req.user?.role;
 
     if (!userId || !role) {
-      throw new ForbiddenException('Token invalido para validar permisos de exportacion.');
+      throw new ForbiddenException('Token inválido: no se pudieron validar los permisos para exportar el reporte.');
     }
 
     const canExport = await this.permissionsService.canUserViewScreen(
@@ -223,7 +223,7 @@ export class ReportsController {
         return this.reportsService.getBillingTotal(dto);
       case 'facturacion-cliente':
         if (!dto.clientId) {
-          throw new BadRequestException('Debe enviar clientId para exportar facturacion por cliente.');
+          throw new BadRequestException('Debes enviar el clientId para exportar la facturación por cliente.');
         }
         return this.reportsService.getBillingByClient({
           clientId: dto.clientId,

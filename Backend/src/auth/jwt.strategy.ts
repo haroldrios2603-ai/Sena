@@ -28,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         : process.env.NODE_ENV === 'production'
           ? (() => {
               throw new Error(
-                'JWT_SECRET no definido o demasiado corto. Debe tener al menos 32 caracteres en producción.',
+                'JWT_SECRET no está definido o es demasiado corto. Debe tener al menos 32 caracteres en producción.',
               );
             })()
           : 'dev-secret-rm-parking-32-chars-minimum';
@@ -46,13 +46,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   validate(payload: { sub?: string; email?: string; role?: string }) {
     if (!payload?.sub || !payload?.role) {
       throw new UnauthorizedException(
-        'Token invalido: faltan datos de usuario para autorizacion.',
+        'Token inválido: faltan datos del usuario para autorizar la solicitud.',
       );
     }
 
     const allowedRoles = Object.values(Role);
     if (!allowedRoles.includes(payload.role as Role)) {
-      throw new UnauthorizedException('Token invalido: rol no reconocido.');
+      throw new UnauthorizedException('Token inválido: el rol del usuario no es válido.');
     }
 
     return { userId: payload.sub, email: payload.email, role: payload.role };

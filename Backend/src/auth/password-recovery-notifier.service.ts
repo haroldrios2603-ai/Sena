@@ -33,7 +33,7 @@ export class PasswordRecoveryNotifierService {
     if (envOverride) {
       this.forcedRecipient = envOverride;
       this.logger.warn(
-        `PASSWORD_RESET_DELIVERY_OVERRIDE activo. Todos los correos de recuperacion se enviaran a ${envOverride}.`,
+        `PASSWORD_RESET_DELIVERY_OVERRIDE está activo. Todos los correos de recuperación se enviarán a ${envOverride}.`,
       );
     }
   }
@@ -52,14 +52,14 @@ export class PasswordRecoveryNotifierService {
       await this.transporter.sendMail({
         from: this.fromAddress,
         to: deliveryAddress,
-        subject: 'RM Parking - Codigo de recuperacion',
-        text: `Tu codigo de recuperacion es: ${code}. Este codigo vence en ${expirationMinutes} minutos. Correo solicitado: ${email}.`,
-        html: `<p>Tu codigo de recuperacion es: <strong>${code}</strong>.</p><p>Este codigo vence en ${expirationMinutes} minutos.</p><p>Correo solicitado: <strong>${email}</strong>.</p>`,
+        subject: 'RM Parking - Código de recuperación',
+        text: `Tu código de recuperación es: ${code}. Este código vence en ${expirationMinutes} minutos. Correo solicitado: ${email}.`,
+        html: `<p>Tu código de recuperación es: <strong>${code}</strong>.</p><p>Este código vence en ${expirationMinutes} minutos.</p><p>Correo solicitado: <strong>${email}</strong>.</p>`,
       });
       return true;
     } catch (error) {
       this.logger.warn(
-        `No fue posible enviar el correo de recuperacion a ${email}: ${(error as Error).message}`,
+        `No fue posible enviar el correo de recuperación a ${email}: ${(error as Error).message}`,
       );
       return false;
     }
@@ -75,7 +75,7 @@ export class PasswordRecoveryNotifierService {
 
     const port = Number(portRaw);
     if (!Number.isFinite(port) || port <= 0) {
-      this.logger.warn('SMTP_PORT invalido. Se omite envio de correo.');
+      this.logger.warn('SMTP_PORT no es válido. Se omite el envío de correo.');
       return null;
     }
 

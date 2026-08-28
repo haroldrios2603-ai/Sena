@@ -138,7 +138,7 @@ export class PaymentsController {
     @Headers('x-wompi-signature') signature: string | undefined,
   ) {
     if (!this.wompiValidator.validateWebhookSignature(payload, signature)) {
-      throw new UnauthorizedException('Firma de webhook inválida');
+      throw new UnauthorizedException('La firma del webhook es inválida o no coincide con la solicitud.');
     }
 
     return this.paymentsService.processWompiWebhook(payload as WompiWebhookInput);

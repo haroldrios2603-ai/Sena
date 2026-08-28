@@ -73,7 +73,7 @@ export class RolesGuard implements CanActivate {
     if (requiredScreenPermission) {
       if (!userId || !userRole) {
         throw new ForbiddenException(
-          'Token invalido: faltan datos de usuario para validar permisos.',
+          'Token inválido: faltan datos del usuario para validar permisos.',
         );
       }
 

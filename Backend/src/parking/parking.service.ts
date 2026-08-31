@@ -3,6 +3,7 @@
  */
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { toNumericCode } from '../common/utils/numeric-code.util';
 import { CreateParkingDto } from './dto/create-parking.dto';
@@ -148,14 +149,17 @@ export class ParkingService {
 
   /**
    * Registra el ingreso de un vehículo.
+   * ES: si ya existe un ticket activo o pendiente de pago para la placa, se bloquea el nuevo ingreso
+   * para evitar duplicados y mantener la trazabilidad del vehículo dentro del parqueadero.
    */
   async registerEntry(plate: string, vehicleType: string, parkingId: string) {
+    // ES: La placa puede reingresar después de una salida registrada. La lógica de bloqueo solo debe
+    // aplicarse a tickets cuyo ingreso sigue abierto. Si el ticket ya fue egresado, aunque esté en
+    // pendiente de pago, el vehículo ya no está dentro del parqueadero y puede registrar un nuevo ingreso.
     const existingActiveTicket = await this.prisma.ticket.findFirst({
       where: {
         vehicle: { plate },
-        status: {
-          in: ['ACTIVE', 'PENDING_PAYMENT'],
-        },
+        status: 'ACTIVE',
       },
       select: {
         id: true,
@@ -181,7 +185,6 @@ export class ParkingService {
     });
 
     // ES: Se genera un código visible totalmente numérico para evitar valores alfanuméricos en tickets y reportes.
-    const { randomUUID } = await import('crypto');
     const ticketCode = toNumericCode(randomUUID());
 
     // Crear ticket
@@ -200,32 +203,49 @@ export class ParkingService {
 
   /**
    * Registra la salida de un vehículo y calcula el cobro.
+   * ES: la salida debe resolverse contra el ticket activo más reciente, incluso si ya quedó en estado
+   * pendiente de pago por una operación previa. Esto evita falsos 404 cuando el vehículo sigue existiendo
+   * en el flujo operativo pero el estado del ticket ya fue actualizado.
    */
   async registerExit(plate: string) {
-    // Buscar ticket activo
     const ticket = await this.prisma.ticket.findFirst({
       where: {
         vehicle: { plate },
-        status: 'ACTIVE',
+        status: {
+          in: ['ACTIVE', 'PENDING_PAYMENT'],
+        },
       },
       include: {
         vehicle: true,
         parking: {
           include: { tariffs: true },
         },
+        exit: true,
+      },
+      orderBy: {
+        entryTime: 'desc',
       },
     });
 
-    if (!ticket)
+    if (!ticket) {
       throw new NotFoundException(
         'No se encontró un ticket activo para esta placa',
       );
+    }
+
+    if (ticket.exit) {
+      return {
+        ticket,
+        exit: ticket.exit,
+        message: 'El vehículo ya tiene una salida registrada pendiente de pago o confirmación.',
+        paymentOptions: await this.getPaymentOptions(),
+      };
+    }
 
     const exitTime = new Date();
     const durationMs = exitTime.getTime() - ticket.entryTime.getTime();
     const durationMinutes = Math.ceil(durationMs / (1000 * 60));
 
-    // Buscar tarifa
     const tariff = ticket.parking.tariffs.find(
       (t: { vehicleType: string; baseRate: number; hourlyRate: number }) =>
         t.vehicleType === ticket.vehicle.type,
@@ -240,7 +260,6 @@ export class ParkingService {
       hourlyRate,
     );
 
-    // Crear registro de salida
     const exit = await this.prisma.exit.create({
       data: {
         ticketId: ticket.id,
@@ -250,7 +269,6 @@ export class ParkingService {
       },
     });
 
-    // ES: La salida queda pendiente de confirmación de pago.
     await this.prisma.ticket.update({
       where: { id: ticket.id },
       data: { status: 'PENDING_PAYMENT' },

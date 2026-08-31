@@ -407,8 +407,10 @@ export class ClientsService {
     });
 
     if (duplicateDocumentUser) {
+      const documentLabel = createClientDto.documentNumber?.trim() || 'no informado';
+
       throw new ConflictException(
-        `El número de documento ${createClientDto.documentNumber.trim()} ya está registrado para ${duplicateDocumentUser.fullName || duplicateDocumentUser.email}.`,
+        `El número de documento ${documentLabel} ya está registrado para ${duplicateDocumentUser.fullName || duplicateDocumentUser.email}.`,
       );
     }
 

@@ -98,7 +98,7 @@ export class ReportsService {
     const normalizedAttendances = this.removeDuplicateOpenRecords(attendances);
 
     const present = normalizedAttendances
-      .filter((item) => item.user.role !== 'CLIENT')
+      .filter((item) => item.user.role !== 'CLIENT' && item.user.isActive)
       .map((item) => ({
         attendanceId: item.id,
         userId: item.userId,
@@ -111,6 +111,8 @@ export class ReportsService {
         ingreso: item.checkIn,
         salida: item.checkOut,
         presente: !item.checkOut,
+        activoEnApp: item.user.isActive,
+        horaInicioSesion: item.checkIn,
       }));
 
     return {
@@ -379,10 +381,12 @@ export class ReportsService {
     const range = this.resolveDateRange(dto);
 
     let userFilter: any = undefined;
-    if (dto.userId) {
-      userFilter = { id: dto.userId };
-    } else if (dto.documentNumber) {
-      userFilter = { documentNumber: { contains: dto.documentNumber, mode: 'insensitive' } };
+    if (dto.userId?.trim()) {
+      userFilter = this.buildUserSearchFilter(dto.userId);
+    } else if (dto.documentNumber?.trim()) {
+      userFilter = {
+        documentNumber: { contains: dto.documentNumber.trim(), mode: 'insensitive' },
+      };
     }
 
     const records = await this.prisma.attendance.findMany({
@@ -439,6 +443,26 @@ export class ReportsService {
       totalRegistros: detalles.length,
       totalHoras: Number(totalHoras.toFixed(2)),
       registros: detalles,
+    };
+  }
+
+  private buildUserSearchFilter(search: string) {
+    const trimmed = search.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    const looksLikeUuid = /^[0-9a-fA-F-]{36}$/.test(trimmed);
+    if (looksLikeUuid) {
+      return { id: trimmed };
+    }
+
+    return {
+      OR: [
+        { fullName: { contains: trimmed, mode: 'insensitive' } },
+        { email: { contains: trimmed, mode: 'insensitive' } },
+        { documentNumber: { contains: trimmed, mode: 'insensitive' } },
+      ],
     };
   }
 

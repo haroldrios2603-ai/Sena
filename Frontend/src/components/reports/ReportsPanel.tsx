@@ -419,9 +419,11 @@ const ReportsPanel = () => {
                                     <th className="px-3 py-2 text-left">Nombre</th>
                                     <th className="px-3 py-2 text-left">Documento</th>
                                     <th className="px-3 py-2 text-left">Rol</th>
+                                    <th className="px-3 py-2 text-left">Inicio sesión</th>
                                     <th className="px-3 py-2 text-left">Ingreso</th>
                                     <th className="px-3 py-2 text-left">Salida</th>
                                     <th className="px-3 py-2 text-left">Estado</th>
+                                    <th className="px-3 py-2 text-left">App</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -430,9 +432,11 @@ const ReportsPanel = () => {
                                         <td className="px-3 py-2">{row.nombre}</td>
                                         <td className="px-3 py-2 text-xs">{row.documento || 'Sin registro'}</td>
                                         <td className="px-3 py-2">{row.rol}</td>
+                                        <td className="px-3 py-2">{row.horaInicioSesion ? new Date(row.horaInicioSesion).toLocaleString('es-CO') : 'Sin sesión'}</td>
                                         <td className="px-3 py-2">{new Date(row.ingreso).toLocaleString('es-CO')}</td>
                                         <td className="px-3 py-2">{row.salida ? new Date(row.salida).toLocaleString('es-CO') : 'Sin salida'}</td>
                                         <td className="px-3 py-2">{row.presente ? 'Presente' : 'Retirado'}</td>
+                                        <td className="px-3 py-2">{row.activoEnApp ? 'Activo' : 'Inactivo'}</td>
                                     </tr>
                                 ))}
                             </tbody>

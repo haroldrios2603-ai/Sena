@@ -20,11 +20,18 @@ import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
-    // Rate limiting/throttling para proteger endpoints críticos
+    // ES: Se aplican límites razonables para rutas públicas y se excluyen las rutas autenticadas
+    // del throttling agresivo para evitar bloqueos al refrescar el perfil del usuario.
     ThrottlerModule.forRoot([
       {
-        ttl: 900000, // 15 minutos (configuración por defecto)
-        limit: 5, // 5 requests por 15 minutos
+        name: 'default',
+        ttl: 60000,
+        limit: 30,
+      },
+      {
+        name: 'auth',
+        ttl: 60000,
+        limit: 10,
       },
     ]),
     DatabaseModule,

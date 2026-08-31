@@ -272,6 +272,13 @@ export class UsersService {
     return value?.trim().replace(/\s+/g, '').toUpperCase() ?? '';
   }
 
+  /**
+   * Devuelve un valor legible para mensajes de conflicto cuando el documento es nulo o vacío.
+   */
+  private formatDocumentNumberForMessage(value: string | null | undefined) {
+    return value?.trim() || 'no informado';
+  }
+
   private async ensureDocumentNumberIsUnique(
     documentNumber: string | null | undefined,
     currentUserId?: string,
@@ -302,7 +309,7 @@ export class UsersService {
 
     if (duplicate) {
       throw new ConflictException(
-        `El número de documento ${documentNumber.trim()} ya está registrado para ${duplicate.fullName || duplicate.email}.`,
+        `El número de documento ${this.formatDocumentNumberForMessage(documentNumber)} ya está registrado para ${duplicate.fullName || duplicate.email}.`,
       );
     }
   }

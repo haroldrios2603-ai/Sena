@@ -48,9 +48,9 @@ describe('AuditService', () => {
     setIntervalSpy = jest
       .spyOn(global, 'setInterval')
       .mockImplementation(((handler: TimerHandler) => {
-        handler as unknown;
-        return 123 as unknown as NodeJS.Timeout;
-      }) as typeof setInterval);
+        void handler;
+        return 123 as unknown as ReturnType<typeof setInterval>;
+      }) as unknown as typeof setInterval);
 
     clearIntervalSpy = jest
       .spyOn(global, 'clearInterval')

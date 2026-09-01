@@ -177,6 +177,34 @@ export class ParkingService {
       );
     }
 
+    // ES: El aforo se valida con la ocupación real del parqueadero y la capacidad configurada.
+    // Esto evita registrar ingresos cuando la sede ya alcanzó el máximo permitido, sin tocar la regla
+    // de cobro ni la lógica de cierre de jornada.
+    const parking = await this.prisma.parking.findUnique({
+      where: { id: parkingId },
+      select: { id: true, name: true, capacity: true },
+    });
+
+    if (!parking) {
+      throw new NotFoundException('Parqueadero no encontrado');
+    }
+
+    const activeCountInParking = await this.prisma.ticket.count({
+      where: {
+        parkingId,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (
+      typeof parking.capacity === 'number' &&
+      activeCountInParking >= parking.capacity
+    ) {
+      throw new ConflictException(
+        `El parqueadero ${parking.name ?? 'seleccionado'} ya alcanzó su capacidad máxima (${parking.capacity} vehículos). No se permiten nuevos ingresos.`,
+      );
+    }
+
     // Buscar o crear vehículo
     const vehicle = await this.prisma.vehicle.upsert({
       where: { plate },
@@ -301,7 +329,9 @@ export class ParkingService {
       }),
       this.prisma.ticket.findMany({
         where: {
-          status: 'CLOSED',
+          status: {
+            in: ['CLOSED', 'PENDING_PAYMENT'],
+          },
           ...(fechaCierreJornada
             ? {
                 exit: {

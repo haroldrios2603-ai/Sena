@@ -34,7 +34,22 @@ type ReportsTab =
 
 const CHART_COLORS = ['#0f766e', '#0369a1', '#ca8a04', '#b91c1c', '#4338ca', '#15803d'];
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const BUSINESS_TIME_ZONE = 'America/Bogota';
+
+const todayIso = () =>
+    new Intl.DateTimeFormat('en-CA', {
+        timeZone: BUSINESS_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(new Date());
+
+const formatBusinessDateTime = (value: string | Date) =>
+    new Intl.DateTimeFormat('es-CO', {
+        timeZone: BUSINESS_TIME_ZONE,
+        dateStyle: 'short',
+        timeStyle: 'medium',
+    }).format(new Date(value));
 
 const ReportsPanel = () => {
     const { t } = useTranslation();
@@ -432,9 +447,9 @@ const ReportsPanel = () => {
                                         <td className="px-3 py-2">{row.nombre}</td>
                                         <td className="px-3 py-2 text-xs">{row.documento || 'Sin registro'}</td>
                                         <td className="px-3 py-2">{row.rol}</td>
-                                        <td className="px-3 py-2">{row.horaInicioSesion ? new Date(row.horaInicioSesion).toLocaleString('es-CO') : 'Sin sesión'}</td>
-                                        <td className="px-3 py-2">{new Date(row.ingreso).toLocaleString('es-CO')}</td>
-                                        <td className="px-3 py-2">{row.salida ? new Date(row.salida).toLocaleString('es-CO') : 'Sin salida'}</td>
+                                        <td className="px-3 py-2">{row.horaInicioSesion ? formatBusinessDateTime(row.horaInicioSesion) : 'Sin sesión'}</td>
+                                        <td className="px-3 py-2">{formatBusinessDateTime(row.ingreso)}</td>
+                                        <td className="px-3 py-2">{row.salida ? formatBusinessDateTime(row.salida) : 'Sin salida'}</td>
                                         <td className="px-3 py-2">{row.presente ? 'Presente' : 'Retirado'}</td>
                                         <td className="px-3 py-2">{row.activoEnApp ? 'Activo' : 'Inactivo'}</td>
                                     </tr>

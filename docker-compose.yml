@@ -9,6 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-rmparking}
+      TZ: America/Bogota
     ports:
       - "5432:5432"
     volumes:
@@ -44,6 +45,7 @@ services:
       - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=${NODE_ENV:-development}
+      - TZ=America/Bogota
       # ES: Secreto JWT obligatorio. Si no se define, se usará un valor por defecto seguro.
       - JWT_SECRET=${JWT_SECRET:-rm_parking_jwt_secret_2024_secure_random_key_64_chars_min}
       - SMTP_HOST=${SMTP_HOST:-}

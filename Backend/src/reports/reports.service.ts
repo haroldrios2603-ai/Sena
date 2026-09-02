@@ -11,6 +11,8 @@ import { VehiclesPeriodDto } from './dto/vehicles-period.dto';
 
 type Range = { from: Date; to: Date };
 
+const BUSINESS_TIME_ZONE = 'America/Bogota';
+
 /**
  * Servicio encargado de generación de reportes y consultas agregadas.
  *
@@ -74,10 +76,17 @@ export class ReportsService {
 
     const attendances = await this.prisma.attendance.findMany({
       where: {
-        checkIn: {
-          gte: shift.from,
-          lte: shift.to,
-        },
+        OR: [
+          {
+            checkIn: {
+              gte: shift.from,
+              lte: shift.to,
+            },
+          },
+          {
+            checkOut: null,
+          },
+        ],
       },
       include: {
         user: {
@@ -674,41 +683,70 @@ export class ReportsService {
   }
 
   private resolveCurrentShiftWindow(now: Date) {
-    const hour = now.getHours();
-    const baseDate = new Date(now);
-    baseDate.setMinutes(0, 0, 0);
+    const colombiaParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: BUSINESS_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(now);
+    const parts = Object.fromEntries(
+      colombiaParts.map(({ type, value }) => [type, Number(value)]),
+    );
+    const hour = parts.hour;
+    const baseDate = new Date(
+      Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0),
+    );
+
+    // Colombia usa UTC-5 durante todo el año; convertimos los límites
+    // del turno a instantes UTC para que la consulta sea independiente
+    // de la zona horaria configurada en el proceso de Node.
+    const createColombiaDate = (date: Date, hourValue: number, minute: number, second: number, millisecond: number) =>
+      new Date(
+        Date.UTC(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate(),
+          hourValue + 5,
+          minute,
+          second,
+          millisecond,
+        ),
+      );
 
     // ES: Turno maniana 06:00-13:59, tarde 14:00-21:59, noche 22:00-05:59.
     if (hour >= 6 && hour < 14) {
-      const from = new Date(baseDate);
-      from.setHours(6, 0, 0, 0);
-      const to = new Date(baseDate);
-      to.setHours(13, 59, 59, 999);
+      const from = createColombiaDate(baseDate, 6, 0, 0, 0);
+      const to = createColombiaDate(baseDate, 13, 59, 59, 999);
       return { shiftName: 'maniana', from, to };
     }
 
     if (hour >= 14 && hour < 22) {
-      const from = new Date(baseDate);
-      from.setHours(14, 0, 0, 0);
-      const to = new Date(baseDate);
-      to.setHours(21, 59, 59, 999);
+      const from = createColombiaDate(baseDate, 14, 0, 0, 0);
+      const to = createColombiaDate(baseDate, 21, 59, 59, 999);
       return { shiftName: 'tarde', from, to };
     }
 
-    const from = new Date(baseDate);
-    const to = new Date(baseDate);
+    const fromDate = new Date(baseDate);
+    const toDate = new Date(baseDate);
 
     if (hour >= 22) {
-      from.setHours(22, 0, 0, 0);
-      to.setDate(to.getDate() + 1);
-      to.setHours(5, 59, 59, 999);
+      const to = new Date(toDate);
+      to.setUTCDate(to.getUTCDate() + 1);
+      return {
+        shiftName: 'noche',
+        from: createColombiaDate(fromDate, 22, 0, 0, 0),
+        to: createColombiaDate(to, 5, 59, 59, 999),
+      };
     } else {
-      from.setDate(from.getDate() - 1);
-      from.setHours(22, 0, 0, 0);
-      to.setHours(5, 59, 59, 999);
+      fromDate.setUTCDate(fromDate.getUTCDate() - 1);
+      return {
+        shiftName: 'noche',
+        from: createColombiaDate(fromDate, 22, 0, 0, 0),
+        to: createColombiaDate(toDate, 5, 59, 59, 999),
+      };
     }
-
-    return { shiftName: 'noche', from, to };
   }
 
   private mapMonthlyState(status: string, endDate: Date) {

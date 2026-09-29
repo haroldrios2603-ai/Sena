@@ -23,12 +23,7 @@ import { DocumentType } from '@prisma/client';
 /**
  * Clase CreateClientDto que implementa la lógica principal de dto.
  */
-/**
- * Clase CreateClientDto que implementa la lógica principal de dto.
- */
-/**
- * Clase CreateClientDto que implementa la lógica principal de dto.
- */
+
 export class CreateClientDto {
   @IsString()
   @MinLength(2)

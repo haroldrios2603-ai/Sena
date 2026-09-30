@@ -4,12 +4,15 @@ FROM node:20-slim
 RUN apt-get update && apt-get install -y \
     openssl \
     libssl-dev \
+    tzdata \
     python3 \
     build-essential \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+ENV TZ=America/Bogota
 
 # Copy package files
 COPY package*.json ./

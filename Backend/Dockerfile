@@ -36,10 +36,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start NestJS application - supports both dev and prod modes
-<<<<<<< HEAD
-
-CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then npm run start:prod; else npm run start:dev; fi"]
-=======
 CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/main.js"]
 #CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then npm run start:prod; else npm run start:dev; fi"]
->>>>>>> 088faed0bea7c2f400f10ada9daf1a8bd01ba890

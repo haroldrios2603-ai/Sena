@@ -13,4 +13,5 @@ COPY . .
 EXPOSE 5173
 
 # Start development server binding to all interfaces
-CMD ["npm", "run", "dev", "--", "--host"]
+#CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-3000}"]

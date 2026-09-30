@@ -85,19 +85,19 @@ export class CreateUserDto {
   /**
    * Tipo de documento de identidad.
    */
-  @IsOptional()
+  @IsNotEmpty({ message: 'Debes seleccionar el tipo de documento' })
   @IsEnum(DocumentType, { message: 'Tipo de documento inválido' })
-  documentType?: DocumentType;
+  documentType: DocumentType;
 
   /**
    * Número del documento de identidad.
    */
-  @IsOptional()
+  @IsNotEmpty({ message: 'El número de documento es obligatorio' })
   @IsString()
-  @MinLength(3)
-  @MaxLength(20)
+  @MinLength(3, { message: 'El número de documento debe tener al menos 3 caracteres' })
+  @MaxLength(20, { message: 'El número de documento no puede exceder 20 caracteres' })
   @Transform(({ value }: TransformFnParams) =>
     typeof value === 'string' ? value.trim() : value,
   )
-  documentNumber?: string;
+  documentNumber: string;
 }

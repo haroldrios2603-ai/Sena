@@ -3,7 +3,7 @@
  */
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Role } from '@prisma/client';
+import { DocumentType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { ClientsService } from './clients.service';
 
@@ -19,6 +19,8 @@ describe('ClientsService', () => {
   const prismaMock = {
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
       delete: jest.fn(),
@@ -76,6 +78,8 @@ describe('ClientsService', () => {
         endDate: '2026-03-15',
         monthlyFee: 100000,
         planName: 'Mensualidad',
+        documentType: DocumentType.CEDULA,
+        documentNumber: '1010101010',
       }),
     ).rejects.toThrow(BadRequestException);
   });
@@ -97,6 +101,37 @@ describe('ClientsService', () => {
         endDate: '2026-04-10',
         monthlyFee: 150000,
         planName: 'Mensualidad',
+        documentType: DocumentType.CEDULA,
+        documentNumber: '222333444',
+      }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('should reject duplicate document number when creating client', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.findMany.mockResolvedValue([
+      {
+        id: 'existing-client',
+        email: 'yaexiste@rmparking.com',
+        fullName: 'Cliente registrado',
+        documentType: DocumentType.CEDULA,
+        documentNumber: '987654321',
+        role: Role.CLIENT,
+      },
+    ]);
+
+    await expect(
+      service.createClientWithContract({
+        fullName: 'Cliente Dos',
+        email: 'cliente.nuevo@rmparking.com',
+        contactPhone: '+57 300 456 0000',
+        parkingId: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78',
+        startDate: '2026-03-10',
+        endDate: '2026-04-10',
+        monthlyFee: 150000,
+        planName: 'Mensualidad',
+        documentType: DocumentType.CEDULA,
+        documentNumber: '987654321',
       }),
     ).rejects.toThrow(ConflictException);
   });
@@ -135,6 +170,8 @@ describe('ClientsService', () => {
       endDate: '2026-06-10',
       monthlyFee: 200000,
       planName: 'Mensualidad',
+      documentType: DocumentType.CEDULA,
+      documentNumber: '3030303030',
     });
 
     expect(prismaMock.$transaction).toHaveBeenCalled();

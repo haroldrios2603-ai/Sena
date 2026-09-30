@@ -7,6 +7,8 @@ import authService from '../services/auth.service';
 import { AuthContext } from './authContextInstance';
 import type { User } from './types';
 
+let authBootstrapStarted = false;
+
 // Proveedor de Autenticación.
 // Mantiene el estado del usuario, maneja inicio/cierre de sesión y expiración de sesión en localStorage.
 const SESSION_DURATION_MS = 10 * 60 * 60 * 1000;
@@ -59,6 +61,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Inicializa el estado de autenticación al montar el proveedor.
     useEffect(() => {
+        if (authBootstrapStarted) {
+            return;
+        }
+
+        authBootstrapStarted = true;
+
         const initAuth = async () => {
             const token = localStorage.getItem(TOKEN_STORAGE_KEY);
             if (token) {
@@ -79,7 +87,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             }
             setLoading(false);
         };
-        initAuth();
+
+        void initAuth();
     }, []);
 
     // Efecto que programa el cierre automático cuando la sesión expire.

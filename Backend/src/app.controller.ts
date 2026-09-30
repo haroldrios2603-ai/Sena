@@ -1,8 +1,9 @@
 /**
  * Controlador que maneja rutas HTTP relacionadas con src.
  */
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Header, Res } from '@nestjs/common';
 import { AppService } from './app.service';
+import type { Response } from 'express';
 
 // Controlador principal de la aplicación.
 // Define rutas HTTP de nivel superior usadas para comprobaciones básicas.
@@ -17,5 +18,13 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  // ES: responde de forma silenciosa para evitar el 404 repetido de /favicon.ico
+  // cuando el navegador intenta cargar el icono de la pestaña.
+  @Get('favicon.ico')
+  @Header('Content-Type', 'image/x-icon')
+  getFavicon(@Res() res: Response) {
+    return res.status(204).end();
   }
 }

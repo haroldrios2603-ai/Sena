@@ -220,12 +220,15 @@ const UserManagementPanel = () => {
 
     const isPasswordValid = useMemo(() => PASSWORD_POLICY.test(formData.password), [formData.password]);
     const isFormReady = useMemo(() => {
+        const documentNumber = formData.documentNumber?.trim() ?? '';
         return (
             formData.fullName.trim().length >= 2 &&
             formData.email.trim().length > 0 &&
-            formData.password.length >= 8
+            formData.password.length >= 8 &&
+            Boolean(formData.documentType) &&
+            documentNumber.length >= 3
         );
-    }, [formData.fullName, formData.email, formData.password]);
+    }, [formData.documentNumber, formData.documentType, formData.email, formData.fullName, formData.password]);
     const canSubmit = isFormReady && isPasswordValid;
 
     const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -238,6 +241,11 @@ const UserManagementPanel = () => {
         if (!isPasswordValid) {
             // ES: La validación local evita viajes innecesarios al backend y aclara el requisito.
             setMessage({ text: PASSWORD_POLICY_MESSAGE, type: 'error' });
+            return;
+        }
+        const documentNumber = formData.documentNumber?.trim() ?? '';
+        if (!formData.documentType || !documentNumber) {
+            setMessage({ text: 'Debes seleccionar el tipo de documento e ingresar el número de documento.', type: 'error' });
             return;
         }
         setCreating(true);
@@ -503,6 +511,7 @@ const UserManagementPanel = () => {
                             onChange={(event) =>
                                 setFormData({ ...formData, documentType: (event.target.value as DocumentType) || undefined })
                             }
+                            required
                         >
                             <option value="">Sin documento</option>
                             {documentTypes.map((dt) => (
@@ -520,6 +529,8 @@ const UserManagementPanel = () => {
                             placeholder="Ej. 1234567890"
                             value={formData.documentNumber ?? ''}
                             onChange={(event) => setFormData({ ...formData, documentNumber: event.target.value })}
+                            disabled={!formData.documentType}
+                            required={Boolean(formData.documentType)}
                         />
                     </div>
                     <div>

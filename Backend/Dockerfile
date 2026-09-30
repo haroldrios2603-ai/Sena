@@ -36,4 +36,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start NestJS application - supports both dev and prod modes
-CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then npm run start:prod; else npm run start:dev; fi"]
+CMD ["node", "dist/main.js"]
+#CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then npm run start:prod; else npm run start:dev; fi"]

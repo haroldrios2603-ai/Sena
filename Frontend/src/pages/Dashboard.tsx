@@ -65,7 +65,7 @@ type Vehicle = {
 type Ticket = {
     id: string;
     ticketCode: string;
-    status: 'ACTIVE' | 'CLOSED';
+    status: 'ACTIVE' | 'PENDING_PAYMENT' | 'CLOSED';
     entryTime: string;
     parking?: Parking;
     vehicle: Vehicle;
@@ -194,6 +194,7 @@ const Dashboard = () => {
     const [selectedParkingId, setSelectedParkingId] = useState('');
     const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
     const [lastExit, setLastExit] = useState<ExitResponse | null>(null);
+    const [exitSummary, setExitSummary] = useState<ExitResponse | null>(null);
     const [loadingParkings, setLoadingParkings] = useState(true);
     const [activeView, setActiveView] = useState<DashboardView>('operations');
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -537,9 +538,25 @@ const Dashboard = () => {
 
     const formatCurrency = (value: number) => currencyFormatter.format(Math.max(0, value));
     const formatDateTime = (value: string) => fechaFormatter.format(new Date(value));
+
     const normalizePlateInput = (value: string, maxLength: number, fieldLabel: 'entrada' | 'salida') => {
-        const normalized = value.toUpperCase().replace(/\s+/g, '');
-        if (normalized.length > maxLength) {
+        // ES: Se restringe la placa a letras y números en mayúsculas para evitar valores especiales,
+        // caracteres de puntuación o espacios que puedan romper la lógica del flujo de ingreso/salida.
+        const sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const hasInvalidCharacters = sanitized !== value.toUpperCase();
+
+        if (hasInvalidCharacters) {
+            setMessage({
+                text:
+                    fieldLabel === 'salida'
+                        ? 'La placa solo permite letras y números en mayúsculas; los caracteres especiales fueron omitidos.'
+                        : 'La placa solo permite letras y números en mayúsculas; los caracteres especiales fueron omitidos.',
+                type: 'info',
+            });
+        }
+
+        const normalized = sanitized.slice(0, maxLength);
+        if (normalized.length !== sanitized.length) {
             setMessage({
                 text:
                     fieldLabel === 'salida'
@@ -547,8 +564,8 @@ const Dashboard = () => {
                         : 'Para ingreso, el máximo de dígitos/caracteres permitidos para la placa es 6.',
                 type: 'info',
             });
-            return normalized.slice(0, maxLength);
         }
+
         return normalized;
     };
     const formatElapsedTime = (value: string) => {
@@ -563,12 +580,30 @@ const Dashboard = () => {
         return segments.join(' ') || '0m';
     };
 
+    const formatDurationText = (minutes: number | undefined) => {
+        const totalMinutes = Math.max(0, minutes ?? 0);
+        const hours = Math.floor(totalMinutes / 60);
+        const remainingMinutes = totalMinutes % 60;
+
+        if (hours > 0 && remainingMinutes > 0) {
+            return `${hours}h ${remainingMinutes}m`;
+        }
+
+        if (hours > 0) {
+            return `${hours}h`;
+        }
+
+        return `${remainingMinutes}m`;
+    };
+
     const kpiSummary = useMemo(() => {
         const totalSites = parkings.length;
         const totalCapacity = parkings.reduce(
-            (acc, parking) => acc + (parking.capacity || 0),
+            (acc, parking) => acc + (parking.capacity ?? 0),
             0,
         );
+        const occupiedVehicles = ticketsActivos.length;
+        const availableCapacity = Math.max(0, totalCapacity - occupiedVehicles);
         const avgBaseRate = totalSites > 0
             ? parkings.reduce((acc, parking) => acc + (parking.baseRate || 0), 0) / totalSites
             : 0;
@@ -592,45 +627,108 @@ const Dashboard = () => {
         return {
             totalSites,
             totalCapacity,
+            occupiedVehicles,
+            availableCapacity,
             avgBaseRate,
             lastAmount,
         };
-    }, [parkings, ticketsCerrados, lastExit]);
+    }, [parkings, ticketsActivos.length, ticketsCerrados, lastExit]);
 
-    const aplicarFiltroPlaca = () => setFiltroPlaca(filtroBusqueda.trim());
+    const selectedParking = useMemo(
+        () => parkings.find((parking) => parking.id === selectedParkingId) ?? null,
+        [parkings, selectedParkingId],
+    );
+
+    const selectedParkingOccupancy = useMemo(
+        () => ticketsActivos.filter((ticket) => ticket.parking?.id === selectedParkingId).length,
+        [selectedParkingId, ticketsActivos],
+    );
+
+    const selectedParkingCapacity = selectedParking?.capacity ?? 0;
+    const selectedParkingAvailable = selectedParkingCapacity > 0
+        ? Math.max(0, selectedParkingCapacity - selectedParkingOccupancy)
+        : 0;
+    const selectedParkingIsFull = selectedParkingCapacity > 0 && selectedParkingAvailable <= 0;
+
+    const aplicarFiltroPlaca = () => setFiltroPlaca(filtroBusqueda.trim().toUpperCase());
     const limpiarFiltroPlaca = () => {
         setFiltroBusqueda('');
         setFiltroPlaca('');
     };
 
     const filtroNormalizado = filtroPlaca.trim().toUpperCase();
+    const tieneFiltroActivo = Boolean(filtroNormalizado);
 
     const ticketsActivosFiltrados = useMemo(() => {
-        if (!filtroNormalizado) return ticketsActivos;
+        if (!tieneFiltroActivo) return ticketsActivos;
         return ticketsActivos.filter((ticket) =>
-            ticket.vehicle?.plate.toUpperCase().includes(filtroNormalizado)
+            (ticket.vehicle?.plate ?? '').toUpperCase().includes(filtroNormalizado)
         );
-    }, [ticketsActivos, filtroNormalizado]);
+    }, [ticketsActivos, filtroNormalizado, tieneFiltroActivo]);
 
     const ticketsCerradosFiltrados = useMemo(() => {
-        if (!filtroNormalizado) return ticketsCerrados;
+        if (!tieneFiltroActivo) return ticketsCerrados;
         return ticketsCerrados.filter((ticket) =>
-            ticket.vehicle?.plate.toUpperCase().includes(filtroNormalizado)
+            (ticket.vehicle?.plate ?? '').toUpperCase().includes(filtroNormalizado)
         );
-    }, [ticketsCerrados, filtroNormalizado]);
+    }, [ticketsCerrados, filtroNormalizado, tieneFiltroActivo]);
+
+    const actividadReciente = useMemo<ExitResponse | null>(() => {
+        if (lastExit) {
+            return lastExit;
+        }
+
+        const ticketReciente = tieneFiltroActivo
+            ? ticketsCerradosFiltrados.find((ticket) => ticket.exit) ?? ticketsCerradosFiltrados[0] ?? null
+            : ticketsCerrados.find((ticket) => ticket.exit) ?? null;
+
+        if (!ticketReciente?.exit) {
+            return null;
+        }
+
+        return {
+            ticket: ticketReciente,
+            exit: ticketReciente.exit,
+            message: 'Última salida registrada',
+            paymentOptions: {
+                aceptaEfectivo: true,
+                aceptaQr: false,
+            },
+        };
+    }, [lastExit, tieneFiltroActivo, ticketsCerrados, ticketsCerradosFiltrados]);
 
     const handleEntry = async (e: React.FormEvent) => {
         e.preventDefault();
         clearMessage();
+
+        const plate = plateEntry.trim().toUpperCase();
+        const validPlate = /^[A-Z0-9]{1,6}$/.test(plate);
 
         if (!selectedParkingId) {
             setMessage({ text: 'Seleccione un parqueadero antes de registrar', type: 'error' });
             return;
         }
 
+        if (!validPlate) {
+            setMessage({
+                text: 'La placa debe contener solo letras y números, en mayúsculas, con máximo 6 caracteres.',
+                type: 'error',
+            });
+            return;
+        }
+
+        // ES: La validación visual del aforo evita enviar un ingreso cuando el parqueadero ya alcanzó su cupo.
+        if (selectedParkingCapacity > 0 && selectedParkingAvailable <= 0) {
+            setMessage({
+                text: `El parqueadero seleccionado ya está lleno (${selectedParkingCapacity} vehículos activos). No se pueden registrar más ingresos.`,
+                type: 'error',
+            });
+            return;
+        }
+
         try {
             await api.post('/parking/entry', {
-                placa: plateEntry,
+                placa: plate,
                 vehicleType: vehicleTypeEntry,
                 parkingId: selectedParkingId,
             });
@@ -651,14 +749,26 @@ const Dashboard = () => {
     const handleExit = async (e: React.FormEvent) => {
         e.preventDefault();
         clearMessage();
-        setLastExit(null);
+        setExitSummary(null);
         setExitPaymentIntent(null);
         setExitCashPayment(null);
 
+        const plate = plateExit.trim().toUpperCase();
+        const validPlate = /^[A-Z0-9]{1,7}$/.test(plate);
+
+        if (!validPlate) {
+            setMessage({
+                text: 'La placa debe contener solo letras y números, en mayúsculas, con máximo 7 caracteres.',
+                type: 'error',
+            });
+            return;
+        }
+
         try {
-            const res = await api.post<ExitResponse>('/parking/exit', { placa: plateExit });
+            const res = await api.post<ExitResponse>('/parking/exit', { placa: plate });
             setMessage({ text: 'Salida procesada con éxito', type: 'success' });
             setLastExit(res.data);
+            setExitSummary(res.data);
             setPlateExit('');
             await cargarResumenTickets();
         } catch (err: unknown) {
@@ -743,18 +853,18 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        if (exitCashPayment?.status !== 'COMPLETED') {
+        if (!exitSummary) {
             return;
         }
 
         const timeoutId = window.setTimeout(() => {
-            setLastExit(null);
+            setExitSummary(null);
             setExitCashPayment(null);
             setExitPaymentIntent(null);
-        }, 5000);
+        }, 10000);
 
         return () => window.clearTimeout(timeoutId);
-    }, [exitCashPayment]);
+    }, [exitSummary]);
 
     return (
         <div className="min-h-screen bg-slate-100 flex">
@@ -882,11 +992,19 @@ const Dashboard = () => {
                                 <p className="kpi-value mt-4">{kpiSummary.totalSites}</p>
                                 <p className="text-sm text-slate-500">Parqueaderos habilitados</p>
                             </article>
-                            <article className="panel-card">
+                            <article className={`panel-card ${kpiSummary.totalCapacity > 0 && kpiSummary.availableCapacity === 0 ? 'border-rose-200 bg-rose-50/60' : ''}`}>
                                 <span className="pill"><Car size={16} /> Capacidad</span>
-                                <p className="kpi-value mt-4">{kpiSummary.totalCapacity}</p>
-                                <p className="text-sm text-slate-500">Cupos totales configurados</p>
-                                <p className="text-xs text-slate-400 mt-1">Origen: Configuracion / Capacidad operativa</p>
+                                <p className="kpi-value mt-4">{kpiSummary.availableCapacity}</p>
+                                <p className="text-sm text-slate-500">
+                                    {kpiSummary.totalCapacity > 0
+                                        ? `${kpiSummary.occupiedVehicles} ocupados / ${kpiSummary.totalCapacity} total`
+                                        : 'Sin capacidad configurada'}
+                                </p>
+                                <p className={`text-xs mt-1 ${kpiSummary.totalCapacity > 0 && kpiSummary.availableCapacity === 0 ? 'text-rose-600 font-semibold' : 'text-slate-400'}`}>
+                                    {kpiSummary.totalCapacity > 0 && kpiSummary.availableCapacity === 0
+                                        ? 'No hay cupos disponibles'
+                                        : 'Disponibles según ocupación real del momento'}
+                                </p>
                             </article>
                             <article className="panel-card">
                                 <span className="pill"><DollarSign size={16} /> Tarifa base</span>
@@ -938,6 +1056,17 @@ const Dashboard = () => {
                                     <span className="text-xs text-slate-400">Última placa: {plateEntry || 'S/N'}</span>
                                 </div>
                                 <form onSubmit={handleEntry} className="space-y-5">
+                                    {selectedParkingCapacity > 0 && selectedParkingIsFull && (
+                                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                                            <div className="flex items-center gap-2 font-semibold">
+                                                <AlertCircle size={16} />
+                                                No hay cupos disponibles
+                                            </div>
+                                            <p className="mt-1">
+                                                El parqueadero ya cumplió con su capacidad máxima. Ya no se pueden ingresar más vehículos.
+                                            </p>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="form-label">Placa del vehículo</label>
                                         <input
@@ -946,10 +1075,11 @@ const Dashboard = () => {
                                             onChange={(e) => {
                                                 setPlateEntry(normalizePlateInput(e.target.value, 6, 'entrada'));
                                             }}
-                                            className="input-field uppercase tracking-widest"
+                                            className="input-field uppercase tracking-widest disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                             placeholder="ABC123"
                                             maxLength={6}
                                             required
+                                            disabled={selectedParkingCapacity > 0 && selectedParkingIsFull}
                                         />
                                     </div>
                                     <div>
@@ -990,11 +1120,30 @@ const Dashboard = () => {
                                                 </option>
                                             ))}
                                         </select>
+                                        {selectedParking && (
+                                            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                                <span className="font-semibold text-slate-800">Aforo:</span>{' '}
+                                                {selectedParkingCapacity > 0
+                                                    ? `${selectedParkingAvailable} disponibles de ${selectedParkingCapacity}`
+                                                    : 'Sin capacidad configurada'}
+                                                {selectedParkingIsFull && selectedParkingCapacity > 0 && (
+                                                    <span className="ml-2 font-semibold text-rose-600">Lleno</span>
+                                                )}
+                                            </div>
+                                        )}
                                         {!parkings.length && (
                                             <p className="text-xs text-rose-500 mt-2">No hay parqueaderos configurados.</p>
                                         )}
                                     </div>
-                                    <button type="submit" className="btn-primary">Registrar entrada</button>
+                                    <button
+                                        type="submit"
+                                        className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled={selectedParkingCapacity > 0 && selectedParkingIsFull}
+                                    >
+                                        {selectedParkingCapacity > 0 && selectedParkingIsFull
+                                            ? 'Parqueadero lleno'
+                                            : 'Registrar entrada'}
+                                    </button>
                                 </form>
                             </div>
 
@@ -1028,7 +1177,7 @@ const Dashboard = () => {
                                     </button>
                                 </form>
 
-                                {lastExit ? (
+                                {exitSummary ? (
                                     <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-3">
                                         <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                                             <DollarSign size={18} /> Resumen de cobro
@@ -1036,18 +1185,18 @@ const Dashboard = () => {
                                         <div className="grid grid-cols-2 gap-2 text-sm text-emerald-900">
                                             <span>Placa</span>
                                             <span className="font-semibold text-right">
-                                                {lastExit.ticket?.vehicle?.plate || 'N/D'}
+                                                {exitSummary.ticket?.vehicle?.plate || 'N/D'}
                                             </span>
                                             <span>Duración</span>
                                             <span className="font-semibold text-right">
-                                                {lastExit.exit?.durationMinutes} min
+                                                {formatDurationText(exitSummary.exit?.durationMinutes)}
                                             </span>
                                             <span>Monto total</span>
                                             <span className="font-bold text-right">
-                                                {formatCurrency(lastExit.exit?.totalAmount || 0)}
+                                                {formatCurrency(exitSummary.exit?.totalAmount || 0)}
                                             </span>
                                         </div>
-                                        {(lastExit.paymentOptions?.aceptaEfectivo ?? true) && (
+                                        {(exitSummary.paymentOptions?.aceptaEfectivo ?? true) && (
                                             <button
                                                 type="button"
                                                 onClick={() => void handleRegisterCashPayment()}
@@ -1062,7 +1211,7 @@ const Dashboard = () => {
                                             </button>
                                         )}
 
-                                        {lastExit.paymentOptions?.aceptaQr && (
+                                        {exitSummary.paymentOptions?.aceptaQr && (
                                             <button
                                                 type="button"
                                                 onClick={() => void handleCreateExitPaymentIntent()}
@@ -1075,13 +1224,13 @@ const Dashboard = () => {
                                             </button>
                                         )}
 
-                                        {!lastExit.paymentOptions?.aceptaQr && (
+                                        {!exitSummary.paymentOptions?.aceptaQr && (
                                             <p className="text-xs text-slate-500">
                                                 El pago por QR no está habilitado en configuración.
                                             </p>
                                         )}
 
-                                        {lastExit.paymentOptions?.aceptaEfectivo === false && (
+                                        {exitSummary.paymentOptions?.aceptaEfectivo === false && (
                                             <p className="text-xs text-slate-500">
                                                 El pago en efectivo no está habilitado en configuración.
                                             </p>
@@ -1144,7 +1293,21 @@ const Dashboard = () => {
                                     <input
                                         type="text"
                                         value={filtroBusqueda}
-                                        onChange={(e) => setFiltroBusqueda(e.target.value.toUpperCase())}
+                                        onChange={(e) => {
+                                            const nextValue = e.target.value.toUpperCase();
+                                            setFiltroBusqueda(nextValue);
+                                            if (nextValue.trim()) {
+                                                setFiltroPlaca(nextValue.trim());
+                                            } else {
+                                                setFiltroPlaca('');
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                aplicarFiltroPlaca();
+                                            }
+                                        }}
                                         className="input-field uppercase tracking-widest md:max-w-xs"
                                         placeholder="Filtra por placa"
                                     />
@@ -1190,7 +1353,11 @@ const Dashboard = () => {
                                             ))}
                                         </ul>
                                     ) : (
-                                        <p className="mt-4 text-sm text-slate-400">No hay vehículos activos que coincidan con el filtro.</p>
+                                        <p className="mt-4 text-sm text-slate-400">
+                                            {tieneFiltroActivo
+                                                ? 'No hay vehículos activos que coincidan con la placa buscada.'
+                                                : 'No hay vehículos activos en este momento.'}
+                                        </p>
                                     )}
                                 </div>
                                 <div className="border border-slate-100 rounded-2xl p-4 bg-white/80">
@@ -1221,7 +1388,11 @@ const Dashboard = () => {
                                             ))}
                                         </ul>
                                     ) : (
-                                        <p className="mt-4 text-sm text-slate-400">No hay registros cerrados que coincidan con el filtro.</p>
+                                        <p className="mt-4 text-sm text-slate-400">
+                                            {tieneFiltroActivo
+                                                ? 'No hay registros cerrados para la placa buscada.'
+                                                : 'No hay registros cerrados en este momento.'}
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -1251,6 +1422,16 @@ const Dashboard = () => {
                                                 <p className="text-sm text-slate-500">
                                                     {parking.address || 'Sin dirección registrada'}
                                                 </p>
+                                                <div className="flex items-center justify-between text-xs text-slate-500">
+                                                    <span>
+                                                        Ocupación: {ticketsActivos.filter((ticket) => ticket.parking?.id === parking.id).length}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-700">
+                                                        {parking.capacity && parking.capacity > 0
+                                                            ? `${Math.max(0, parking.capacity - ticketsActivos.filter((ticket) => ticket.parking?.id === parking.id).length)} libres`
+                                                            : 'Sin límite'}
+                                                    </span>
+                                                </div>
                                                 <p className="text-xs text-slate-400 uppercase">
                                                     Tarifa base {parking.baseRate ? formatCurrency(parking.baseRate) : 'por definir'}
                                                 </p>
@@ -1269,35 +1450,35 @@ const Dashboard = () => {
                                     <h2 className="panel-card__title">Actividad reciente</h2>
                                     <span className="pill">Tiempo real</span>
                                 </div>
-                                {lastExit ? (
+                                {actividadReciente ? (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Ticket</span>
                                             <span className="font-semibold text-slate-900">
-                                                {formatNumericCode(lastExit.ticket?.ticketCode)}
+                                                {formatNumericCode(actividadReciente.ticket?.ticketCode)}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Vehículo</span>
                                             <span className="font-semibold text-slate-900">
-                                                {lastExit.ticket?.vehicle?.plate || 'N/D'}
+                                                {actividadReciente.ticket?.vehicle?.plate || 'N/D'}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Parqueadero</span>
                                             <span className="font-semibold text-slate-900">
-                                                {lastExit.ticket?.parking?.name || 'N/D'}
+                                                {actividadReciente.ticket?.parking?.name || 'N/D'}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-xs uppercase text-slate-500">Cobro</p>
                                                 <p className="text-2xl font-semibold text-slate-900">
-                                                    {formatCurrency(lastExit.exit?.totalAmount || 0)}
+                                                    {formatCurrency(actividadReciente.exit?.totalAmount || 0)}
                                                 </p>
                                             </div>
                                             <span className="pill">
-                                                <Clock size={16} /> {lastExit.exit?.durationMinutes} min
+                                                <Clock size={16} /> {formatDurationText(actividadReciente.exit?.durationMinutes)}
                                             </span>
                                         </div>
                                     </div>

@@ -10,7 +10,7 @@ import {
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -49,7 +49,7 @@ export class AuthController {
    * Aplica throttling para limitar intentos desde la misma IP.
    * Recibe `RegisterDto` y delega la creación en `AuthService`.
    */
-  @Throttle({})
+  @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
@@ -61,7 +61,7 @@ export class AuthController {
    * - Registra eventos de auditoría: login exitoso, fallo y creación/reutilización de asistencia.
    * - Retorna token JWT y metadatos de asistencia si aplica.
    */
-  @Throttle({})
+  @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,
@@ -126,6 +126,7 @@ export class AuthController {
    * Endpoint protegido para obtener el perfil completo del usuario.
    * ES: Consulta BD y retorna campos completos esperados por el Frontend.
    */
+  @SkipThrottle()
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   getProfile(@Request() req: { user: { userId: string } }) {
@@ -137,6 +138,7 @@ export class AuthController {
    * - Cierra la asistencia activa del usuario si existe.
    * - Registra eventos de auditoría asociados al logout y al registro de salida.
    */
+  @SkipThrottle()
   @UseGuards(AuthGuard('jwt'))
   @Post('logout')
   async logout(@Request() req: { user: { userId: string } }) {
@@ -173,7 +175,7 @@ export class AuthController {
    * - Genera y persiste un token de recuperación (no devuelve el código en producción).
    * - Envía notificación por correo mediante `PasswordRecoveryNotifierService`.
    */
-  @Throttle({})
+  @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('password/request')
   async requestPassword(@Body() passwordRequestDto: PasswordRequestDto) {
     const result = await this.authService.requestPasswordReset(passwordRequestDto);
@@ -192,7 +194,7 @@ export class AuthController {
    * Endpoint público para confirmar un código de recuperación y establecer nueva contraseña.
    * - Valida token, hashea la nueva contraseña y marca tokens previos como usados.
    */
-  @Throttle({})
+  @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('password/reset')
   async resetPassword(@Body() passwordResetDto: PasswordResetDto) {
     const result = await this.authService.confirmPasswordReset(passwordResetDto);

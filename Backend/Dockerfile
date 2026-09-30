@@ -18,7 +18,7 @@ ENV TZ=America/Bogota
 COPY package*.json ./
 
 # Install dependencies with retry and increased timeout
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit || npm install --legacy-peer-deps --prefer-offline --no-audit
+RUN npm install --include=dev --legacy-peer-deps --prefer-offline --no-audit
 
 # Copy source code
 COPY . .

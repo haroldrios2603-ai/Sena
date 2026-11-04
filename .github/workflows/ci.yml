@@ -27,7 +27,7 @@ jobs:
     - name: Install Dependencies
       if: steps.check_files.outputs.files_exists == 'true'
       working-directory: ./Backend
-      run: npm ci
+      run: npm ci --legacy-peer-deps
       
     - name: Build
       if: steps.check_files.outputs.files_exists == 'true'

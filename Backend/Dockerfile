@@ -26,8 +26,6 @@ COPY . .
 # Generate Prisma Client with correct binary targets for Linux
 RUN npx prisma generate
 
-# Sync database schema (creates tables if they don't exist)
-RUN npx prisma db push --skip-generate --accept-data-loss || true
 
 # Build NestJS application
 RUN npm run build

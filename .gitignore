@@ -32,7 +32,6 @@ Thumbs.db
 .DS_Store
 
 # Prisma
-/Backend/prisma/migrations/
 /Backend/prisma/*.db
 
 # Otros

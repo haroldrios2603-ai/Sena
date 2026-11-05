@@ -41,7 +41,9 @@ export class PermissionsController {
   async getMyEffectivePermissions(
     @Request() req: { user: { userId: string; role: Role } },
   ) {
-    return this.permissionsService.getEffectivePermissionsForUser(req.user.userId);
+    return this.permissionsService.getEffectivePermissionsForUser(
+      req.user.userId,
+    );
   }
 
   @Get('screens')
@@ -79,7 +81,8 @@ export class PermissionsController {
     @Request() req: any,
   ) {
     const parsedRole = this.parseRole(role);
-    const previous = await this.permissionsService.getRolePermissions(parsedRole);
+    const previous =
+      await this.permissionsService.getRolePermissions(parsedRole);
     const result = await this.permissionsService.saveRolePermissions(
       parsedRole,
       dto.permissions,
@@ -100,7 +103,10 @@ export class PermissionsController {
   @UseGuards(RolesGuard)
   @Roles(Role.SUPER_ADMIN)
   @RequireScreenPermission('settings-permissions-profiles')
-  async getUserPermissions(@Param('userId') userId: string, @Request() req: any) {
+  async getUserPermissions(
+    @Param('userId') userId: string,
+    @Request() req: any,
+  ) {
     const result = await this.permissionsService.getUserPermissions(userId);
     this.auditService.log({
       operation: 'VIEW' as any,

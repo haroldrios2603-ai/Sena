@@ -20,4 +20,3 @@ describe('numeric-code.util', () => {
     expect(fromNumericCode(numericCode)).toBe(uuid);
   });
 });
-

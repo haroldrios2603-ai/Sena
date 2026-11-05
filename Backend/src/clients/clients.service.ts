@@ -175,7 +175,10 @@ export class ClientsService {
   /**
    * Edita datos del cliente y del contrato en una sola transacción.
    */
-  async updateContract(contractId: string, updateContractDto: UpdateContractDto) {
+  async updateContract(
+    contractId: string,
+    updateContractDto: UpdateContractDto,
+  ) {
     const existing = await this.findContractById(contractId);
 
     if (existing.status === 'CANCELLED') {
@@ -244,7 +247,9 @@ export class ClientsService {
           ...(typeof updateContractDto.parkingId === 'string'
             ? { parkingId: updateContractDto.parkingId }
             : {}),
-          ...(typeof updateContractDto.startDate === 'string' ? { startDate } : {}),
+          ...(typeof updateContractDto.startDate === 'string'
+            ? { startDate }
+            : {}),
           ...(typeof updateContractDto.endDate === 'string' ? { endDate } : {}),
           ...(typeof updateContractDto.monthlyFee === 'number'
             ? { monthlyFee: updateContractDto.monthlyFee }
@@ -382,7 +387,9 @@ export class ClientsService {
     createClientDto: CreateClientDto,
     tx: Prisma.TransactionClient,
   ) {
-    const normalizedDocumentNumber = this.normalizeDocumentNumber(createClientDto.documentNumber);
+    const normalizedDocumentNumber = this.normalizeDocumentNumber(
+      createClientDto.documentNumber,
+    );
     if (!createClientDto.documentType || !normalizedDocumentNumber) {
       throw new BadRequestException(
         'Debes seleccionar el tipo de documento e ingresar el número de documento.',
@@ -403,11 +410,15 @@ export class ClientsService {
       })) ?? [];
 
     const duplicateDocumentUser = duplicateDocumentUsers.find((user) => {
-      return this.normalizeDocumentNumber(user.documentNumber) === normalizedDocumentNumber;
+      return (
+        this.normalizeDocumentNumber(user.documentNumber) ===
+        normalizedDocumentNumber
+      );
     });
 
     if (duplicateDocumentUser) {
-      const documentLabel = createClientDto.documentNumber?.trim() || 'no informado';
+      const documentLabel =
+        createClientDto.documentNumber?.trim() || 'no informado';
 
       throw new ConflictException(
         `El número de documento ${documentLabel} ya está registrado para ${duplicateDocumentUser.fullName || duplicateDocumentUser.email}.`,

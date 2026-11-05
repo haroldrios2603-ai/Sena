@@ -69,8 +69,12 @@ export class CreateClientDto {
 
   @IsNotEmpty({ message: 'El número de documento es obligatorio' })
   @IsString()
-  @MinLength(3, { message: 'El número de documento debe tener al menos 3 caracteres' })
-  @MaxLength(20, { message: 'El número de documento no puede exceder 20 caracteres' })
+  @MinLength(3, {
+    message: 'El número de documento debe tener al menos 3 caracteres',
+  })
+  @MaxLength(20, {
+    message: 'El número de documento no puede exceder 20 caracteres',
+  })
   @Transform(({ value }: TransformFnParams) =>
     typeof value === 'string' ? value.trim() : value,
   )

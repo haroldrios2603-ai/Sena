@@ -1,7 +1,13 @@
 /**
  * Data Transfer Object que define la forma y validaciones del payload para dto.
  */
-import { IsEmail, IsString, MaxLength, MinLength, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MaxLength,
+  MinLength,
+  Matches,
+} from 'class-validator';
 import { Transform, TransformFnParams } from 'class-transformer';
 
 /**

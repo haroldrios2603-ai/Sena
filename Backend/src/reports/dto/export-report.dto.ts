@@ -2,7 +2,13 @@
  * Data Transfer Object que define la forma y validaciones del payload para dto.
  */
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 /**
  * DTO para exportacion de reportes en distintos formatos.
@@ -17,7 +23,16 @@ import { IsDateString, IsIn, IsOptional, IsString, IsUUID } from 'class-validato
  * Clase ExportReportDto que implementa la lógica principal de dto.
  */
 export class ExportReportDto {
-  @IsIn(['trabajadores', 'vehiculos', 'facturacion-total', 'facturacion-cliente', 'mensualidades', 'asistencia', 'ingresos-por-tipo', 'horas-pico'])
+  @IsIn([
+    'trabajadores',
+    'vehiculos',
+    'facturacion-total',
+    'facturacion-cliente',
+    'mensualidades',
+    'asistencia',
+    'ingresos-por-tipo',
+    'horas-pico',
+  ])
   reportType!:
     | 'trabajadores'
     | 'vehiculos'

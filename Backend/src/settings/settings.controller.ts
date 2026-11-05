@@ -56,7 +56,10 @@ export class SettingsController {
    * Actualiza parámetros generales como capacidades, horarios o políticas.
    */
   @Put('general')
-  async actualizarGeneral(@Body() dto: UpdateGeneralConfigDto, @Request() req: any) {
+  async actualizarGeneral(
+    @Body() dto: UpdateGeneralConfigDto,
+    @Request() req: any,
+  ) {
     const before = await this.settingsService.obtenerConfiguracionCompleta();
     const result = await this.settingsService.actualizarConfiguracion(dto);
     this.auditService.log({

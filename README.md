@@ -52,6 +52,39 @@ npm install
 npm run dev -- --host
 ```
 
+## Persistencia, migraciones y respaldos de datos
+
+### Persistencia local
+
+PostgreSQL usa el volumen Docker `postgres_data`, por lo que los datos sobreviven a `docker compose restart` y a recrear los contenedores. No ejecutes `docker compose down -v` si deseas conservar la base: ese comando elimina el volumen.
+
+### Preparar otro equipo
+
+1. Copia el repositorio y crea el archivo `.env` local a partir de `.env.example`.
+2. Ejecuta `docker compose up -d db`.
+3. Aplica la estructura con `docker compose up -d backend` y `docker compose exec backend npx prisma migrate deploy`.
+4. Para una instalación demo nueva, ejecuta `docker compose exec backend npx prisma db seed`. El seed es idempotente para los usuarios y la sede demo.
+5. Levanta Frontend y verifica `http://localhost:3000/api/docs` y `http://localhost:5173`.
+
+Para trasladar datos reales, no uses el seed: copia un respaldo creado con `ops/database_backup.ps1` y restáuralo con `ops/database_restore.ps1 -BackupFile <archivo.dump>`. Los respaldos contienen información sensible y están excluidos por `.gitignore`.
+
+### Respaldo y restauración en Windows PowerShell
+
+```powershell
+docker compose up -d db
+.\ops\database_backup.ps1 -OutputDirectory .\backups
+.\ops\database_restore.ps1 -BackupFile .\backups\rmparking-AAAAMMDD-HHMMSS.dump
+```
+
+La restauración reemplaza los datos actuales y exige escribir `RESTAURAR`. Antes de restaurar producción crea un respaldo adicional y valida el archivo en una instancia aislada.
+
+### Producción
+
+- Ejecuta `npx prisma migrate deploy` durante el despliegue para aplicar únicamente migraciones versionadas.
+- No ejecutes `prisma db seed` en producción salvo que exista una decisión operativa explícita.
+- Programa respaldos periódicos de PostgreSQL, conserva varias generaciones y prueba periódicamente la restauración.
+- Guarda `DATABASE_URL`, contraseñas y claves externas en el gestor de secretos del ambiente, nunca en Git.
+
 ## URLs Locales
 
 - Backend (Swagger): `http://localhost:3000/api/docs`

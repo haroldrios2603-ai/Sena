@@ -314,7 +314,9 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
     const endpoint = row.endpoint?.trim() ? ` en ${row.endpoint}` : '';
     const operationPhrase = this.getOperationPhrase(row.operation);
     const resultPhrase =
-      row.result === AuditResult.SUCCESS ? 'con resultado exitoso' : 'con resultado fallido';
+      row.result === AuditResult.SUCCESS
+        ? 'con resultado exitoso'
+        : 'con resultado fallido';
     const error = row.errorMessage?.trim() ? ` Error: ${row.errorMessage}` : '';
 
     return `${operationPhrase} sobre ${row.entity} por ${actor}${endpoint}, ${resultPhrase}.${error}`;
@@ -349,15 +351,20 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
 
   private scheduleRetentionCleanup() {
     const retentionDays = Number(process.env.AUDIT_RETENTION_DAYS ?? '365');
-    const intervalHours = Number(process.env.AUDIT_RETENTION_CHECK_HOURS ?? '24');
+    const intervalHours = Number(
+      process.env.AUDIT_RETENTION_CHECK_HOURS ?? '24',
+    );
 
     if (retentionDays <= 0) {
       return;
     }
 
-    this.retentionTimer = setInterval(() => {
-      void this.purgeOlderThanDays(retentionDays);
-    }, Math.max(1, intervalHours) * 60 * 60 * 1000);
+    this.retentionTimer = setInterval(
+      () => {
+        void this.purgeOlderThanDays(retentionDays);
+      },
+      Math.max(1, intervalHours) * 60 * 60 * 1000,
+    );
   }
 
   private async purgeOlderThanDays(days: number) {
@@ -381,7 +388,10 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
         });
       }
     } catch (error) {
-      this.logger.error('Falló la política de retención de auditoría', error as Error);
+      this.logger.error(
+        'Falló la política de retención de auditoría',
+        error as Error,
+      );
     }
   }
 }

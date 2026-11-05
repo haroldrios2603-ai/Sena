@@ -44,10 +44,16 @@ describe('PermissionsService', () => {
 
     (mockPrisma as any).$transaction = jest
       .fn()
-      .mockImplementation(async (operations: unknown[]) => Promise.all(operations));
-    (mockPrisma as any).appScreen.findMany = jest
-      .fn()
-      .mockResolvedValue([{ key: 'operations-dashboard', name: 'Operación diaria', route: '/dashboard' }]);
+      .mockImplementation(async (operations: unknown[]) =>
+        Promise.all(operations),
+      );
+    (mockPrisma as any).appScreen.findMany = jest.fn().mockResolvedValue([
+      {
+        key: 'operations-dashboard',
+        name: 'Operación diaria',
+        route: '/dashboard',
+      },
+    ]);
     (mockPrisma as any).appScreen.upsert = jest.fn().mockResolvedValue(null);
   });
 

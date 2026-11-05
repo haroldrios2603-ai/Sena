@@ -186,13 +186,15 @@ describe('AuthService', () => {
 
       const result = await service.login(loginDto);
 
-        expect(result.accessToken).toBe('jwt-token');
-        expect(result.attendanceAction).toBe('CHECK_IN_CREATED');
+      expect(result.accessToken).toBe('jwt-token');
+      expect(result.attendanceAction).toBe('CHECK_IN_CREATED');
       expect(mockPrismaService.attendance.create).toHaveBeenCalled();
       type AttendanceCreateArg = { data: { userId: string; checkIn: Date } };
-      const mockCreate = mockPrismaService.attendance
-        .create as jest.Mock<Promise<AttendanceCreateArg>, [AttendanceCreateArg]>;
-      const callArg = mockCreate.mock.calls[0][0] as AttendanceCreateArg;
+      const mockCreate = mockPrismaService.attendance.create as jest.Mock<
+        Promise<AttendanceCreateArg>,
+        [AttendanceCreateArg]
+      >;
+      const callArg = mockCreate.mock.calls[0][0];
       expect(callArg.data.userId).toBe(user.id);
       expect(callArg.data.checkIn).toBeInstanceOf(Date);
     });
@@ -275,7 +277,9 @@ describe('AuthService', () => {
         message:
           'Si el correo está registrado recibirás un código de recuperación en los próximos minutos.',
       });
-      expect(mockPrismaService.passwordResetToken.create).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.passwordResetToken.create,
+      ).not.toHaveBeenCalled();
       expect(
         mockPasswordRecoveryNotifierService.sendRecoveryCode,
       ).not.toHaveBeenCalled();
@@ -297,7 +301,9 @@ describe('AuthService', () => {
 
       expect(result.message).toContain('codigo de recuperacion');
       expect(result).toHaveProperty('debugCode');
-      expect(mockPrismaService.passwordResetToken.updateMany).toHaveBeenCalled();
+      expect(
+        mockPrismaService.passwordResetToken.updateMany,
+      ).toHaveBeenCalled();
       expect(mockPrismaService.passwordResetToken.create).toHaveBeenCalled();
     });
 
@@ -357,12 +363,12 @@ describe('AuthService', () => {
       });
       expect(compare).toHaveBeenCalledWith('ABC123', 'hashed-ABC123');
       expect(mockPrismaService.user.update).toHaveBeenCalled();
-      expect(mockPrismaService.passwordResetToken.updateMany).toHaveBeenCalledWith(
-        {
-          where: { userId: 'user-id', usedAt: null },
-          data: { usedAt: expect.any(Date) },
-        },
-      );
+      expect(
+        mockPrismaService.passwordResetToken.updateMany,
+      ).toHaveBeenCalledWith({
+        where: { userId: 'user-id', usedAt: null },
+        data: { usedAt: expect.any(Date) },
+      });
     });
 
     it('should throw when code is invalid', async () => {

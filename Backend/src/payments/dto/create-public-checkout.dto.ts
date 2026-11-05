@@ -1,7 +1,13 @@
 /**
  * Data Transfer Object que define la forma y validaciones del payload para dto.
  */
-import { IsEmail, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * Enumeración PublicPaymentMethod que lista valores discretos usados en dto.

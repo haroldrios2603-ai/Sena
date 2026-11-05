@@ -184,6 +184,48 @@ El script `ops/prisma_orchestrator.sh` permite `migrate`, `push`, `seed` y `stud
 
 `Backend/prisma/seed.ts` crea dos usuarios demo y una sede/tarifas de ejemplo. El script contiene una contraseña predeterminada débil y datos de demostración: no ejecutar seed en una base productiva y rotar/eliminar esas cuentas en instalaciones de prueba compartidas.
 
+### 6.4 Persistencia y traslado de datos
+
+La base local se almacena en el volumen Docker `postgres_data`. Los datos sobreviven a reinicios y a recrear contenedores, pero se pierden si se ejecuta `docker compose down -v`. El volumen es persistencia local, no un mecanismo de respaldo ni de traslado entre equipos.
+
+La estrategia correcta separa tres responsabilidades:
+
+| Necesidad | Mecanismo | Uso |
+|---|---|---|
+| Estructura de tablas, índices y cambios de esquema | Migraciones Prisma en `Backend/prisma/migrations/` | Versionar y desplegar con `npx prisma migrate deploy`. |
+| Datos demo para una instalación nueva | `Backend/prisma/seed.ts` | Ejecutar solo en desarrollo o una base vacía. El seed actualiza/crea de forma idempotente usuarios y sede demo, pero no debe ejecutarse contra producción. |
+| Datos reales de negocio | Respaldo PostgreSQL en formato custom | Crear con `ops/database_backup.ps1` y restaurar con `ops/database_restore.ps1`. Incluye usuarios, configuración, tickets, pagos, contratos, auditoría y demás registros. |
+
+#### Respaldar la base local
+
+Desde la raíz, en PowerShell:
+
+```powershell
+docker compose up -d db
+.\ops\database_backup.ps1 -OutputDirectory .\backups
+```
+
+El script crea `backups/rmparking-AAAAMMDD-HHMMSS.dump`. El directorio y las extensiones de respaldo están excluidos por `.gitignore`; nunca se deben subir a Git ni enviar sin protección.
+
+#### Restaurar datos en otro equipo
+
+```powershell
+docker compose up -d db
+.\ops\database_restore.ps1 -BackupFile .\backups\rmparking-AAAAMMDD-HHMMSS.dump
+```
+
+La restauración reemplaza los datos de la base configurada, exige confirmación literal `RESTAURAR` y conserva el archivo original. Debe ejecutarse sobre una base de destino desechable o respaldada; no mezclar un seed después de restaurar datos reales.
+
+#### Procedimiento para producción
+
+1. Configurar `DATABASE_URL` y credenciales mediante el gestor de secretos del ambiente.
+2. Ejecutar `npx prisma migrate deploy` para aplicar migraciones pendientes.
+3. No ejecutar el seed en producción.
+4. Crear un respaldo antes de cada migración de alto riesgo y programar respaldos periódicos con retención de varias generaciones.
+5. Probar restauraciones en una instancia aislada antes de declarar recuperable un respaldo.
+
+La migración de vehículos sin placa debe aplicarse antes de usar esa funcionalidad. Las migraciones modifican estructura; no sustituyen los respaldos de datos.
+
 ## 7. API, validación y documentación interactiva
 
 - Framework HTTP: NestJS sobre Express.

@@ -17,7 +17,10 @@ describe('WompiValidatorService', () => {
   });
 
   it('acepta una firma válida del webhook', () => {
-    const payload = { event: 'transaction.updated', data: { transaction: { id: 'abc-123', status: 'APPROVED' } } };
+    const payload = {
+      event: 'transaction.updated',
+      data: { transaction: { id: 'abc-123', status: 'APPROVED' } },
+    };
     const signature = createHmac('sha256', process.env.WOMPI_INTEGRITY_SECRET!)
       .update(JSON.stringify(payload))
       .digest('hex');
@@ -28,10 +31,15 @@ describe('WompiValidatorService', () => {
   });
 
   it('rechaza una firma inválida del webhook', () => {
-    const payload = { event: 'transaction.updated', data: { transaction: { id: 'abc-123', status: 'APPROVED' } } };
+    const payload = {
+      event: 'transaction.updated',
+      data: { transaction: { id: 'abc-123', status: 'APPROVED' } },
+    };
 
     const service = new WompiValidatorService();
 
-    expect(service.validateWebhookSignature(payload, 'invalid-signature')).toBe(false);
+    expect(service.validateWebhookSignature(payload, 'invalid-signature')).toBe(
+      false,
+    );
   });
 });

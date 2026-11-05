@@ -92,14 +92,20 @@ export class ReportsExportService {
     worksheet.addRow([this.reportBrandSubtitle]);
     worksheet.addRow([title]);
     worksheet.addRow([`Generado por: ${metadata.generatedBy}`]);
-    worksheet.addRow([`Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`]);
+    worksheet.addRow([
+      `Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`,
+    ]);
     worksheet.addRow([]);
 
     if (headers.length > 0) {
-      const headerRowIndex = worksheet.lastRow ? worksheet.lastRow.number + 1 : 1;
+      const headerRowIndex = worksheet.lastRow
+        ? worksheet.lastRow.number + 1
+        : 1;
       worksheet.addRow(headers);
       for (const row of rows) {
-        worksheet.addRow(headers.map((header) => this.toCellValue(row[header])));
+        worksheet.addRow(
+          headers.map((header) => this.toCellValue(row[header])),
+        );
       }
 
       const headerRow = worksheet.getRow(headerRowIndex);
@@ -110,7 +116,10 @@ export class ReportsExportService {
           header.length,
           ...rows.map((row) => String(this.toCellValue(row[header])).length),
         );
-        worksheet.getColumn(idx + 1).width = Math.min(45, Math.max(14, maxDataLength + 2));
+        worksheet.getColumn(idx + 1).width = Math.min(
+          45,
+          Math.max(14, maxDataLength + 2),
+        );
       });
     }
 
@@ -135,11 +144,16 @@ export class ReportsExportService {
       doc.moveDown(0.5);
       doc.fillColor('#111827').fontSize(12).text(title);
       doc.moveDown(0.3);
-      doc.fontSize(9).fillColor('#374151').text(`Generado por: ${metadata.generatedBy}`);
       doc
         .fontSize(9)
         .fillColor('#374151')
-        .text(`Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`);
+        .text(`Generado por: ${metadata.generatedBy}`);
+      doc
+        .fontSize(9)
+        .fillColor('#374151')
+        .text(
+          `Fecha y hora de generación: ${this.formatDateTime(metadata.generatedAt)}`,
+        );
       doc.moveDown(0.8);
 
       const headers = this.getHeaders(rows);
@@ -149,7 +163,9 @@ export class ReportsExportService {
         return;
       }
 
-      const headerLabels = headers.map((header) => this.formatHeaderLabel(header));
+      const headerLabels = headers.map((header) =>
+        this.formatHeaderLabel(header),
+      );
       const cellValuesByHeader = headers.map((header) =>
         rows.map((row) => this.toCellValue(row[header])),
       );
@@ -185,7 +201,9 @@ export class ReportsExportService {
       drawHeaderRow();
 
       rows.forEach((row) => {
-        const cellValues = headers.map((header) => this.toCellValue(row[header]));
+        const cellValues = headers.map((header) =>
+          this.toCellValue(row[header]),
+        );
         const rowHeight = Math.max(
           ...cellValues.map((value, index) => {
             const width = columnWidths[index] - 6;
@@ -231,7 +249,9 @@ export class ReportsExportService {
             (header) =>
               new TableCell({
                 children: [
-                  new Paragraph({ children: [new TextRun({ text: header, bold: true })] }),
+                  new Paragraph({
+                    children: [new TextRun({ text: header, bold: true })],
+                  }),
                 ],
               }),
           ),
@@ -244,7 +264,9 @@ export class ReportsExportService {
             children: headers.map(
               (header) =>
                 new TableCell({
-                  children: [new Paragraph(String(this.toCellValue(row[header])))],
+                  children: [
+                    new Paragraph(String(this.toCellValue(row[header]))),
+                  ],
                 }),
             ),
           }),
@@ -257,17 +279,28 @@ export class ReportsExportService {
         {
           children: [
             new Paragraph({
-              children: [new TextRun({ text: this.reportBrandTitle, bold: true, size: 30 })],
+              children: [
+                new TextRun({
+                  text: this.reportBrandTitle,
+                  bold: true,
+                  size: 30,
+                }),
+              ],
             }),
             new Paragraph({
-              children: [new TextRun({ text: this.reportBrandSubtitle, size: 20 })],
+              children: [
+                new TextRun({ text: this.reportBrandSubtitle, size: 20 }),
+              ],
             }),
             new Paragraph({
               children: [new TextRun({ text: title, bold: true, size: 24 })],
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: `Generado por: ${metadata.generatedBy}`, size: 20 }),
+                new TextRun({
+                  text: `Generado por: ${metadata.generatedBy}`,
+                  size: 20,
+                }),
               ],
             }),
             new Paragraph({
@@ -315,10 +348,15 @@ export class ReportsExportService {
     const desired = headers.map((header, index) => {
       const label = headerLabels[index];
       const sampleValues = (cellValuesByHeader[index] ?? []).slice(0, 30);
-      const maxValueLength = sampleValues.reduce((acc, value) => Math.max(acc, value.length), 0);
+      const maxValueLength = sampleValues.reduce(
+        (acc, value) => Math.max(acc, value.length),
+        0,
+      );
       const baseByLabel = label.length * 5.8;
       const baseByValue = maxValueLength * 4.2;
-      const weighted = Math.max(baseByLabel, baseByValue) * this.resolvePdfColumnWeight(header);
+      const weighted =
+        Math.max(baseByLabel, baseByValue) *
+        this.resolvePdfColumnWeight(header);
       return Math.min(maxWidth, Math.max(minWidth, weighted));
     });
 
@@ -336,7 +374,9 @@ export class ReportsExportService {
       return desired.map(() => usableWidth / desired.length);
     }
 
-    return flexible.map((value) => minWidth + (value / totalFlexible) * usableFlexible);
+    return flexible.map(
+      (value) => minWidth + (value / totalFlexible) * usableFlexible,
+    );
   }
 
   private resolvePdfColumnWeight(header: string): number {
@@ -344,16 +384,33 @@ export class ReportsExportService {
 
     if (normalized.includes('descripcion')) return 1.25;
     if (normalized.includes('correo')) return 1.2;
-    if (normalized.includes('nombre') || normalized.includes('cliente')) return 1.15;
+    if (normalized.includes('nombre') || normalized.includes('cliente'))
+      return 1.15;
     if (normalized.includes('documento')) return 1.12;
     if (normalized.includes('parqueadero')) return 1.1;
-    if (normalized.includes('ingreso') || normalized.includes('salida') || normalized.includes('fecha')) return 1.08;
-    if (normalized.includes('mensualidad') || normalized.includes('monto') || normalized.includes('valor') || normalized.includes('total')) return 1.06;
+    if (
+      normalized.includes('ingreso') ||
+      normalized.includes('salida') ||
+      normalized.includes('fecha')
+    )
+      return 1.08;
+    if (
+      normalized.includes('mensualidad') ||
+      normalized.includes('monto') ||
+      normalized.includes('valor') ||
+      normalized.includes('total')
+    )
+      return 1.06;
     if (normalized.includes('referencia')) return 1.05;
     if (normalized.includes('horas')) return 1.03;
     if (normalized.includes('estado')) return 1.02;
     if (normalized.includes('rol')) return 1;
-    if (normalized.includes('tipo') || normalized.includes('periodo') || normalized.includes('etiqueta')) return 1;
+    if (
+      normalized.includes('tipo') ||
+      normalized.includes('periodo') ||
+      normalized.includes('etiqueta')
+    )
+      return 1;
 
     return 1;
   }

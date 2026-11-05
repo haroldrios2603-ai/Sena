@@ -10,9 +10,10 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🌱 Iniciando siembra de datos...');
 
-    // Generar hash de contraseña predeterminada: '123456'
+    // ES: La contraseña se puede inyectar desde el entorno para no depender de una clave fija.
+    const seedPassword = process.env.SEED_ADMIN_PASSWORD ?? '123456';
     const salt = await bcrypt.genSalt();
-    const passwordHash = await bcrypt.hash('123456', salt);
+    const passwordHash = await bcrypt.hash(seedPassword, salt);
 
     // Crear Usuario Super Admin
     const admin = await prisma.user.upsert({
@@ -25,7 +26,7 @@ async function main() {
             role: Role.SUPER_ADMIN,
         },
     });
-    console.log('✅ Usuario Admin creado: admin@rmparking.com / 123456');
+    console.log('✅ Usuario Admin disponible: admin@rmparking.com');
 
     // Crear Usuario Operador
     const operator = await prisma.user.upsert({
@@ -38,22 +39,40 @@ async function main() {
             role: Role.OPERATOR,
         },
     });
-    console.log('✅ Usuario Operador creado: operador@rmparking.com / 123456');
+    console.log('✅ Usuario Operador disponible: operador@rmparking.com');
 
-    // Crear Parqueadero de Ejemplo
-    await prisma.parking.create({
-        data: {
-            name: 'RM Parking Central',
-            address: 'Calle 123 # 45-67',
-            capacity: 50,
-            baseRate: 5000,
-            tariffs: {
-                create: [
-                    { vehicleType: 'CAR', baseRate: 5000, hourlyRate: 3000, dayRate: 25000 },
-                    { vehicleType: 'MOTORCYCLE', baseRate: 2000, hourlyRate: 1000, dayRate: 10000 },
-                ]
-            }
-        }
+    // ES: Buscar por nombre evita crear otra sede cada vez que se restaura o inicializa el proyecto.
+    const existingParking = await prisma.parking.findFirst({
+        where: { name: 'RM Parking Central' },
+        select: { id: true },
+    });
+    const parking = existingParking
+        ? await prisma.parking.update({
+            where: { id: existingParking.id },
+            data: {
+                address: 'Calle 123 # 45-67',
+                capacity: 50,
+                baseRate: 5000,
+            },
+        })
+        : await prisma.parking.create({
+            data: {
+                name: 'RM Parking Central',
+                address: 'Calle 123 # 45-67',
+                capacity: 50,
+                baseRate: 5000,
+            },
+        });
+
+    await prisma.tariff.upsert({
+        where: { parkingId_vehicleType: { parkingId: parking.id, vehicleType: 'CAR' } },
+        update: { baseRate: 5000, hourlyRate: 3000, dayRate: 25000 },
+        create: { parkingId: parking.id, vehicleType: 'CAR', baseRate: 5000, hourlyRate: 3000, dayRate: 25000 },
+    });
+    await prisma.tariff.upsert({
+        where: { parkingId_vehicleType: { parkingId: parking.id, vehicleType: 'MOTORCYCLE' } },
+        update: { baseRate: 2000, hourlyRate: 1000, dayRate: 10000 },
+        create: { parkingId: parking.id, vehicleType: 'MOTORCYCLE', baseRate: 2000, hourlyRate: 1000, dayRate: 10000 },
     });
     console.log('✅ Parqueadero de ejemplo creado: RM Parking Central');
 

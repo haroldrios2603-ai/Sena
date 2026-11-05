@@ -65,7 +65,14 @@ export class AuthController {
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,
-    @Request() req: { ip?: string; headers?: Record<string, unknown>; originalUrl?: string; method?: string; _auditStartMs?: number },
+    @Request()
+    req: {
+      ip?: string;
+      headers?: Record<string, unknown>;
+      originalUrl?: string;
+      method?: string;
+      _auditStartMs?: number;
+    },
   ) {
     try {
       const result = await this.authService.login(loginDto);
@@ -85,7 +92,10 @@ export class AuthController {
         }),
       });
 
-      if (result.attendanceAction === 'CHECK_IN_CREATED' && result.attendanceId) {
+      if (
+        result.attendanceAction === 'CHECK_IN_CREATED' &&
+        result.attendanceId
+      ) {
         this.auditService.log({
           operation: AuditOperation.CREATE,
           entity: 'attendance',
@@ -178,7 +188,8 @@ export class AuthController {
   @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('password/request')
   async requestPassword(@Body() passwordRequestDto: PasswordRequestDto) {
-    const result = await this.authService.requestPasswordReset(passwordRequestDto);
+    const result =
+      await this.authService.requestPasswordReset(passwordRequestDto);
 
     this.auditService.log({
       operation: AuditOperation.VIEW,
@@ -197,7 +208,8 @@ export class AuthController {
   @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('password/reset')
   async resetPassword(@Body() passwordResetDto: PasswordResetDto) {
-    const result = await this.authService.confirmPasswordReset(passwordResetDto);
+    const result =
+      await this.authService.confirmPasswordReset(passwordResetDto);
 
     this.auditService.log({
       operation: AuditOperation.PASSWORD_CHANGE,

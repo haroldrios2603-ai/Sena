@@ -19,5 +19,4 @@ import { PassportModule } from '@nestjs/passport';
 /**
  * Clase ClientsModule que implementa la lógica principal de clients.
  */
-
 export class ClientsModule {}

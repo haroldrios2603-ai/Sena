@@ -1,7 +1,10 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
 export class WompiValidatorService {
-  validateWebhookSignature(payload: unknown, signature: string | undefined): boolean {
+  validateWebhookSignature(
+    payload: unknown,
+    signature: string | undefined,
+  ): boolean {
     const secret = process.env.WOMPI_INTEGRITY_SECRET;
 
     if (!secret) {

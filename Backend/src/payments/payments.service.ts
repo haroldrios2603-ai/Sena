@@ -14,7 +14,10 @@ import {
 } from './dto/create-public-checkout.dto';
 import { createHash } from 'crypto';
 import { CreateExitPaymentIntentDto } from './dto/create-exit-payment-intent.dto';
-import { fromNumericCode, toNumericCode } from '../common/utils/numeric-code.util';
+import {
+  fromNumericCode,
+  toNumericCode,
+} from '../common/utils/numeric-code.util';
 
 type WompiWebhookPayload = {
   event?: string;
@@ -58,9 +61,9 @@ export class PaymentsService {
     dto: CreateExitPaymentIntentDto,
   ) {
     const paymentMethods = await this.getPaymentMethodsConfig();
-    if (!paymentMethods.aceptaQr) {
+    if (!this.hasDigitalPaymentMethod(paymentMethods)) {
       throw new BadRequestException(
-        'El pago por QR no está habilitado en la configuración actual.',
+        'No hay métodos de pago digitales habilitados en la configuración actual.',
       );
     }
 
@@ -189,6 +192,7 @@ export class PaymentsService {
   }
 
   async getPublicPayment(paymentId: string) {
+    const paymentMethods = await this.getPaymentMethodsConfig();
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       select: {
@@ -207,16 +211,22 @@ export class PaymentsService {
     return {
       ...payment,
       currency: 'COP',
-      availableMethods: Object.values(PublicPaymentMethod),
+      availableMethods: this.getAvailablePublicMethods(paymentMethods),
       reference: this.buildReference(payment.id),
     };
   }
 
   async createPublicCheckout(paymentId: string, dto: CreatePublicCheckoutDto) {
     const paymentMethods = await this.getPaymentMethodsConfig();
-    if (!paymentMethods.aceptaQr) {
+    if (!this.hasDigitalPaymentMethod(paymentMethods)) {
       throw new BadRequestException(
-        'El pago por QR no está habilitado en la configuración actual.',
+        'No hay métodos de pago digitales habilitados en la configuración actual.',
+      );
+    }
+
+    if (!this.getAvailablePublicMethods(paymentMethods).includes(dto.method)) {
+      throw new BadRequestException(
+        'El método de pago seleccionado no está habilitado en la configuración actual.',
       );
     }
 
@@ -419,11 +429,27 @@ export class PaymentsService {
     return 'CARD';
   }
 
+  private hasDigitalPaymentMethod(methods: PaymentMethodsConfig) {
+    return methods.aceptaQr || methods.aceptaTarjeta || methods.aceptaEnLinea;
+  }
+
+  private getAvailablePublicMethods(methods: PaymentMethodsConfig) {
+    const available: PublicPaymentMethod[] = [];
+    if (methods.aceptaQr) available.push(PublicPaymentMethod.NEQUI);
+    if (methods.aceptaTarjeta) available.push(PublicPaymentMethod.CARD);
+    if (methods.aceptaEnLinea) available.push(PublicPaymentMethod.BANK_ACCOUNT);
+    return available;
+  }
+
   private mapWompiStatus(status?: string) {
     const normalized = status?.toUpperCase() ?? 'PENDING';
 
     if (normalized === 'APPROVED') return 'COMPLETED';
-    if (normalized === 'DECLINED' || normalized === 'VOIDED' || normalized === 'ERROR') {
+    if (
+      normalized === 'DECLINED' ||
+      normalized === 'VOIDED' ||
+      normalized === 'ERROR'
+    ) {
       return 'FAILED';
     }
 

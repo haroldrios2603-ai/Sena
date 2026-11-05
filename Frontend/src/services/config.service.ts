@@ -243,6 +243,12 @@ const configService = {
         const response = await api.patch<ParqueaderoConfigurado>(`/parking/${parkingId}/estado`, { activo });
         return response.data;
     },
+    async eliminarParqueadero(parkingId: string) {
+        const response = await api.delete<{ id: string; deleted: boolean; tariffsDeleted: boolean }>(
+            `/parking/${parkingId}`,
+        );
+        return response.data;
+    },
 };
 
 export default configService;

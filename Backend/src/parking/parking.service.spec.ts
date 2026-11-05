@@ -23,10 +23,20 @@ describe('ParkingService', () => {
     },
     parking: {
       findUnique: jest.fn(),
+      delete: jest.fn(),
+    },
+    contract: {
+      count: jest.fn(),
+    },
+    tariff: {
+      deleteMany: jest.fn(),
     },
     systemConfig: {
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn(async (operations: unknown[]) =>
+      Promise.all(operations as Promise<unknown>[]),
+    ),
   };
 
   beforeEach(() => {
@@ -42,9 +52,9 @@ describe('ParkingService', () => {
       status: 'ACTIVE',
     });
 
-    await expect(service.registerEntry('QWE123', 'CAR', 'parking-1')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      service.registerEntry('QWE123', 'CAR', 'parking-1'),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('should allow a new entry when the previous ticket is pending payment because the vehicle already exited', async () => {
@@ -55,7 +65,11 @@ describe('ParkingService', () => {
       capacity: 10,
     });
     prismaMock.ticket.count.mockResolvedValue(0);
-    prismaMock.vehicle.upsert.mockResolvedValue({ id: 'vehicle-1', plate: 'QWE124', type: 'CAR' });
+    prismaMock.vehicle.upsert.mockResolvedValue({
+      id: 'vehicle-1',
+      plate: 'QWE124',
+      type: 'CAR',
+    });
     prismaMock.ticket.create.mockResolvedValue({
       id: 'ticket-new-1',
       ticketCode: 'TK-NEW-1',
@@ -80,9 +94,9 @@ describe('ParkingService', () => {
     });
     prismaMock.ticket.count.mockResolvedValue(2);
 
-    await expect(service.registerEntry('QWE125', 'CAR', 'parking-1')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      service.registerEntry('QWE125', 'CAR', 'parking-1'),
+    ).rejects.toThrow(ConflictException);
     expect(prismaMock.ticket.create).not.toHaveBeenCalled();
   });
 
@@ -139,7 +153,9 @@ describe('ParkingService', () => {
       },
     };
 
-    prismaMock.ticket.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([pendingTicket]);
+    prismaMock.ticket.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([pendingTicket]);
 
     const result = await service.obtenerResumenTickets();
 
@@ -147,5 +163,48 @@ describe('ParkingService', () => {
     expect(result.cerrados).toHaveLength(1);
     expect(result.cerrados[0].vehicle.plate).toBe('QWE123');
     expect(result.cerrados[0].exit?.totalAmount).toBe(1000);
+    expect(result.paymentOptions).toEqual({
+      aceptaEfectivo: true,
+      aceptaQr: false,
+      aceptaTarjeta: true,
+      aceptaEnLinea: false,
+    });
+  });
+
+  it('should delete an unused parking and its tariffs', async () => {
+    prismaMock.parking.findUnique.mockResolvedValue({
+      id: 'parking-unused',
+      name: 'Sede sin operaciones',
+    });
+    prismaMock.ticket.count.mockResolvedValue(0);
+    prismaMock.contract.count.mockResolvedValue(0);
+
+    const result = await service.deleteParking('parking-unused');
+
+    expect(prismaMock.tariff.deleteMany).toHaveBeenCalledWith({
+      where: { parkingId: 'parking-unused' },
+    });
+    expect(prismaMock.parking.delete).toHaveBeenCalledWith({
+      where: { id: 'parking-unused' },
+    });
+    expect(result).toEqual({
+      id: 'parking-unused',
+      deleted: true,
+      tariffsDeleted: true,
+    });
+  });
+
+  it('should preserve a parking with tickets or contracts', async () => {
+    prismaMock.parking.findUnique.mockResolvedValue({
+      id: 'parking-used',
+      name: 'Sede con historial',
+    });
+    prismaMock.ticket.count.mockResolvedValue(1);
+    prismaMock.contract.count.mockResolvedValue(0);
+
+    await expect(service.deleteParking('parking-used')).rejects.toThrow(
+      ConflictException,
+    );
+    expect(prismaMock.parking.delete).not.toHaveBeenCalled();
   });
 });

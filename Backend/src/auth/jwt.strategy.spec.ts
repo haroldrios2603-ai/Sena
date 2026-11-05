@@ -36,7 +36,10 @@ describe('JwtStrategy', () => {
     const strategy = new JwtStrategy();
 
     expect(() =>
-      strategy.validate({ email: 'admin@rmparking.com', role: Role.SUPER_ADMIN }),
+      strategy.validate({
+        email: 'admin@rmparking.com',
+        role: Role.SUPER_ADMIN,
+      }),
     ).toThrow(UnauthorizedException);
   });
 

@@ -38,19 +38,21 @@ describe('AuditService', () => {
 
     loggerErrorSpy = jest
       .spyOn(
-        (service as unknown as {
-          logger: { error: (...args: unknown[]) => void };
-        }).logger,
+        (
+          service as unknown as {
+            logger: { error: (...args: unknown[]) => void };
+          }
+        ).logger,
         'error',
       )
       .mockImplementation(() => undefined);
 
-    setIntervalSpy = jest
-      .spyOn(global, 'setInterval')
-      .mockImplementation(((handler: TimerHandler) => {
-        void handler;
-        return 123 as unknown as ReturnType<typeof setInterval>;
-      }) as unknown as typeof setInterval);
+    setIntervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((
+      handler: TimerHandler,
+    ) => {
+      void handler;
+      return 123 as unknown as ReturnType<typeof setInterval>;
+    }) as unknown as typeof setInterval);
 
     clearIntervalSpy = jest
       .spyOn(global, 'clearInterval')
@@ -137,7 +139,8 @@ describe('AuditService', () => {
     await new Promise((resolve) => setImmediate(resolve));
 
     expect(prismaMock.auditLog.create).toHaveBeenCalledTimes(1);
-    const firstCallArg = (prismaMock.auditLog.create as jest.Mock).mock.calls[0][0].data as {
+    const firstCallArg = (prismaMock.auditLog.create as jest.Mock).mock
+      .calls[0][0].data as {
       metadata: Record<string, unknown>;
       requestParams: Record<string, unknown>;
       responseTimeMs: number;
@@ -148,7 +151,9 @@ describe('AuditService', () => {
   });
 
   it('should not throw when async log persistence fails', async () => {
-    prismaMock.auditLog.create = jest.fn().mockRejectedValue(new Error('db down'));
+    prismaMock.auditLog.create = jest
+      .fn()
+      .mockRejectedValue(new Error('db down'));
 
     service.log({
       operation: 'UPDATE' as any,
@@ -262,10 +267,14 @@ describe('AuditService', () => {
     const result = await service.exportLogs({ format: 'csv', limit: 1 });
 
     expect(result.contentType).toBe('text/csv');
-    expect(result.body).toContain('FechaHora,UsuarioCorreo,Operacion,Entidad,Resultado,ResumenEvento');
+    expect(result.body).toContain(
+      'FechaHora,UsuarioCorreo,Operacion,Entidad,Resultado,ResumenEvento',
+    );
     expect(result.body).toContain('"a""1"');
     expect(result.body).toContain('"a""@b.com"');
-    expect(result.body).toContain('"Consulta de informacion sobre users por a""@b.com en /users, con resultado exitoso."');
+    expect(result.body).toContain(
+      '"Consulta de informacion sobre users por a""@b.com en /users, con resultado exitoso."',
+    );
     expect(result.body).toContain('"{""query"":{""page"":""1""}}"');
     expect(result.body.startsWith('\uFEFF')).toBe(true);
     expect(result.fileName).toContain('.csv');
@@ -302,7 +311,9 @@ describe('AuditService', () => {
     prismaMock.auditLog.create = jest.fn().mockResolvedValue({ id: 'log-1' });
 
     await (
-      service as unknown as { purgeOlderThanDays: (days: number) => Promise<void> }
+      service as unknown as {
+        purgeOlderThanDays: (days: number) => Promise<void>;
+      }
     ).purgeOlderThanDays(1);
     await new Promise((resolve) => setImmediate(resolve));
 
@@ -316,7 +327,9 @@ describe('AuditService', () => {
       .mockRejectedValue(new Error('delete failed'));
 
     await (
-      service as unknown as { purgeOlderThanDays: (days: number) => Promise<void> }
+      service as unknown as {
+        purgeOlderThanDays: (days: number) => Promise<void>;
+      }
     ).purgeOlderThanDays(1);
 
     expect(loggerErrorSpy).toHaveBeenCalled();
@@ -327,7 +340,9 @@ describe('AuditService', () => {
     prismaMock.auditLog.create = jest.fn();
 
     await (
-      service as unknown as { purgeOlderThanDays: (days: number) => Promise<void> }
+      service as unknown as {
+        purgeOlderThanDays: (days: number) => Promise<void>;
+      }
     ).purgeOlderThanDays(1);
     await new Promise((resolve) => setImmediate(resolve));
 

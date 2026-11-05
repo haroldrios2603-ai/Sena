@@ -34,6 +34,11 @@ Thumbs.db
 # Prisma
 /Backend/prisma/*.db
 
+# Respaldos de base de datos
+/backups/
+*.dump
+*.backup
+
 # Otros
 .gemini/
 .agent/

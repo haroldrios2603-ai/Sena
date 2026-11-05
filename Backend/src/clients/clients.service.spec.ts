@@ -156,9 +156,15 @@ describe('ClientsService', () => {
       monthlyFee: 200000,
       isRecurring: true,
       user: { id: 'client-user-1', email: 'nuevo@rmparking.com' },
-      parking: { id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78', name: 'Sede Norte' },
+      parking: {
+        id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78',
+        name: 'Sede Norte',
+      },
     });
-    prismaMock.contract.update.mockResolvedValue({ id: 'contract-1', status: 'ACTIVE' });
+    prismaMock.contract.update.mockResolvedValue({
+      id: 'contract-1',
+      status: 'ACTIVE',
+    });
     prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await service.createClientWithContract({
@@ -187,7 +193,10 @@ describe('ClientsService', () => {
       endDate: new Date('2026-04-10'),
       monthlyFee: 180000,
     });
-    prismaMock.contract.update.mockResolvedValue({ id: 'contract-1', status: 'ACTIVE' });
+    prismaMock.contract.update.mockResolvedValue({
+      id: 'contract-1',
+      status: 'ACTIVE',
+    });
     prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await service.renewContract('contract-1', {
@@ -216,7 +225,10 @@ describe('ClientsService', () => {
         id: 'client-user-1',
         email: 'cliente1@rmparking.com',
       },
-      parking: { id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78', name: 'Sede Norte' },
+      parking: {
+        id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78',
+        name: 'Sede Norte',
+      },
       alerts: [],
     });
     prismaMock.user.findUnique.mockResolvedValue(null);
@@ -259,7 +271,10 @@ describe('ClientsService', () => {
         id: 'client-user-1',
         email: 'cliente1@rmparking.com',
       },
-      parking: { id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78', name: 'Sede Norte' },
+      parking: {
+        id: '57f0c6de-50b4-4ce8-9e67-57f2e5608a78',
+        name: 'Sede Norte',
+      },
       alerts: [],
     });
     prismaMock.user.findUnique.mockResolvedValue({
@@ -290,9 +305,15 @@ describe('ClientsService', () => {
       alerts: [],
     });
     prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.contract.update.mockResolvedValue({ id: 'contract-1', status: 'CANCELLED' });
+    prismaMock.contract.update.mockResolvedValue({
+      id: 'contract-1',
+      status: 'CANCELLED',
+    });
     prismaMock.contract.count.mockResolvedValue(0);
-    prismaMock.user.update.mockResolvedValue({ id: 'client-user-1', isActive: false });
+    prismaMock.user.update.mockResolvedValue({
+      id: 'client-user-1',
+      isActive: false,
+    });
 
     const result = await service.deleteContract('contract-1');
 
@@ -325,7 +346,10 @@ describe('ClientsService', () => {
       alerts: [],
     });
     prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.contract.update.mockResolvedValue({ id: 'contract-2', status: 'CANCELLED' });
+    prismaMock.contract.update.mockResolvedValue({
+      id: 'contract-2',
+      status: 'CANCELLED',
+    });
     prismaMock.contract.count.mockResolvedValue(2);
 
     const result = await service.deleteContract('contract-2');
@@ -353,9 +377,15 @@ describe('ClientsService', () => {
         alerts: [],
       })
       .mockResolvedValueOnce({ status: 'ACTIVE' });
-    prismaMock.contract.update.mockResolvedValue({ id: 'contract-restore', status: 'ACTIVE' });
+    prismaMock.contract.update.mockResolvedValue({
+      id: 'contract-restore',
+      status: 'ACTIVE',
+    });
     prismaMock.contractAlert.updateMany.mockResolvedValue({ count: 0 });
-    prismaMock.user.update.mockResolvedValue({ id: 'client-user-restore', isActive: true });
+    prismaMock.user.update.mockResolvedValue({
+      id: 'client-user-restore',
+      isActive: true,
+    });
 
     const result = await service.restoreContract('contract-restore');
 

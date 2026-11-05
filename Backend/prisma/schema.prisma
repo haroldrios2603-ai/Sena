@@ -180,8 +180,13 @@ model SystemConfig {
 // Vehicle registry
 model Vehicle {
    id        String   @id @default(uuid())
-   plate     String   @unique
-   type      String   // CAR, MOTORCYCLE
+  plate     String?  @unique
+  identificationCode String @unique // Placa o código interno único para vehículos sin placa
+  type      String   // CAR, MOTORCYCLE, VAN, BICYCLE, ELECTRIC_MOTORCYCLE
+  ownerName String?
+  ownerDocumentType DocumentType?
+  ownerDocumentNumber String?
+  ownerPhone String?
    ownerId   String?
    owner     User?    @relation(fields: [ownerId], references: [id])
    tickets   Ticket[]

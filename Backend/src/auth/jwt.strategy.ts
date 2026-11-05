@@ -52,7 +52,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const allowedRoles = Object.values(Role);
     if (!allowedRoles.includes(payload.role as Role)) {
-      throw new UnauthorizedException('Token inválido: el rol del usuario no es válido.');
+      throw new UnauthorizedException(
+        'Token inválido: el rol del usuario no es válido.',
+      );
     }
 
     return { userId: payload.sub, email: payload.email, role: payload.role };

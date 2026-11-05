@@ -52,10 +52,7 @@ export class UsersController {
    * Crea un usuario operativo con el rol deseado.
    */
   @Post()
-  async create(
-    @Body() createUserDto: CreateUserDto,
-    @Request() req: any,
-  ) {
+  async create(@Body() createUserDto: CreateUserDto, @Request() req: any) {
     const created = await this.usersService.createUser(createUserDto);
     this.auditService.log({
       operation: AuditOperation.CREATE,
@@ -140,7 +137,10 @@ export class UsersController {
     @Request() req: any,
   ) {
     const previous = await this.usersService.findById(id);
-    const updated = await this.usersService.updateStatus(id, updateUserStatusDto);
+    const updated = await this.usersService.updateStatus(
+      id,
+      updateUserStatusDto,
+    );
     this.auditService.log({
       operation: AuditOperation.UPDATE,
       entity: 'users',
@@ -158,10 +158,7 @@ export class UsersController {
    */
   @Delete(':id')
   @RequireScreenPermission('users-delete')
-  async remove(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async remove(@Param('id') id: string, @Request() req: any) {
     const previous = await this.usersService.findById(id);
     const result = await this.usersService.deleteUser(id, req.user?.userId);
     this.auditService.log({
@@ -181,10 +178,7 @@ export class UsersController {
    */
   @Post(':id/restore')
   @RequireScreenPermission('users-delete')
-  async restore(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async restore(@Param('id') id: string, @Request() req: any) {
     const previous = await this.usersService.findById(id);
     const result = await this.usersService.restoreUser(id);
     const updated = await this.usersService.findById(id);

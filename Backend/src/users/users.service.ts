@@ -1,7 +1,12 @@
 /**
  * Servicio que contiene la lógica de negocio para users.
  */
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -39,13 +44,19 @@ export class UsersService {
       throw new ConflictException('El correo ya está registrado');
     }
 
-    if (!createUserDto.documentType || !this.normalizeDocumentNumber(createUserDto.documentNumber)) {
+    if (
+      !createUserDto.documentType ||
+      !this.normalizeDocumentNumber(createUserDto.documentNumber)
+    ) {
       throw new BadRequestException(
         'Debes seleccionar el tipo de documento e ingresar el número de documento.',
       );
     }
 
-    await this.ensureDocumentNumberIsUnique(createUserDto.documentNumber, undefined);
+    await this.ensureDocumentNumberIsUnique(
+      createUserDto.documentNumber,
+      undefined,
+    );
 
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
 
@@ -79,7 +90,10 @@ export class UsersService {
     }
 
     if (filters.fullName?.trim()) {
-      where.fullName = { contains: filters.fullName.trim(), mode: 'insensitive' };
+      where.fullName = {
+        contains: filters.fullName.trim(),
+        mode: 'insensitive',
+      };
     }
 
     if (filters.email?.trim()) {
@@ -87,11 +101,17 @@ export class UsersService {
     }
 
     if (filters.contactPhone?.trim()) {
-      where.contactPhone = { contains: filters.contactPhone.trim(), mode: 'insensitive' };
+      where.contactPhone = {
+        contains: filters.contactPhone.trim(),
+        mode: 'insensitive',
+      };
     }
 
     if (filters.documentNumber?.trim()) {
-      where.documentNumber = { contains: filters.documentNumber.trim(), mode: 'insensitive' };
+      where.documentNumber = {
+        contains: filters.documentNumber.trim(),
+        mode: 'insensitive',
+      };
     }
 
     const users = await this.prisma.user.findMany({
@@ -151,14 +171,17 @@ export class UsersService {
     const nextDocumentType =
       typeof updateUserDto.documentType !== 'undefined'
         ? updateUserDto.documentType
-        : currentUser.documentType ?? undefined;
+        : (currentUser.documentType ?? undefined);
     const nextDocumentNumber =
       typeof updateUserDto.documentNumber !== 'undefined'
         ? updateUserDto.documentNumber
-        : currentUser.documentNumber ?? undefined;
+        : (currentUser.documentNumber ?? undefined);
 
     if (nextDocumentType || nextDocumentNumber) {
-      if (!nextDocumentType || !this.normalizeDocumentNumber(nextDocumentNumber)) {
+      if (
+        !nextDocumentType ||
+        !this.normalizeDocumentNumber(nextDocumentNumber)
+      ) {
         throw new BadRequestException(
           'Si se registra un documento, debe indicarse el tipo y el número.',
         );

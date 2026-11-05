@@ -40,7 +40,9 @@ export class PermissionsService {
     const explicit = await this.prisma.roleScreenPermission.findMany({
       where: { role },
     });
-    const explicitMap = new Map(explicit.map((item) => [item.screenKey, item.canView]));
+    const explicitMap = new Map(
+      explicit.map((item) => [item.screenKey, item.canView]),
+    );
 
     return screens.map((screen) => ({
       screenKey: screen.key,
@@ -60,8 +62,16 @@ export class PermissionsService {
     await this.syncScreens();
     await this.assertScreenKeysExist(permissions.map((item) => item.screenKey));
 
-    await this.prisma.$transaction(
-      permissions.map((item) =>
+    // ES: La pantalla de administración envía el catálogo completo. Primero quitamos
+    // solo las asignaciones explícitas omitidas para que el perfil refleje exactamente lo guardado.
+    await this.prisma.$transaction([
+      this.prisma.roleScreenPermission.deleteMany({
+        where: {
+          role,
+          screenKey: { notIn: permissions.map((item) => item.screenKey) },
+        },
+      }),
+      ...permissions.map((item) =>
         this.prisma.roleScreenPermission.upsert({
           where: {
             role_screenKey: {
@@ -77,7 +87,7 @@ export class PermissionsService {
           },
         }),
       ),
-    );
+    ]);
 
     return this.getRolePermissions(role);
   }
@@ -90,7 +100,9 @@ export class PermissionsService {
     const explicit = await this.prisma.userScreenPermission.findMany({
       where: { userId },
     });
-    const explicitMap = new Map(explicit.map((item) => [item.screenKey, item.canView]));
+    const explicitMap = new Map(
+      explicit.map((item) => [item.screenKey, item.canView]),
+    );
 
     return {
       user: {
@@ -108,7 +120,9 @@ export class PermissionsService {
           canView: explicitMap.has(screen.key)
             ? explicitMap.get(screen.key)
             : inherited,
-          source: explicitMap.has(screen.key) ? 'explicit-user' : 'role-default',
+          source: explicitMap.has(screen.key)
+            ? 'explicit-user'
+            : 'role-default',
           inherited,
         };
       }),
@@ -123,8 +137,16 @@ export class PermissionsService {
     await this.syncScreens();
     await this.assertScreenKeysExist(permissions.map((item) => item.screenKey));
 
-    await this.prisma.$transaction(
-      permissions.map((item) =>
+    // ES: Al guardar permisos individuales, las excepciones anteriores que no vienen
+    // en el payload dejan de aplicar y el usuario vuelve a heredar el rol en esas pantallas.
+    await this.prisma.$transaction([
+      this.prisma.userScreenPermission.deleteMany({
+        where: {
+          userId,
+          screenKey: { notIn: permissions.map((item) => item.screenKey) },
+        },
+      }),
+      ...permissions.map((item) =>
         this.prisma.userScreenPermission.upsert({
           where: {
             userId_screenKey: {
@@ -140,7 +162,7 @@ export class PermissionsService {
           },
         }),
       ),
-    );
+    ]);
 
     return this.getUserPermissions(userId);
   }
@@ -153,7 +175,9 @@ export class PermissionsService {
     const explicit = await this.prisma.userScreenPermission.findMany({
       where: { userId },
     });
-    const explicitMap = new Map(explicit.map((item) => [item.screenKey, item.canView]));
+    const explicitMap = new Map(
+      explicit.map((item) => [item.screenKey, item.canView]),
+    );
 
     const effective = screens.map((screen) => ({
       screenKey: screen.key,

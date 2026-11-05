@@ -57,6 +57,7 @@ const PaymentCheckoutPage = () => {
   const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
 
   const isPaid = useMemo(() => payment?.status === 'COMPLETED', [payment?.status]);
+  const hasAvailableMethods = Boolean(payment?.availableMethods.length);
 
   useEffect(() => {
     let isMounted = true;
@@ -166,6 +167,10 @@ const PaymentCheckoutPage = () => {
             {isPaid ? (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
                 Pago confirmado exitosamente. Ya puedes cerrar esta pantalla.
+              </div>
+            ) : !hasAvailableMethods ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
+                No hay métodos de pago digitales habilitados para este parqueadero.
               </div>
             ) : (
               <>

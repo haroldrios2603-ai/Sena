@@ -1,8 +1,13 @@
 /**
  * Servicio que contiene la lógica de negocio para parking.
  */
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { DocumentType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { toNumericCode } from '../common/utils/numeric-code.util';
@@ -80,6 +85,35 @@ export class ParkingService {
   }
 
   /**
+   * Elimina una sede únicamente cuando no tiene historial dependiente.
+   * Los tickets y contratos se conservan para no romper reportes ni trazabilidad.
+   */
+  async deleteParking(parkingId: string) {
+    const parking = await this.ensureParkingExists(parkingId);
+    const [ticketCount, contractCount] = await Promise.all([
+      this.prisma.ticket.count({ where: { parkingId } }),
+      this.prisma.contract.count({ where: { parkingId } }),
+    ]);
+
+    if (ticketCount > 0 || contractCount > 0) {
+      throw new ConflictException(
+        'No se puede eliminar la sede porque tiene tickets o contratos asociados. Suspéndela para conservar el historial operativo.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.tariff.deleteMany({ where: { parkingId } }),
+      this.prisma.parking.delete({ where: { id: parkingId } }),
+    ]);
+
+    return {
+      id: parking.id,
+      deleted: true,
+      tariffsDeleted: true,
+    };
+  }
+
+  /**
    * Obtiene la lista de todos los parqueaderos registrados.
    */
   async findAll() {
@@ -126,10 +160,50 @@ export class ParkingService {
    * Guarda un paquete de tarifas para múltiples sedes.
    */
   async bulkUpsertTariffs(parkingIds: string[], tarifas: TarifaConfigDto[]) {
-    const operaciones = parkingIds.flatMap((id) =>
-      tarifas.map((tarifa) => this.setTariff(id, tarifa)),
-    );
-    await Promise.all(operaciones);
+    const vehicleTypes = tarifas.map((tarifa) => tarifa.tipoVehiculo);
+    await this.prisma.$transaction(async (tx) => {
+      for (const id of parkingIds) {
+        await tx.tariff.deleteMany({
+          where: {
+            parkingId: id,
+            ...(vehicleTypes.length
+              ? { vehicleType: { notIn: vehicleTypes } }
+              : {}),
+          },
+        });
+
+        for (const tarifa of tarifas) {
+          await tx.tariff.upsert({
+            where: {
+              parkingId_vehicleType: {
+                parkingId: id,
+                vehicleType: tarifa.tipoVehiculo,
+              },
+            },
+            update: {
+              baseRate: tarifa.tarifaBase,
+              hourlyRate: tarifa.tarifaHora,
+              dayRate: tarifa.tarifaDia,
+              nightRate: tarifa.tarifaNocturna,
+              nightStart: tarifa.horaInicioNocturna,
+              nightEnd: tarifa.horaFinNocturna,
+              flatRate: tarifa.tarifaPlana,
+            },
+            create: {
+              parkingId: id,
+              vehicleType: tarifa.tipoVehiculo,
+              baseRate: tarifa.tarifaBase,
+              hourlyRate: tarifa.tarifaHora,
+              dayRate: tarifa.tarifaDia,
+              nightRate: tarifa.tarifaNocturna,
+              nightStart: tarifa.horaInicioNocturna,
+              nightEnd: tarifa.horaFinNocturna,
+              flatRate: tarifa.tarifaPlana,
+            },
+          });
+        }
+      }
+    });
     return this.prisma.tariff.findMany({
       where: { parkingId: { in: parkingIds } },
     });
@@ -152,15 +226,41 @@ export class ParkingService {
    * ES: si ya existe un ticket activo o pendiente de pago para la placa, se bloquea el nuevo ingreso
    * para evitar duplicados y mantener la trazabilidad del vehículo dentro del parqueadero.
    */
-  async registerEntry(plate: string, vehicleType: string, parkingId: string) {
+  async registerEntry(
+    plate: string | undefined,
+    vehicleType: string,
+    parkingId: string,
+    owner?: {
+      ownerName?: string;
+      ownerDocumentType?: DocumentType;
+      ownerDocumentNumber?: string;
+      ownerPhone?: string;
+    },
+  ) {
+    // ES: La placa sigue siendo opcional únicamente para vehículos sin placa visible.
+    // En ese caso se genera un código interno no reutilizable y el DTO ya exigió los datos del responsable.
+    const normalizedPlate = plate?.trim().toUpperCase() || undefined;
+        if (
+          !normalizedPlate
+          && (!owner?.ownerName
+            || !owner.ownerDocumentType
+            || !owner.ownerDocumentNumber
+            || !owner.ownerPhone)
+        ) {
+          throw new BadRequestException(
+            'Los vehículos sin placa requieren nombre, documento y teléfono del responsable.',
+          );
+        }
+    const identificationCode = normalizedPlate ?? `NP-${toNumericCode(randomUUID())}`;
     // ES: La placa puede reingresar después de una salida registrada. La lógica de bloqueo solo debe
     // aplicarse a tickets cuyo ingreso sigue abierto. Si el ticket ya fue egresado, aunque esté en
     // pendiente de pago, el vehículo ya no está dentro del parqueadero y puede registrar un nuevo ingreso.
-    const existingActiveTicket = await this.prisma.ticket.findFirst({
-      where: {
-        vehicle: { plate },
-        status: 'ACTIVE',
-      },
+    const existingActiveTicket = normalizedPlate
+      ? await this.prisma.ticket.findFirst({
+          where: {
+            vehicle: { plate: normalizedPlate },
+            status: 'ACTIVE',
+          },
       select: {
         id: true,
         ticketCode: true,
@@ -169,11 +269,12 @@ export class ParkingService {
       orderBy: {
         entryTime: 'desc',
       },
-    });
+        })
+      : null;
 
     if (existingActiveTicket) {
       throw new ConflictException(
-        `La placa ${plate} ya tiene un ingreso activo (ticket ${existingActiveTicket.ticketCode}). Debes registrar la salida antes de generar uno nuevo.`,
+        `La placa ${normalizedPlate} ya tiene un ingreso activo (ticket ${existingActiveTicket.ticketCode}). Debes registrar la salida antes de generar uno nuevo.`,
       );
     }
 
@@ -206,11 +307,35 @@ export class ParkingService {
     }
 
     // Buscar o crear vehículo
-    const vehicle = await this.prisma.vehicle.upsert({
-      where: { plate },
-      update: { type: vehicleType },
-      create: { plate, type: vehicleType },
-    });
+    const vehicle = normalizedPlate
+      ? await this.prisma.vehicle.upsert({
+          where: { plate: normalizedPlate },
+          update: {
+            type: vehicleType,
+            ...(owner?.ownerName ? { ownerName: owner.ownerName } : {}),
+            ...(owner?.ownerDocumentType
+              ? { ownerDocumentType: owner.ownerDocumentType }
+              : {}),
+            ...(owner?.ownerDocumentNumber
+              ? { ownerDocumentNumber: owner.ownerDocumentNumber } : {}),
+            ...(owner?.ownerPhone ? { ownerPhone: owner.ownerPhone } : {}),
+          },
+          create: {
+            plate: normalizedPlate,
+            identificationCode,
+            type: vehicleType,
+          },
+        })
+      : await this.prisma.vehicle.create({
+          data: {
+            identificationCode,
+            type: vehicleType,
+            ownerName: owner?.ownerName,
+            ownerDocumentType: owner?.ownerDocumentType,
+            ownerDocumentNumber: owner?.ownerDocumentNumber,
+            ownerPhone: owner?.ownerPhone,
+          },
+        });
 
     // ES: Se genera un código visible totalmente numérico para evitar valores alfanuméricos en tickets y reportes.
     const ticketCode = toNumericCode(randomUUID());
@@ -235,10 +360,16 @@ export class ParkingService {
    * pendiente de pago por una operación previa. Esto evita falsos 404 cuando el vehículo sigue existiendo
    * en el flujo operativo pero el estado del ticket ya fue actualizado.
    */
-  async registerExit(plate: string) {
+  async registerExit(identificador: string) {
+    // ES: Para vehículos sin placa, el código del ticket es la credencial operativa
+    // que permite localizar la salida sin inventar una placa ni mezclar registros.
     const ticket = await this.prisma.ticket.findFirst({
       where: {
-        vehicle: { plate },
+        OR: [
+          { ticketCode: identificador },
+          { vehicle: { plate: identificador } },
+          { vehicle: { identificationCode: identificador } },
+        ],
         status: {
           in: ['ACTIVE', 'PENDING_PAYMENT'],
         },
@@ -265,7 +396,8 @@ export class ParkingService {
       return {
         ticket,
         exit: ticket.exit,
-        message: 'El vehículo ya tiene una salida registrada pendiente de pago o confirmación.',
+        message:
+          'El vehículo ya tiene una salida registrada pendiente de pago o confirmación.',
         paymentOptions: await this.getPaymentOptions(),
       };
     }
@@ -356,6 +488,7 @@ export class ParkingService {
     return {
       activos: ticketsActivos,
       cerrados: ticketsCerrados,
+      paymentOptions: await this.getPaymentOptions(),
     };
   }
 
@@ -566,7 +699,9 @@ export class ParkingService {
     return this.obtenerFechaCierreDesdeConfig(config?.parametrosOperacion);
   }
 
-  private obtenerFechaCierreDesdeConfig(value: Prisma.JsonValue | null | undefined) {
+  private obtenerFechaCierreDesdeConfig(
+    value: Prisma.JsonValue | null | undefined,
+  ) {
     const parametros = this.extraerObjetoJson(value);
     const cierre = parametros.cierreJornadaAt;
     if (typeof cierre !== 'string') {

@@ -138,7 +138,9 @@ export class ReportsService {
   }
 
   async getVehiclesByPeriod(dto: VehiclesPeriodDto) {
-    const baseDate = dto.date ? this.parseDateInput(dto.date, false) : new Date();
+    const baseDate = dto.date
+      ? this.parseDateInput(dto.date, false)
+      : new Date();
     const range = this.resolvePeriodRange(dto.period, baseDate);
 
     const tickets = await this.prisma.ticket.findMany({
@@ -166,11 +168,17 @@ export class ReportsService {
       orderBy: { entryTime: 'asc' },
     });
 
-    const buckets = new Map<string, { totalVehiculos: number; totalCobrado: number }>();
+    const buckets = new Map<
+      string,
+      { totalVehiculos: number; totalCobrado: number }
+    >();
 
     for (const ticket of tickets) {
       const bucket = this.resolveBucket(dto.period, ticket.entryTime);
-      const current = buckets.get(bucket) ?? { totalVehiculos: 0, totalCobrado: 0 };
+      const current = buckets.get(bucket) ?? {
+        totalVehiculos: 0,
+        totalCobrado: 0,
+      };
       current.totalVehiculos += 1;
       current.totalCobrado += ticket.exit?.totalAmount ?? 0;
       buckets.set(bucket, current);
@@ -183,8 +191,13 @@ export class ReportsService {
       totalCobrado: Number(data.totalCobrado.toFixed(2)),
     }));
 
-    const totalCobrado = tickets.reduce((acc, item) => acc + (item.exit?.totalAmount ?? 0), 0);
-    const totalVehiculosConCobro = tickets.filter((item) => Boolean(item.exit)).length;
+    const totalCobrado = tickets.reduce(
+      (acc, item) => acc + (item.exit?.totalAmount ?? 0),
+      0,
+    );
+    const totalVehiculosConCobro = tickets.filter((item) =>
+      Boolean(item.exit),
+    ).length;
 
     return {
       periodo: dto.period,
@@ -312,7 +325,10 @@ export class ReportsService {
         descripcion: `Pago ${payment.method}`,
         monto: payment.amount,
       })),
-    ].sort((a, b) => new Date(a.fecha ?? 0).getTime() - new Date(b.fecha ?? 0).getTime());
+    ].sort(
+      (a, b) =>
+        new Date(a.fecha ?? 0).getTime() - new Date(b.fecha ?? 0).getTime(),
+    );
 
     const totalAcumulado = movimientos.reduce((acc, row) => acc + row.monto, 0);
 
@@ -394,7 +410,10 @@ export class ReportsService {
       userFilter = this.buildUserSearchFilter(dto.userId);
     } else if (dto.documentNumber?.trim()) {
       userFilter = {
-        documentNumber: { contains: dto.documentNumber.trim(), mode: 'insensitive' },
+        documentNumber: {
+          contains: dto.documentNumber.trim(),
+          mode: 'insensitive',
+        },
       };
     }
 
@@ -425,7 +444,10 @@ export class ReportsService {
 
     const detalles = normalizedRecords.map((record) => {
       const end = record.checkOut ?? new Date();
-      const minutes = Math.max(0, Math.round((end.getTime() - record.checkIn.getTime()) / 60000));
+      const minutes = Math.max(
+        0,
+        Math.round((end.getTime() - record.checkIn.getTime()) / 60000),
+      );
 
       return {
         attendanceId: record.id,
@@ -442,7 +464,10 @@ export class ReportsService {
       };
     });
 
-    const totalHoras = detalles.reduce((acc, row) => acc + row.horasTrabajadas, 0);
+    const totalHoras = detalles.reduce(
+      (acc, row) => acc + row.horasTrabajadas,
+      0,
+    );
 
     return {
       rango: {
@@ -475,9 +500,14 @@ export class ReportsService {
     };
   }
 
-  private removeDuplicateOpenRecords<T extends { id: string; userId: string; checkIn: Date; checkOut: Date | null }>(
-    records: T[],
-  ): T[] {
+  private removeDuplicateOpenRecords<
+    T extends {
+      id: string;
+      userId: string;
+      checkIn: Date;
+      checkOut: Date | null;
+    },
+  >(records: T[]): T[] {
     const latestOpenByUser = new Map<string, T>();
 
     records.forEach((record) => {
@@ -538,13 +568,18 @@ export class ReportsService {
       grouped.set(tipo, current);
     });
 
-    const detalle = Array.from(grouped.entries()).map(([tipoVehiculo, data]) => ({
-      tipoVehiculo,
-      totalIngresos: Number(data.total.toFixed(2)),
-      cantidadServicios: data.cantidad,
-    }));
+    const detalle = Array.from(grouped.entries()).map(
+      ([tipoVehiculo, data]) => ({
+        tipoVehiculo,
+        totalIngresos: Number(data.total.toFixed(2)),
+        cantidadServicios: data.cantidad,
+      }),
+    );
 
-    const totalIngresos = detalle.reduce((acc, row) => acc + row.totalIngresos, 0);
+    const totalIngresos = detalle.reduce(
+      (acc, row) => acc + row.totalIngresos,
+      0,
+    );
 
     return {
       rango: {
@@ -577,7 +612,15 @@ export class ReportsService {
       ingresos: 0,
     }));
 
-    const weekDays = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    const weekDays = [
+      'domingo',
+      'lunes',
+      'martes',
+      'miercoles',
+      'jueves',
+      'viernes',
+      'sabado',
+    ];
     const daily = weekDays.map((dia) => ({ dia, ingresos: 0 }));
 
     tickets.forEach((ticket) => {
@@ -586,8 +629,10 @@ export class ReportsService {
       daily[date.getDay()].ingresos += 1;
     });
 
-    const topHour = [...hourly].sort((a, b) => b.ingresos - a.ingresos)[0] ?? null;
-    const topDay = [...daily].sort((a, b) => b.ingresos - a.ingresos)[0] ?? null;
+    const topHour =
+      [...hourly].sort((a, b) => b.ingresos - a.ingresos)[0] ?? null;
+    const topDay =
+      [...daily].sort((a, b) => b.ingresos - a.ingresos)[0] ?? null;
 
     return {
       rango: {
@@ -640,7 +685,10 @@ export class ReportsService {
     return parsed;
   }
 
-  private resolvePeriodRange(period: 'day' | 'week' | 'month', date: Date): Range {
+  private resolvePeriodRange(
+    period: 'day' | 'week' | 'month',
+    date: Date,
+  ): Range {
     if (period === 'day') {
       const from = new Date(date);
       from.setHours(0, 0, 0, 0);
@@ -663,7 +711,15 @@ export class ReportsService {
     }
 
     const from = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-    const to = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+    const to = new Date(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
     return { from, to };
   }
 
@@ -673,7 +729,15 @@ export class ReportsService {
     }
 
     if (period === 'week') {
-      const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+      const days = [
+        'domingo',
+        'lunes',
+        'martes',
+        'miercoles',
+        'jueves',
+        'viernes',
+        'sabado',
+      ];
       return days[date.getDay()];
     }
 
@@ -702,7 +766,13 @@ export class ReportsService {
     // Colombia usa UTC-5 durante todo el año; convertimos los límites
     // del turno a instantes UTC para que la consulta sea independiente
     // de la zona horaria configurada en el proceso de Node.
-    const createColombiaDate = (date: Date, hourValue: number, minute: number, second: number, millisecond: number) =>
+    const createColombiaDate = (
+      date: Date,
+      hourValue: number,
+      minute: number,
+      second: number,
+      millisecond: number,
+    ) =>
       new Date(
         Date.UTC(
           date.getUTCFullYear(),

@@ -75,7 +75,9 @@ export const hasScreenPermission = (
     explicitPermissions: string[] | undefined,
     screenKey: string,
 ) => {
-    if (Array.isArray(explicitPermissions) && explicitPermissions.length > 0) {
+    // ES: Un arreglo vacío puede ser una denegación explícita de todas las pantallas.
+    // Solo usamos los valores heredados mientras el perfil todavía no ha cargado permisos.
+    if (Array.isArray(explicitPermissions)) {
         return explicitPermissions.includes(screenKey);
     }
     if (!role) {

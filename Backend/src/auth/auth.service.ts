@@ -161,9 +161,8 @@ export class AuthService {
       return null;
     }
 
-    const effective = await this.permissionsService.getEffectivePermissionsForUser(
-      userId,
-    );
+    const effective =
+      await this.permissionsService.getEffectivePermissionsForUser(userId);
 
     return {
       ...user,

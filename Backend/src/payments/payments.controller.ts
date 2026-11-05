@@ -115,7 +115,10 @@ export class PaymentsController {
     @Body() dto: CreatePublicCheckoutDto,
     @Request() req: any,
   ) {
-    const result = await this.paymentsService.createPublicCheckout(paymentId, dto);
+    const result = await this.paymentsService.createPublicCheckout(
+      paymentId,
+      dto,
+    );
 
     this.auditService.log({
       operation: AuditOperation.CREATE,
@@ -126,7 +129,7 @@ export class PaymentsController {
         method: dto.method,
       },
       result: AuditResult.SUCCESS,
-      context: this.auditService.buildContextFromRequest(req as any),
+      context: this.auditService.buildContextFromRequest(req),
     });
 
     return result;
@@ -138,9 +141,13 @@ export class PaymentsController {
     @Headers('x-wompi-signature') signature: string | undefined,
   ) {
     if (!this.wompiValidator.validateWebhookSignature(payload, signature)) {
-      throw new UnauthorizedException('La firma del webhook es inválida o no coincide con la solicitud.');
+      throw new UnauthorizedException(
+        'La firma del webhook es inválida o no coincide con la solicitud.',
+      );
     }
 
-    return this.paymentsService.processWompiWebhook(payload as WompiWebhookInput);
+    return this.paymentsService.processWompiWebhook(
+      payload as WompiWebhookInput,
+    );
   }
 }

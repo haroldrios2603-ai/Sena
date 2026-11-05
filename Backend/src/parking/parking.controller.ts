@@ -3,6 +3,7 @@
  */
 import {
   Controller,
+  Delete,
   Post,
   Body,
   UseGuards,
@@ -98,7 +99,10 @@ export class ParkingController {
     @Body() data: UpdateParkingStatusDto,
     @Request() req: any,
   ) {
-    const updated = await this.parkingService.updateParkingStatus(id, data.activo);
+    const updated = await this.parkingService.updateParkingStatus(
+      id,
+      data.activo,
+    );
     this.auditService.log({
       operation: AuditOperation.UPDATE,
       entity: 'parking_status',
@@ -108,6 +112,22 @@ export class ParkingController {
       context: this.auditService.buildContextFromRequest(req),
     });
     return updated;
+  }
+
+  @Delete(':id')
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PARKING)
+  @RequireScreenPermission('settings-config')
+  async deleteParking(@Param('id') id: string, @Request() req: any) {
+    const result = await this.parkingService.deleteParking(id);
+    this.auditService.log({
+      operation: AuditOperation.DELETE,
+      entity: 'parking',
+      recordId: id,
+      newValues: result,
+      result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
   }
 
   /**
@@ -121,12 +141,24 @@ export class ParkingController {
       data.placa,
       data.vehicleType,
       data.parkingId,
+      {
+        ownerName: data.ownerName,
+        ownerDocumentType: data.ownerDocumentType,
+        ownerDocumentNumber: data.ownerDocumentNumber,
+        ownerPhone: data.ownerPhone,
+      },
     );
     this.auditService.log({
       operation: AuditOperation.CREATE,
       entity: 'parking_entry',
       recordId: result?.id,
-      newValues: { placa: data.placa, parkingId: data.parkingId },
+      newValues: {
+        placa: data.placa,
+        vehicleType: data.vehicleType,
+        parkingId: data.parkingId,
+        ownerDocumentType: data.ownerDocumentType,
+        ownerDocumentNumber: data.ownerDocumentNumber,
+      },
       result: AuditResult.SUCCESS,
       context: this.auditService.buildContextFromRequest(req),
     });
@@ -140,11 +172,12 @@ export class ParkingController {
   @Post('exit')
   @RequireScreenPermission('operations-dashboard')
   async registerExit(@Body() data: ExitDto, @Request() req: any) {
-    const result = await this.parkingService.registerExit(data.placa);
+    const identificador = data.identificador ?? data.placa ?? data.ticketCode;
+    const result = await this.parkingService.registerExit(identificador!);
     this.auditService.log({
       operation: AuditOperation.UPDATE,
       entity: 'parking_exit',
-      newValues: { placa: data.placa, exitId: result?.exit?.id },
+      newValues: { identificador, exitId: result?.exit?.id },
       result: AuditResult.SUCCESS,
       context: this.auditService.buildContextFromRequest(req),
     });

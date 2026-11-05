@@ -150,7 +150,11 @@ export const DEFAULT_ROLE_SCREEN_PERMISSIONS: Record<Role, string[]> = {
     'ver-reporte-ingresos-grafico',
     'ver-reporte-horas-pico',
   ],
-  OPERATOR: ['operations-dashboard', 'acceso-reportes', 'ver-reporte-vehiculos'],
+  OPERATOR: [
+    'operations-dashboard',
+    'acceso-reportes',
+    'ver-reporte-vehiculos',
+  ],
   AUDITOR: [
     'operations-dashboard',
     'admin-audit-logs',

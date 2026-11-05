@@ -12,6 +12,7 @@ import {
     Save,
     Settings,
     ShieldCheck,
+    Trash2,
 } from 'lucide-react';
 import configService, {
     type ActualizarParqueaderoPayload,
@@ -121,6 +122,11 @@ type EliminacionPendiente =
     | {
         tipo: 'tarifa';
         index: number;
+    }
+    | {
+        tipo: 'parqueadero';
+        id: string;
+        nombre: string;
     };
 
 const etiquetasSeccion: Record<Exclude<SeccionConfiguracion, 'menu'>, { titulo: string; descripcion: string }> = {
@@ -231,6 +237,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
     const [guardandoMetodosPago, setGuardandoMetodosPago] = useState(false);
     const [guardandoTarifas, setGuardandoTarifas] = useState(false);
     const [guardandoParqueadero, setGuardandoParqueadero] = useState(false);
+    const [eliminandoParqueadero, setEliminandoParqueadero] = useState(false);
     const [eliminacionPendiente, setEliminacionPendiente] = useState<EliminacionPendiente | null>(null);
     const [nuevoParqueadero, setNuevoParqueadero] = useState<ParqueaderoEditable>({
         nombre: '',
@@ -284,7 +291,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
         });
 
         const tarifasNormalizadas = normalizarTarifas(respuesta.tarifas);
-        setTarifas(tarifasNormalizadas.length ? tarifasNormalizadas : tarifasBase);
+        setTarifas(tarifasNormalizadas);
 
         setParqueaderos(respuesta.parkings);
         setParqueaderoObjetivo(respuesta.parkings[0]?.id ?? '');
@@ -472,13 +479,34 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
         });
     };
 
-    const confirmarEliminacionPendiente = () => {
+    const confirmarEliminacionPendiente = async () => {
         if (!eliminacionPendiente) {
             return;
         }
 
         // ES: Resolvemos la acción de eliminación según el tipo de registro seleccionado en el modal.
-        const { tipo, index } = eliminacionPendiente;
+        const { tipo } = eliminacionPendiente;
+
+        if (tipo === 'parqueadero') {
+            setEliminandoParqueadero(true);
+            try {
+                await configService.eliminarParqueadero(eliminacionPendiente.id);
+                setMensaje({ texto: 'Sede y sus tarifas eliminadas correctamente.', tipo: 'success' });
+                setEliminacionPendiente(null);
+                await cargarConfiguracion();
+                announceSettingsUpdated();
+            } catch (error) {
+                setMensaje({
+                    texto: mensajeError(error, 'No se pudo eliminar la sede. Si tiene historial, debes suspenderla.'),
+                    tipo: 'error',
+                });
+            } finally {
+                setEliminandoParqueadero(false);
+            }
+            return;
+        }
+
+        const { index } = eliminacionPendiente;
 
         if (tipo === 'capacidad') {
             if (!configGeneral.capacidadPorTipo[index]) {
@@ -530,6 +558,10 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
             const registro = configGeneral.tarifasEspeciales[eliminacionPendiente.index];
             const nombre = registro?.nombre || 'esta tarifa especial';
             return `¿Deseas eliminar la tarifa especial ${nombre}?`;
+        }
+
+        if (eliminacionPendiente.tipo === 'parqueadero') {
+            return `¿Deseas eliminar la sede ${eliminacionPendiente.nombre} y sus tarifas configuradas? Esta acción no se puede deshacer.`;
         }
 
         const registro = tarifas[eliminacionPendiente.index];
@@ -763,6 +795,14 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
         } finally {
             setGuardandoParqueadero(false);
         }
+    };
+
+    const solicitarEliminacionParqueadero = (parking: ParqueaderoConfigurado) => {
+        setEliminacionPendiente({
+            tipo: 'parqueadero',
+            id: parking.id,
+            nombre: parking.name,
+        });
     };
 
     if (cargando) {
@@ -1317,7 +1357,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                                         actualizarTarifa(index, 'tipoVehiculo', event.target.value.toUpperCase())
                                     }
                                 />
-                                {tarifas.length > 1 && (
+                                {tarifas.length > 0 && (
                                     <button
                                         type="button"
                                         className="text-xs text-rose-600"
@@ -1543,6 +1583,15 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                                         >
                                             {parking.isActive ? 'Suspender' : 'Reactivar'}
                                         </button>
+                                        <button
+                                            type="button"
+                                            className="btn-suspend btn-suspend--danger"
+                                            onClick={() => solicitarEliminacionParqueadero(parking)}
+                                            disabled={guardandoParqueadero || eliminandoParqueadero}
+                                            title="Eliminar sede y tarifas"
+                                        >
+                                            <Trash2 size={14} /> Eliminar
+                                        </button>
                                     </div>
                                     <p className="text-xs text-slate-500 self-center">
                                         Actualizado {parking.updatedAt ? new Date(parking.updatedAt).toLocaleDateString() : 'sin registro'}
@@ -1638,6 +1687,7 @@ const ConfigPanel = ({ seccionActiva }: ConfigPanelProps) => {
                 message={mensajeEliminacionPendiente}
                 confirmText="Aceptar"
                 cancelText="Cancelar"
+                isProcessing={eliminandoParqueadero}
                 onConfirm={confirmarEliminacionPendiente}
                 onCancel={cancelarEliminacionPendiente}
             />

@@ -46,6 +46,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - TZ=America/Bogota
+      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-123456}
       # ES: Secreto JWT obligatorio. Si no se define, se usará un valor por defecto seguro.
       - JWT_SECRET=${JWT_SECRET:-rm_parking_jwt_secret_2024_secure_random_key_64_chars_min}
       - SMTP_HOST=${SMTP_HOST:-}

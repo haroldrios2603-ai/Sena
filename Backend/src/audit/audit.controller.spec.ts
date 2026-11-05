@@ -21,12 +21,18 @@ describe('AuditController', () => {
   });
 
   it('should list logs', async () => {
-    (auditServiceMock.findAll as jest.Mock).mockResolvedValue({ items: [], total: 0 });
+    (auditServiceMock.findAll as jest.Mock).mockResolvedValue({
+      items: [],
+      total: 0,
+    });
 
     const result = await controller.listLogs({ page: 1, pageSize: 25 });
 
     expect(result).toEqual({ items: [], total: 0 });
-    expect(auditServiceMock.findAll).toHaveBeenCalledWith({ page: 1, pageSize: 25 });
+    expect(auditServiceMock.findAll).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 25,
+    });
   });
 
   it('should return one log by id', async () => {
@@ -41,7 +47,9 @@ describe('AuditController', () => {
   it('should throw not found when log does not exist', async () => {
     (auditServiceMock.findById as jest.Mock).mockResolvedValue(null);
 
-    await expect(controller.getLogById('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.getLogById('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('should export logs and write response headers', async () => {
@@ -67,7 +75,9 @@ describe('AuditController', () => {
 
     expect(result).toBe('id,timestamp');
     expect(headers['Content-Type']).toBe('text/csv');
-    expect(headers['Content-Disposition']).toBe('attachment; filename="audit.csv"');
+    expect(headers['Content-Disposition']).toBe(
+      'attachment; filename="audit.csv"',
+    );
     expect(auditServiceMock.log).toHaveBeenCalledWith(
       expect.objectContaining({
         operation: 'EXPORT',

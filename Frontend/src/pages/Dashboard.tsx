@@ -39,7 +39,7 @@ import {
     type ExitPaymentIntentResponse,
 } from '../services/payments.service';
 
-type VehicleType = 'CAR' | 'MOTORCYCLE';
+type VehicleType = 'CAR' | 'MOTORCYCLE' | 'VAN' | 'BICYCLE' | 'ELECTRIC_MOTORCYCLE';
 
 type Tariff = {
     vehicleType: VehicleType;
@@ -58,8 +58,13 @@ type Parking = {
 
 type Vehicle = {
     id: string;
-    plate: string;
+    plate?: string | null;
+    identificationCode: string;
     type: VehicleType;
+    ownerName?: string | null;
+    ownerDocumentType?: string | null;
+    ownerDocumentNumber?: string | null;
+    ownerPhone?: string | null;
 };
 
 type Ticket = {
@@ -95,6 +100,14 @@ type TicketConSalida = Ticket & { exit?: ExitRecord | null };
 type ResumenTicketsResponse = {
     activos: Ticket[];
     cerrados: TicketConSalida[];
+    paymentOptions: PaymentOptions;
+};
+
+type PaymentOptions = {
+    aceptaEfectivo: boolean;
+    aceptaQr: boolean;
+    aceptaTarjeta: boolean;
+    aceptaEnLinea: boolean;
 };
 
 type CierreJornadaResponse = {
@@ -189,6 +202,11 @@ const Dashboard = () => {
     const location = useLocation();
     const [plateEntry, setPlateEntry] = useState('');
     const [plateExit, setPlateExit] = useState('');
+    const [entryHasPlate, setEntryHasPlate] = useState(true);
+    const [ownerNameEntry, setOwnerNameEntry] = useState('');
+    const [ownerDocumentTypeEntry, setOwnerDocumentTypeEntry] = useState('CEDULA');
+    const [ownerDocumentNumberEntry, setOwnerDocumentNumberEntry] = useState('');
+    const [ownerPhoneEntry, setOwnerPhoneEntry] = useState('');
     const [vehicleTypeEntry, setVehicleTypeEntry] = useState<VehicleType>('CAR');
     const [parkings, setParkings] = useState<Parking[]>([]);
     const [selectedParkingId, setSelectedParkingId] = useState('');
@@ -200,6 +218,12 @@ const Dashboard = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [ticketsActivos, setTicketsActivos] = useState<Ticket[]>([]);
     const [ticketsCerrados, setTicketsCerrados] = useState<TicketConSalida[]>([]);
+    const [paymentOptions, setPaymentOptions] = useState<PaymentOptions>({
+        aceptaEfectivo: true,
+        aceptaQr: false,
+        aceptaTarjeta: true,
+        aceptaEnLinea: false,
+    });
     const [filtroBusqueda, setFiltroBusqueda] = useState('');
     const [filtroPlaca, setFiltroPlaca] = useState('');
     const [isSyncingSettings, setIsSyncingSettings] = useState(false);
@@ -218,6 +242,9 @@ const Dashboard = () => {
             const response = await api.get<ResumenTicketsResponse>('/parking/tickets/resumen');
             setTicketsActivos(response.data.activos ?? []);
             setTicketsCerrados(response.data.cerrados ?? []);
+            if (response.data.paymentOptions) {
+                setPaymentOptions(response.data.paymentOptions);
+            }
         } catch (err: unknown) {
             console.error('Error al consultar el resumen de tickets', err);
             setMessage({
@@ -662,14 +689,18 @@ const Dashboard = () => {
     const ticketsActivosFiltrados = useMemo(() => {
         if (!tieneFiltroActivo) return ticketsActivos;
         return ticketsActivos.filter((ticket) =>
-            (ticket.vehicle?.plate ?? '').toUpperCase().includes(filtroNormalizado)
+            `${ticket.vehicle?.plate ?? ''} ${ticket.vehicle?.identificationCode ?? ''}`
+                .toUpperCase()
+                .includes(filtroNormalizado)
         );
     }, [ticketsActivos, filtroNormalizado, tieneFiltroActivo]);
 
     const ticketsCerradosFiltrados = useMemo(() => {
         if (!tieneFiltroActivo) return ticketsCerrados;
         return ticketsCerrados.filter((ticket) =>
-            (ticket.vehicle?.plate ?? '').toUpperCase().includes(filtroNormalizado)
+            `${ticket.vehicle?.plate ?? ''} ${ticket.vehicle?.identificationCode ?? ''}`
+                .toUpperCase()
+                .includes(filtroNormalizado)
         );
     }, [ticketsCerrados, filtroNormalizado, tieneFiltroActivo]);
 
@@ -691,27 +722,34 @@ const Dashboard = () => {
             exit: ticketReciente.exit,
             message: 'Última salida registrada',
             paymentOptions: {
-                aceptaEfectivo: true,
-                aceptaQr: false,
+                ...paymentOptions,
             },
         };
-    }, [lastExit, tieneFiltroActivo, ticketsCerrados, ticketsCerradosFiltrados]);
+    }, [lastExit, paymentOptions, tieneFiltroActivo, ticketsCerrados, ticketsCerradosFiltrados]);
 
     const handleEntry = async (e: React.FormEvent) => {
         e.preventDefault();
         clearMessage();
 
         const plate = plateEntry.trim().toUpperCase();
-        const validPlate = /^[A-Z0-9]{1,6}$/.test(plate);
+        const validPlate = /^[A-Z0-9]{6}$/.test(plate);
 
         if (!selectedParkingId) {
             setMessage({ text: 'Seleccione un parqueadero antes de registrar', type: 'error' });
             return;
         }
 
-        if (!validPlate) {
+        if (entryHasPlate && !validPlate) {
             setMessage({
                 text: 'La placa debe contener solo letras y números, en mayúsculas, con máximo 6 caracteres.',
+                type: 'error',
+            });
+            return;
+        }
+
+        if (!entryHasPlate && (!ownerNameEntry.trim() || !ownerDocumentNumberEntry.trim() || !ownerPhoneEntry.trim())) {
+            setMessage({
+                text: 'Para un vehículo sin placa debes registrar nombre, documento y teléfono del responsable.',
                 type: 'error',
             });
             return;
@@ -728,15 +766,25 @@ const Dashboard = () => {
 
         try {
             await api.post('/parking/entry', {
-                placa: plate,
+                ...(entryHasPlate ? { placa: plate } : {
+                    ownerName: ownerNameEntry.trim(),
+                    ownerDocumentType: ownerDocumentTypeEntry,
+                    ownerDocumentNumber: ownerDocumentNumberEntry.trim(),
+                    ownerPhone: ownerPhoneEntry.trim(),
+                }),
                 vehicleType: vehicleTypeEntry,
                 parkingId: selectedParkingId,
             });
             setMessage({
-                text: `Ingreso registrado para la placa ${plateEntry}`,
+                text: entryHasPlate
+                    ? `Ingreso registrado para la placa ${plateEntry}`
+                    : 'Ingreso registrado con responsable identificado. Entrega el código del ticket al usuario.',
                 type: 'success',
             });
             setPlateEntry('');
+            setOwnerNameEntry('');
+            setOwnerDocumentNumberEntry('');
+            setOwnerPhoneEntry('');
             await cargarResumenTickets();
         } catch (err: unknown) {
             setMessage({
@@ -753,22 +801,28 @@ const Dashboard = () => {
         setExitPaymentIntent(null);
         setExitCashPayment(null);
 
-        const plate = plateExit.trim().toUpperCase();
-        const validPlate = /^[A-Z0-9]{1,7}$/.test(plate);
+        const identifier = plateExit.trim().toUpperCase();
+        const validIdentifier = /^[A-Z0-9-]{1,80}$/.test(identifier);
 
-        if (!validPlate) {
+        if (!validIdentifier) {
             setMessage({
-                text: 'La placa debe contener solo letras y números, en mayúsculas, con máximo 7 caracteres.',
+            text: 'Ingresa una placa o un código de ticket válido.',
                 type: 'error',
             });
             return;
         }
 
         try {
-            const res = await api.post<ExitResponse>('/parking/exit', { placa: plate });
+            const res = await api.post<ExitResponse>('/parking/exit', { identificador: identifier });
             setMessage({ text: 'Salida procesada con éxito', type: 'success' });
             setLastExit(res.data);
             setExitSummary(res.data);
+            if (res.data.paymentOptions) {
+                setPaymentOptions((previous) => ({
+                    ...previous,
+                    ...res.data.paymentOptions,
+                }));
+            }
             setPlateExit('');
             await cargarResumenTickets();
         } catch (err: unknown) {
@@ -1053,7 +1107,7 @@ const Dashboard = () => {
                                         <span className="pill"><Car size={16} /> Entrada</span>
                                         <h2 className="panel-card__title mt-2">Registrar ingreso</h2>
                                     </div>
-                                    <span className="text-xs text-slate-400">Última placa: {plateEntry || 'S/N'}</span>
+                                    <span className="text-xs text-slate-400">Último identificador: {plateEntry || 'S/N'}</span>
                                 </div>
                                 <form onSubmit={handleEntry} className="space-y-5">
                                     {selectedParkingCapacity > 0 && selectedParkingIsFull && (
@@ -1068,23 +1122,88 @@ const Dashboard = () => {
                                         </div>
                                     )}
                                     <div>
-                                        <label className="form-label">Placa del vehículo</label>
-                                        <input
-                                            type="text"
-                                            value={plateEntry}
-                                            onChange={(e) => {
-                                                setPlateEntry(normalizePlateInput(e.target.value, 6, 'entrada'));
-                                            }}
-                                            className="input-field uppercase tracking-widest disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                                            placeholder="ABC123"
-                                            maxLength={6}
-                                            required
-                                            disabled={selectedParkingCapacity > 0 && selectedParkingIsFull}
-                                        />
+                                        <label className="form-label">Identificación del vehículo</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[
+                                                { value: true, label: 'Con placa' },
+                                                { value: false, label: 'Sin placa' },
+                                            ].map((option) => (
+                                                <label
+                                                    key={String(option.value)}
+                                                    className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
+                                                        entryHasPlate === option.value
+                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                                                            : 'border-slate-200 text-slate-500'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        checked={entryHasPlate === option.value}
+                                                        onChange={() => setEntryHasPlate(option.value)}
+                                                        className="sr-only"
+                                                    />
+                                                    {option.label}
+                                                </label>
+                                            ))}
+                                        </div>
+                                        {entryHasPlate ? (
+                                            <input
+                                                type="text"
+                                                value={plateEntry}
+                                                onChange={(e) => setPlateEntry(normalizePlateInput(e.target.value, 6, 'entrada'))}
+                                                className="input-field mt-3 uppercase tracking-widest disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                                placeholder="ABC123"
+                                                maxLength={6}
+                                                required
+                                                disabled={selectedParkingCapacity > 0 && selectedParkingIsFull}
+                                            />
+                                        ) : (
+                                            <div className="mt-3 space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                                <p className="text-xs text-amber-900">
+                                                    Se generará un código interno y el ticket quedará asociado al responsable registrado.
+                                                </p>
+                                                <input
+                                                    type="text"
+                                                    className="input-field"
+                                                    value={ownerNameEntry}
+                                                    onChange={(event) => setOwnerNameEntry(event.target.value)}
+                                                    placeholder="Nombre completo del responsable"
+                                                    required
+                                                />
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <select
+                                                        className="input-field"
+                                                        value={ownerDocumentTypeEntry}
+                                                        onChange={(event) => setOwnerDocumentTypeEntry(event.target.value)}
+                                                    >
+                                                        <option value="CEDULA">Cédula</option>
+                                                        <option value="NIT">NIT</option>
+                                                        <option value="PASAPORTE">Pasaporte</option>
+                                                        <option value="PEP">PEP</option>
+                                                    </select>
+                                                    <input
+                                                        type="text"
+                                                        className="input-field"
+                                                        value={ownerDocumentNumberEntry}
+                                                        onChange={(event) => setOwnerDocumentNumberEntry(event.target.value)}
+                                                        placeholder="Documento"
+                                                        required
+                                                    />
+                                                </div>
+                                                <input
+                                                    type="tel"
+                                                    className="input-field"
+                                                    value={ownerPhoneEntry}
+                                                    onChange={(event) => setOwnerPhoneEntry(event.target.value)}
+                                                    placeholder="Teléfono del responsable"
+                                                    required
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="form-label">Tipo de vehículo</label>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                                             {(['CAR', 'MOTORCYCLE'] as const).map((type) => (
                                                 <label
                                                     key={type}
@@ -1102,6 +1221,25 @@ const Dashboard = () => {
                                                         className="sr-only"
                                                     />
                                                     {type === 'CAR' ? 'Carro' : 'Moto'}
+                                                </label>
+                                            ))}
+                                            {(['VAN', 'BICYCLE', 'ELECTRIC_MOTORCYCLE'] as const).map((type) => (
+                                                <label
+                                                    key={type}
+                                                    className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
+                                                        vehicleTypeEntry === type
+                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                                                            : 'border-slate-200 text-slate-500'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        value={type}
+                                                        checked={vehicleTypeEntry === type}
+                                                        onChange={() => setVehicleTypeEntry(type)}
+                                                        className="sr-only"
+                                                    />
+                                                    {type === 'VAN' ? 'Camioneta' : type === 'BICYCLE' ? 'Bicicleta' : 'Moto eléctrica'}
                                                 </label>
                                             ))}
                                         </div>
@@ -1156,16 +1294,16 @@ const Dashboard = () => {
                                 </div>
                                 <form onSubmit={handleExit} className="space-y-5">
                                     <div>
-                                        <label className="form-label">Placa</label>
+                                        <label className="form-label">Placa o código del ticket</label>
                                         <input
                                             type="text"
                                             value={plateExit}
                                             onChange={(e) => {
-                                                setPlateExit(normalizePlateInput(e.target.value, 7, 'salida'));
+                                                setPlateExit(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 80));
                                             }}
                                             className="input-field uppercase tracking-widest"
-                                            placeholder="ABC123"
-                                            maxLength={7}
+                                            placeholder="ABC123 o código del ticket"
+                                            maxLength={80}
                                             required
                                         />
                                     </div>
@@ -1183,10 +1321,19 @@ const Dashboard = () => {
                                             <DollarSign size={18} /> Resumen de cobro
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 text-sm text-emerald-900">
-                                            <span>Placa</span>
+                                            <span>Identificador</span>
                                             <span className="font-semibold text-right">
-                                                {exitSummary.ticket?.vehicle?.plate || 'N/D'}
+                                                {exitSummary.ticket?.vehicle?.plate
+                                                    || `Sin placa · ${exitSummary.ticket?.ticketCode || exitSummary.ticket?.vehicle?.identificationCode}`}
                                             </span>
+                                            {!exitSummary.ticket?.vehicle?.plate && exitSummary.ticket?.vehicle?.ownerName && (
+                                                <>
+                                                    <span>Responsable</span>
+                                                    <span className="font-semibold text-right">
+                                                        {exitSummary.ticket.vehicle.ownerName}
+                                                    </span>
+                                                </>
+                                            )}
                                             <span>Duración</span>
                                             <span className="font-semibold text-right">
                                                 {formatDurationText(exitSummary.exit?.durationMinutes)}
@@ -1211,7 +1358,9 @@ const Dashboard = () => {
                                             </button>
                                         )}
 
-                                        {exitSummary.paymentOptions?.aceptaQr && (
+                                        {(exitSummary.paymentOptions?.aceptaQr
+                                            || exitSummary.paymentOptions?.aceptaTarjeta
+                                            || exitSummary.paymentOptions?.aceptaEnLinea) && (
                                             <button
                                                 type="button"
                                                 onClick={() => void handleCreateExitPaymentIntent()}
@@ -1219,20 +1368,35 @@ const Dashboard = () => {
                                                 className="mt-2 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
                                             >
                                                 {generatingExitPayment
-                                                    ? 'Generando QR de pago...'
-                                                    : 'Generar QR de pago (Wompi Sandbox)'}
+                                                    ? 'Generando enlace de pago...'
+                                                    : 'Generar enlace de pago (Wompi Sandbox)'}
                                             </button>
                                         )}
 
-                                        {!exitSummary.paymentOptions?.aceptaQr && (
+                                        {!exitSummary.paymentOptions?.aceptaQr
+                                            && !exitSummary.paymentOptions?.aceptaTarjeta
+                                            && !exitSummary.paymentOptions?.aceptaEnLinea && (
                                             <p className="text-xs text-slate-500">
-                                                El pago por QR no está habilitado en configuración.
+                                                No hay métodos de pago digitales habilitados en configuración.
                                             </p>
                                         )}
 
                                         {exitSummary.paymentOptions?.aceptaEfectivo === false && (
                                             <p className="text-xs text-slate-500">
                                                 El pago en efectivo no está habilitado en configuración.
+                                            </p>
+                                        )}
+
+                                        {(exitSummary.paymentOptions?.aceptaQr
+                                            || exitSummary.paymentOptions?.aceptaTarjeta
+                                            || exitSummary.paymentOptions?.aceptaEnLinea) && (
+                                            <p className="text-xs text-slate-500">
+                                                Métodos digitales habilitados:{' '}
+                                                {[
+                                                    exitSummary.paymentOptions.aceptaQr && 'QR / Nequi',
+                                                    exitSummary.paymentOptions.aceptaTarjeta && 'tarjeta',
+                                                    exitSummary.paymentOptions.aceptaEnLinea && 'PSE',
+                                                ].filter(Boolean).join(', ')}.
                                             </p>
                                         )}
 
@@ -1343,12 +1507,19 @@ const Dashboard = () => {
                                                     className="rounded-xl border border-slate-100 p-3 text-sm text-slate-700"
                                                 >
                                                     <div className="flex items-center justify-between font-semibold text-slate-900">
-                                                        <span>{ticket.vehicle?.plate}</span>
+                                                        <span>
+                                                            {ticket.vehicle?.plate || `Sin placa · ${ticket.ticketCode}`}
+                                                        </span>
                                                         <span>{formatElapsedTime(ticket.entryTime)}</span>
                                                     </div>
                                                     <p className="text-xs text-slate-500 mt-1">
                                                         Ingreso: {formatDateTime(ticket.entryTime)}
                                                     </p>
+                                                    {!ticket.vehicle?.plate && ticket.vehicle?.ownerName && (
+                                                        <p className="text-xs text-slate-500">
+                                                            Responsable: {ticket.vehicle.ownerName} · Documento: {ticket.vehicle.ownerDocumentNumber}
+                                                        </p>
+                                                    )}
                                                 </li>
                                             ))}
                                         </ul>
@@ -1373,12 +1544,19 @@ const Dashboard = () => {
                                                     className="rounded-xl border border-slate-100 p-3 text-sm text-slate-700"
                                                 >
                                                     <div className="flex items-center justify-between font-semibold text-slate-900">
-                                                        <span>{ticket.vehicle?.plate}</span>
+                                                        <span>
+                                                            {ticket.vehicle?.plate || `Sin placa · ${ticket.ticketCode}`}
+                                                        </span>
                                                         <span>{ticket.exit ? formatDateTime(ticket.exit.exitTime) : 'Sin hora'}</span>
                                                     </div>
                                                     <p className="text-xs text-slate-500 mt-1">
                                                         Ingreso: {formatDateTime(ticket.entryTime)}
                                                     </p>
+                                                    {!ticket.vehicle?.plate && ticket.vehicle?.ownerName && (
+                                                        <p className="text-xs text-slate-500">
+                                                            Responsable: {ticket.vehicle.ownerName} · Documento: {ticket.vehicle.ownerDocumentNumber}
+                                                        </p>
+                                                    )}
                                                     {ticket.exit && (
                                                         <p className="text-xs text-slate-500">
                                                             Salida: {formatDateTime(ticket.exit.exitTime)}
@@ -1461,7 +1639,8 @@ const Dashboard = () => {
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Vehículo</span>
                                             <span className="font-semibold text-slate-900">
-                                                {actividadReciente.ticket?.vehicle?.plate || 'N/D'}
+                                                {actividadReciente.ticket?.vehicle?.plate
+                                                    || `Sin placa · ${actividadReciente.ticket?.ticketCode}`}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">

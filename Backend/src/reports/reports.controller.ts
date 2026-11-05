@@ -69,7 +69,10 @@ export class ReportsController {
   @RequireScreenPermission('ver-reporte-vehiculos')
   async getVehiclesCount(@Query() dto: VehiclesPeriodDto, @Request() req: any) {
     const result = await this.reportsService.getVehiclesByPeriod(dto);
-    this.logView(req, 'reports_vehicles_count', { filtros: dto, total: result.totalVehiculos });
+    this.logView(req, 'reports_vehicles_count', {
+      filtros: dto,
+      total: result.totalVehiculos,
+    });
     return result;
   }
 
@@ -86,7 +89,10 @@ export class ReportsController {
 
   @Get('billing/client')
   @RequireScreenPermission('ver-reporte-facturacion')
-  async getBillingByClient(@Query() dto: ClientBillingDto, @Request() req: any) {
+  async getBillingByClient(
+    @Query() dto: ClientBillingDto,
+    @Request() req: any,
+  ) {
     const result = await this.reportsService.getBillingByClient(dto);
     this.logView(req, 'reports_billing_client', {
       filtros: dto,
@@ -99,7 +105,10 @@ export class ReportsController {
   @RequireScreenPermission('ver-reporte-mensualidades')
   async getMonthlyStatus(@Query() dto: MonthlyStatusDto, @Request() req: any) {
     const result = await this.reportsService.getMonthlyPaymentStatus(dto);
-    this.logView(req, 'reports_monthly_status', { filtros: dto, total: result.total });
+    this.logView(req, 'reports_monthly_status', {
+      filtros: dto,
+      total: result.total,
+    });
     return result;
   }
 
@@ -107,7 +116,10 @@ export class ReportsController {
   @RequireScreenPermission('ver-reporte-asistencia')
   async getAttendance(@Query() dto: AttendanceReportDto, @Request() req: any) {
     const result = await this.reportsService.getAttendanceReport(dto);
-    this.logView(req, 'reports_attendance', { filtros: dto, total: result.totalRegistros });
+    this.logView(req, 'reports_attendance', {
+      filtros: dto,
+      total: result.totalRegistros,
+    });
     return result;
   }
 
@@ -145,7 +157,9 @@ export class ReportsController {
     const role = req.user?.role;
 
     if (!userId || !role) {
-      throw new ForbiddenException('Token inválido: no se pudieron validar los permisos para exportar el reporte.');
+      throw new ForbiddenException(
+        'Token inválido: no se pudieron validar los permisos para exportar el reporte.',
+      );
     }
 
     const canExport = await this.permissionsService.canUserViewScreen(
@@ -155,7 +169,9 @@ export class ReportsController {
     );
 
     if (!canExport) {
-      throw new ForbiddenException('No tienes permisos para exportar este tipo de reporte.');
+      throw new ForbiddenException(
+        'No tienes permisos para exportar este tipo de reporte.',
+      );
     }
 
     const data = await this.resolveReportForExport(dto);
@@ -200,12 +216,16 @@ export class ReportsController {
   ): string {
     if (reportType === 'trabajadores') return 'ver-reporte-trabajadores';
     if (reportType === 'vehiculos') return 'ver-reporte-vehiculos';
-    if (reportType === 'facturacion-total' || reportType === 'facturacion-cliente') {
+    if (
+      reportType === 'facturacion-total' ||
+      reportType === 'facturacion-cliente'
+    ) {
       return 'ver-reporte-facturacion';
     }
     if (reportType === 'mensualidades') return 'ver-reporte-mensualidades';
     if (reportType === 'asistencia') return 'ver-reporte-asistencia';
-    if (reportType === 'ingresos-por-tipo') return 'ver-reporte-ingresos-grafico';
+    if (reportType === 'ingresos-por-tipo')
+      return 'ver-reporte-ingresos-grafico';
     return 'ver-reporte-horas-pico';
   }
 
@@ -223,7 +243,9 @@ export class ReportsController {
         return this.reportsService.getBillingTotal(dto);
       case 'facturacion-cliente':
         if (!dto.clientId) {
-          throw new BadRequestException('Debes enviar el clientId para exportar la facturación por cliente.');
+          throw new BadRequestException(
+            'Debes enviar el clientId para exportar la facturación por cliente.',
+          );
         }
         return this.reportsService.getBillingByClient({
           clientId: dto.clientId,
@@ -248,7 +270,10 @@ export class ReportsController {
     }
   }
 
-  private buildExportConfig(reportType: ExportReportDto['reportType'], data: Record<string, any>) {
+  private buildExportConfig(
+    reportType: ExportReportDto['reportType'],
+    data: Record<string, any>,
+  ) {
     if (reportType === 'trabajadores') {
       return {
         title: 'Reporte de trabajadores en turno',

@@ -61,7 +61,12 @@ export class ListContractsDto {
 
   @IsOptional()
   @IsIn(['ACTIVE', 'EXPIRED', 'EXPIRING_SOON', 'PAYMENT_PENDING', 'CANCELLED'])
-  status?: 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'PAYMENT_PENDING' | 'CANCELLED';
+  status?:
+    | 'ACTIVE'
+    | 'EXPIRED'
+    | 'EXPIRING_SOON'
+    | 'PAYMENT_PENDING'
+    | 'CANCELLED';
 
   @IsOptional()
   @IsString()

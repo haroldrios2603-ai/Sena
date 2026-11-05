@@ -52,7 +52,8 @@ export class ClientsController {
    */
   @Post()
   async create(@Body() createClientDto: CreateClientDto, @Request() req: any) {
-    const created = await this.clientsService.createClientWithContract(createClientDto);
+    const created =
+      await this.clientsService.createClientWithContract(createClientDto);
     this.auditService.log({
       operation: AuditOperation.CREATE,
       entity: 'clients_contracts',
@@ -108,17 +109,19 @@ export class ClientsController {
     @Body() renewContractDto: RenewContractDto,
     @Request() req: any,
   ) {
-    return this.clientsService.renewContract(id, renewContractDto).then((result) => {
-      this.auditService.log({
-        operation: AuditOperation.UPDATE,
-        entity: 'clients_contracts',
-        recordId: id,
-        newValues: result,
-        result: AuditResult.SUCCESS,
-        context: this.auditService.buildContextFromRequest(req),
+    return this.clientsService
+      .renewContract(id, renewContractDto)
+      .then((result) => {
+        this.auditService.log({
+          operation: AuditOperation.UPDATE,
+          entity: 'clients_contracts',
+          recordId: id,
+          newValues: result,
+          result: AuditResult.SUCCESS,
+          context: this.auditService.buildContextFromRequest(req),
+        });
+        return result;
       });
-      return result;
-    });
   }
 
   /**
@@ -131,7 +134,10 @@ export class ClientsController {
     @Request() req: any,
   ) {
     const previous = await this.clientsService.findContractById(id);
-    const updated = await this.clientsService.updateContract(id, updateContractDto);
+    const updated = await this.clientsService.updateContract(
+      id,
+      updateContractDto,
+    );
     this.auditService.log({
       operation: AuditOperation.UPDATE,
       entity: 'clients_contracts',
@@ -149,10 +155,7 @@ export class ClientsController {
    */
   @Delete('contracts/:id')
   @RequireScreenPermission('clients-delete')
-  async removeContract(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async removeContract(@Param('id') id: string, @Request() req: any) {
     const previous = await this.clientsService.findContractById(id);
     const result = await this.clientsService.deleteContract(id);
     this.auditService.log({
@@ -172,10 +175,7 @@ export class ClientsController {
    */
   @Post('contracts/:id/restore')
   @RequireScreenPermission('clients-delete')
-  async restoreContract(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async restoreContract(@Param('id') id: string, @Request() req: any) {
     const previous = await this.clientsService.findContractById(id);
     const result = await this.clientsService.restoreContract(id);
     const updated = await this.clientsService.findContractById(id);

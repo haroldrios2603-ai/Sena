@@ -41,10 +41,7 @@ export class RolesGuard implements CanActivate {
     ]);
     const requiredScreenPermission = this.reflector.getAllAndOverride<
       string | string[]
-    >(
-      SCREEN_PERMISSION_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    >(SCREEN_PERMISSION_KEY, [context.getHandler(), context.getClass()]);
 
     type RequestWithUser = Request & {
       user?: { userId?: string; role?: Role };
@@ -53,13 +50,17 @@ export class RolesGuard implements CanActivate {
     const userId = request.user?.userId;
     const userRole = request.user?.role;
 
-    if (requiredRoles?.length && (!userRole || !requiredRoles.includes(userRole))) {
+    if (
+      requiredRoles?.length &&
+      (!userRole || !requiredRoles.includes(userRole))
+    ) {
       this.auditService.log({
         operation: AuditOperation.FORBIDDEN,
         entity: 'authorization',
         result: AuditResult.FAILURE,
         errorCode: '403',
-        errorMessage: 'No tienes permisos suficientes para ejecutar esta acción.',
+        errorMessage:
+          'No tienes permisos suficientes para ejecutar esta acción.',
         metadata: {
           requiredRoles,
         },
@@ -83,7 +84,11 @@ export class RolesGuard implements CanActivate {
 
       const permissionChecks = await Promise.all(
         screenKeys.map((screenKey) =>
-          this.permissionsService.canUserViewScreen(userId, userRole, screenKey),
+          this.permissionsService.canUserViewScreen(
+            userId,
+            userRole,
+            screenKey,
+          ),
         ),
       );
 

@@ -239,6 +239,8 @@ La migración de vehículos sin placa debe aplicarse antes de usar esa funcional
 
 La especificación completa por método, protección, parámetros de entrada y respuesta está en [modulos integrados.md](modulos%20integrados.md).
 
+Para el flujo de salida, la interfaz primero consulta `POST /parking/exit/consult` por placa o número de documento. Esta operación es de solo lectura. El operador revisa responsable, vehículo, duración y monto estimado; si la cédula tiene varias coincidencias, debe seleccionar el ticket. Solo después se llama `POST /parking/exit`, que persiste la salida y habilita la confirmación del pago en efectivo o el enlace de pago digital. Las migraciones anteriores a la consolidación se conservan en `Backend/migraciones_archivadas/`; no deben borrarse ni aplicarse nuevamente sobre una base que ya tiene su historial registrado.
+
 ## 8. Identidad, autorización y auditoría
 
 ### 8.1 JWT y sesión

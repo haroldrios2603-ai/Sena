@@ -103,7 +103,7 @@ describe('ParkingService', () => {
   it('should return the existing exit when the ticket is pending payment instead of creating a duplicate exit', async () => {
     const exitStamp = new Date('2026-08-31T09:00:00.000Z');
 
-    prismaMock.ticket.findFirst.mockResolvedValue({
+    const pendingTicket = {
       id: 'ticket-pending-1',
       ticketCode: 'TK-PENDING-1',
       status: 'PENDING_PAYMENT',
@@ -121,13 +121,70 @@ describe('ParkingService', () => {
         durationMinutes: 60,
         totalAmount: 1000,
       },
-    });
+    };
+    prismaMock.ticket.findMany.mockResolvedValue([pendingTicket]);
 
     const result = await service.registerExit('QWE123');
 
     expect(prismaMock.exit.create).not.toHaveBeenCalled();
     expect(result.exit.id).toBe('exit-1');
     expect(result.message).toContain('pendiente de pago');
+  });
+
+  it('should consult an unplated vehicle by responsible document without creating an exit', async () => {
+    prismaMock.ticket.findMany.mockResolvedValue([
+      {
+        id: 'ticket-unplated-1',
+        ticketCode: '1234567890',
+        status: 'ACTIVE',
+        entryTime: new Date(Date.now() - 60 * 60 * 1000),
+        vehicle: {
+          id: 'vehicle-unplated-1',
+          plate: null,
+          identificationCode: 'NP-123',
+          type: 'BICYCLE',
+          ownerName: 'Responsable QA',
+          ownerDocumentNumber: '100200300',
+        },
+        parking: { baseRate: 1000, tariffs: [] },
+        exit: null,
+      },
+    ]);
+
+    const result = await service.consultExit(undefined, '100200300');
+
+    expect(result.status).toBe('FOUND');
+    expect(result.ticket.vehicle.plate).toBeNull();
+    expect(result.exit.totalAmount).toBe(1000);
+    expect(prismaMock.exit.create).not.toHaveBeenCalled();
+    expect(prismaMock.ticket.update).not.toHaveBeenCalled();
+  });
+
+  it('should report ambiguous consultation when a document has multiple active vehicles', async () => {
+    prismaMock.ticket.findMany.mockResolvedValue([
+      {
+        id: 'ticket-1',
+        ticketCode: '1111111111',
+        entryTime: new Date(Date.now() - 30 * 60 * 1000),
+        vehicle: { plate: null, identificationCode: 'NP-1', type: 'BICYCLE' },
+        parking: { baseRate: 1000, tariffs: [] },
+        exit: null,
+      },
+      {
+        id: 'ticket-2',
+        ticketCode: '2222222222',
+        entryTime: new Date(Date.now() - 20 * 60 * 1000),
+        vehicle: { plate: null, identificationCode: 'NP-2', type: 'ELECTRIC_MOTORCYCLE' },
+        parking: { baseRate: 1000, tariffs: [] },
+        exit: null,
+      },
+    ]);
+
+    const result = await service.consultExit(undefined, '100200300');
+
+    expect(result.status).toBe('AMBIGUOUS');
+    expect(result.candidates).toHaveLength(2);
+    expect(prismaMock.exit.create).not.toHaveBeenCalled();
   });
 
   it('should include pending payment tickets in the dashboard exit summary so a vehicle that already left remains visible', async () => {

@@ -5,7 +5,7 @@
 
 ## 1. Propósito y alcance
 
-Este documento resume la arquitectura técnica y cataloga las APIs HTTP que expone el Backend. Se identifican **59 endpoints de aplicación** en diez áreas de API: aplicación, autenticación, parqueaderos, usuarios, clientes, configuración, permisos, auditoría, reportes y pagos.
+Este documento resume la arquitectura técnica y cataloga las APIs HTTP que expone el Backend. Se identifican **61 endpoints de aplicación** en diez áreas de API: aplicación, autenticación, parqueaderos, usuarios, clientes, configuración, permisos, auditoría, reportes y pagos.
 
 Los endpoints se expresan como ruta relativa a la raíz del Backend. La aplicación no configura un prefijo global `/api`: por ejemplo, el inicio de sesión es `POST /auth/login`, no `POST /api/auth/login`. La interfaz Swagger sí está publicada en `/api/docs`.
 
@@ -78,7 +78,8 @@ Todas estas rutas exigen JWT. La creación/edición/activación requiere rol SUP
 | `PATCH /parking/:id` | Roles SUPER_ADMIN/ADMIN_PARKING; `settings-config` | Parcial de los campos de creación | Sede actualizada. |
 | `PATCH /parking/:id/estado` | Roles SUPER_ADMIN/ADMIN_PARKING; `settings-config` | `{activo: boolean}` | Sede con estado actualizado. |
 | `POST /parking/entry` | `operations-dashboard` | `EntryDto`: `{placa, vehicleType, parkingId}`; tipo CAR, MOTORCYCLE o VAN | Ticket de ingreso asociado a vehículo y sede. Placa normalizada a mayúsculas; sede UUID. |
-| `POST /parking/exit` | `operations-dashboard` | `ExitDto`: `{placa}` | `{ticket, exit, message, paymentOptions?}`; calcula duración e importe de salida. |
+| `POST /parking/exit/consult` | `operations-dashboard` | `ExitDto`: `{placa?}`, `{documentNumber?}` o identificador/ticket | Consulta sin modificar la base. Devuelve vehículo, responsable, duración e importe estimados; si una cédula coincide con varios vehículos devuelve candidatos para seleccionar. |
+| `POST /parking/exit` | `operations-dashboard` | `ExitDto`: placa, código de ticket o documento; se usa después de consultar | Confirma la salida, crea `Exit`, cambia el ticket a `PENDING_PAYMENT` y devuelve `paymentOptions`. No debe ejecutarse como sustituto de la consulta en la interfaz. |
 | `POST /parking/jornada/cerrar` | `operations-dashboard` | Sin body; identidad derivada del JWT | `{fechaCierre, activosPendientes, salidasArchivadas, mensaje}`. |
 | `GET /parking` | Uno de `operations-dashboard`, `clients-management`, `settings-config` | Ninguna | Arreglo de sedes. |
 | `GET /parking/tickets/resumen` | `operations-dashboard` | Ninguna | `{activos, cerrados}` con tickets operativos. |
@@ -196,7 +197,7 @@ La instancia Axios de `Frontend/src/api.ts` añade `Authorization: Bearer` cuand
 | Servicio/consumidor | API Backend consumida |
 |---|---|
 | `auth.service.ts` | `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/password/request`, `/auth/password/reset`. |
-| `Dashboard.tsx` | Operación: `/parking`, `/parking/entry`, `/parking/exit`, `/parking/jornada/cerrar`, resumen de tickets y pagos. |
+| `Dashboard.tsx` | Operación: `/parking`, `/parking/entry`, `/parking/exit/consult`, `/parking/exit`, `/parking/jornada/cerrar`, resumen de tickets y pagos. |
 | `users.service.ts` | `/users` y `/users/:id` para consulta, creación, actualización, rol, estado, archivo y restauración. |
 | `clients.service.ts` | `/clients`, `/clients/contracts`, alertas, renovación, actualización, archivo y restauración. |
 | `config.service.ts` | `/settings`, configuración general, tarifas, medios de pago y `/parking` para sedes. |

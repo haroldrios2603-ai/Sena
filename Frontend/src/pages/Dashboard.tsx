@@ -95,6 +95,22 @@ type ExitResponse = {
     };
 };
 
+type ExitDetails = Omit<ExitRecord, 'id'> & { id?: string | null; ticketId?: string };
+
+type ExitConsultCandidate = {
+    ticket: Ticket;
+    exit: ExitDetails;
+};
+
+type ExitConsultResponse = {
+    status: 'FOUND' | 'AMBIGUOUS';
+    ticket?: Ticket;
+    exit?: ExitDetails;
+    candidates?: ExitConsultCandidate[];
+    paymentOptions?: PaymentOptions;
+    message: string;
+};
+
 type TicketConSalida = Ticket & { exit?: ExitRecord | null };
 
 type ResumenTicketsResponse = {
@@ -202,6 +218,11 @@ const Dashboard = () => {
     const location = useLocation();
     const [plateEntry, setPlateEntry] = useState('');
     const [plateExit, setPlateExit] = useState('');
+    const [exitSearchMode, setExitSearchMode] = useState<'plate' | 'document'>('plate');
+    const [exitConsultation, setExitConsultation] = useState<ExitConsultResponse | null>(null);
+    const [selectedExitTicketCode, setSelectedExitTicketCode] = useState('');
+    const [consultingExit, setConsultingExit] = useState(false);
+    const [confirmingExit, setConfirmingExit] = useState(false);
     const [entryHasPlate, setEntryHasPlate] = useState(true);
     const [ownerNameEntry, setOwnerNameEntry] = useState('');
     const [ownerDocumentTypeEntry, setOwnerDocumentTypeEntry] = useState('CEDULA');
@@ -794,42 +815,79 @@ const Dashboard = () => {
         }
     };
 
-    const handleExit = async (e: React.FormEvent) => {
+    const handleConsultExit = async (e: React.FormEvent) => {
         e.preventDefault();
         clearMessage();
         setExitSummary(null);
+        setExitConsultation(null);
         setExitPaymentIntent(null);
         setExitCashPayment(null);
 
         const identifier = plateExit.trim().toUpperCase();
-        const validIdentifier = /^[A-Z0-9-]{1,80}$/.test(identifier);
+        const validIdentifier = exitSearchMode === 'plate'
+            ? /^[A-Z0-9]{6,7}$/.test(identifier)
+            : /^[A-Z0-9-]{3,20}$/.test(identifier);
 
         if (!validIdentifier) {
             setMessage({
-            text: 'Ingresa una placa o un código de ticket válido.',
+                text: exitSearchMode === 'plate'
+                    ? 'Ingresa una placa válida para consultar.'
+                    : 'Ingresa un número de documento válido para consultar.',
                 type: 'error',
             });
             return;
         }
 
         try {
-            const res = await api.post<ExitResponse>('/parking/exit', { identificador: identifier });
-            setMessage({ text: 'Salida procesada con éxito', type: 'success' });
-            setLastExit(res.data);
-            setExitSummary(res.data);
+            setConsultingExit(true);
+            const res = await api.post<ExitConsultResponse>('/parking/exit/consult', exitSearchMode === 'plate'
+                ? { placa: identifier }
+                : { documentNumber: identifier });
+            setExitConsultation(res.data);
+            setSelectedExitTicketCode(res.data.ticket?.ticketCode ?? res.data.candidates?.[0]?.ticket.ticketCode ?? '');
+            setMessage({ text: res.data.message, type: 'info' });
             if (res.data.paymentOptions) {
                 setPaymentOptions((previous) => ({
                     ...previous,
                     ...res.data.paymentOptions,
                 }));
             }
+        } catch (err: unknown) {
+            setMessage({
+                text: getErrorMessage(err, 'No se pudo consultar la salida'),
+                type: 'error',
+            });
+        } finally {
+            setConsultingExit(false);
+        }
+    };
+
+    const handleConfirmExit = async () => {
+        const identifier = selectedExitTicketCode || plateExit.trim().toUpperCase();
+        if (!identifier) {
+            setMessage({ text: 'Selecciona el ticket que deseas confirmar.', type: 'error' });
+            return;
+        }
+
+        try {
+            setConfirmingExit(true);
+            const res = await api.post<ExitResponse>('/parking/exit', { identificador: identifier });
+            setMessage({ text: 'Salida confirmada. Selecciona el método para confirmar el pago.', type: 'success' });
+            setLastExit(res.data);
+            setExitSummary(res.data);
+            setExitConsultation(null);
             setPlateExit('');
+            if (res.data.paymentOptions) {
+                setPaymentOptions((previous) => ({ ...previous, ...res.data.paymentOptions }));
+            }
             await cargarResumenTickets();
         } catch (err: unknown) {
             setMessage({
-                text: getErrorMessage(err, 'Error al registrar la salida'),
+                text: getErrorMessage(err, 'No se pudo confirmar la salida'),
                 type: 'error',
             });
+        } finally {
+            setConfirmingExit(false);
         }
     };
 
@@ -1292,28 +1350,108 @@ const Dashboard = () => {
                                         <h2 className="panel-card__title mt-2">Registrar salida</h2>
                                     </div>
                                 </div>
-                                <form onSubmit={handleExit} className="space-y-5">
+                                <form onSubmit={handleConsultExit} className="space-y-5">
                                     <div>
-                                        <label className="form-label">Placa o código del ticket</label>
+                                        <label className="form-label">Buscar vehículo para salida</label>
+                                        <div className="mb-3 grid grid-cols-2 gap-3">
+                                            {[
+                                                { value: 'plate' as const, label: 'Placa' },
+                                                { value: 'document' as const, label: 'Cédula' },
+                                            ].map((option) => (
+                                                <label
+                                                    key={option.value}
+                                                    className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
+                                                        exitSearchMode === option.value
+                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                                                            : 'border-slate-200 text-slate-500'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        checked={exitSearchMode === option.value}
+                                                        onChange={() => {
+                                                            setExitSearchMode(option.value);
+                                                            setPlateExit('');
+                                                            setExitConsultation(null);
+                                                        }}
+                                                        className="sr-only"
+                                                    />
+                                                    {option.label}
+                                                </label>
+                                            ))}
+                                        </div>
                                         <input
                                             type="text"
                                             value={plateExit}
                                             onChange={(e) => {
-                                                setPlateExit(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 80));
+                                                setPlateExit(exitSearchMode === 'plate'
+                                                    ? e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7)
+                                                    : e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 20));
                                             }}
                                             className="input-field uppercase tracking-widest"
-                                            placeholder="ABC123 o código del ticket"
-                                            maxLength={80}
+                                            placeholder={exitSearchMode === 'plate' ? 'ABC123' : 'Número de cédula'}
+                                            maxLength={exitSearchMode === 'plate' ? 7 : 20}
                                             required
                                         />
                                     </div>
                                     <button
                                         type="submit"
                                         className="btn-primary bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                                        disabled={consultingExit || confirmingExit}
                                     >
-                                        Registrar salida
+                                        {consultingExit ? 'Consultando...' : 'Consultar'}
                                     </button>
                                 </form>
+
+                                {exitConsultation && (
+                                    <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 space-y-3">
+                                        <p className="font-semibold text-sky-900">Resultado de la consulta</p>
+                                        {exitConsultation.status === 'AMBIGUOUS' ? (
+                                            <>
+                                                <p className="text-sm text-sky-800">
+                                                    La cédula tiene varios vehículos activos. Selecciona el ticket correcto.
+                                                </p>
+                                                <select
+                                                    className="input-field"
+                                                    value={selectedExitTicketCode}
+                                                    onChange={(event) => setSelectedExitTicketCode(event.target.value)}
+                                                >
+                                                    {exitConsultation.candidates?.map((candidate) => (
+                                                        <option key={candidate.ticket.ticketCode} value={candidate.ticket.ticketCode}>
+                                                            Ticket {candidate.ticket.ticketCode} · {candidate.ticket.vehicle.ownerName ?? 'Responsable'}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-sky-800">
+                                                {exitConsultation.ticket?.vehicle.plate
+                                                    || `Sin placa · ticket ${exitConsultation.ticket?.ticketCode}`}
+                                                {exitConsultation.ticket?.vehicle.ownerName
+                                                    ? ` · ${exitConsultation.ticket.vehicle.ownerName}`
+                                                    : ''}
+                                            </p>
+                                        )}
+                                        <div className="grid grid-cols-2 gap-2 text-sm text-sky-900">
+                                            <span>Duración estimada</span>
+                                            <span className="text-right font-semibold">
+                                                {formatDurationText(exitConsultation.exit?.durationMinutes)}
+                                            </span>
+                                            <span>Total estimado</span>
+                                            <span className="text-right font-bold">
+                                                {formatCurrency(exitConsultation.exit?.totalAmount ?? 0)}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleConfirmExit()}
+                                            disabled={confirmingExit || exitConsultation.status === 'AMBIGUOUS' && !selectedExitTicketCode}
+                                            className="w-full rounded-xl bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
+                                        >
+                                            {confirmingExit ? 'Confirmando salida...' : 'Confirmar salida y continuar al pago'}
+                                        </button>
+                                    </div>
+                                )}
 
                                 {exitSummary ? (
                                     <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-3">
@@ -1354,7 +1492,7 @@ const Dashboard = () => {
                                                     ? 'Registrando pago en efectivo...'
                                                     : exitCashPayment?.status === 'COMPLETED'
                                                         ? 'Pago en efectivo registrado'
-                                                        : 'Registrar pago recibido (efectivo)'}
+                                                        : 'Confirmar pago en efectivo'}
                                             </button>
                                         )}
 

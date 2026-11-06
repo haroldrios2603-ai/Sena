@@ -96,7 +96,8 @@ Todas las rutas de dominio usan validación global: propiedades desconocidas se 
 | `PATCH /parking/:id` | JWT; SUPER_ADMIN/ADMIN_PARKING; permiso `settings-config` | Parcial de los campos de sede | Sede actualizada. |
 | `PATCH /parking/:id/estado` | JWT; SUPER_ADMIN/ADMIN_PARKING; permiso `settings-config` | `{activo: boolean}` | Sede con estado actualizado. |
 | `POST /parking/entry` | JWT; permiso `operations-dashboard` | `{placa, vehicleType, parkingId}` | Ticket de entrada, vehículo y datos de operación. `vehicleType`: `CAR`, `MOTORCYCLE` o `VAN`. |
-| `POST /parking/exit` | JWT; permiso `operations-dashboard` | `{placa}` | `{ticket, exit, message, paymentOptions?}`; `exit` contiene duración e importe calculado. |
+| `POST /parking/exit/consult` | JWT; permiso `operations-dashboard` | `{placa?}`, `{documentNumber?}` o ticket | Consulta de solo lectura con responsable, duración e importe estimados. Para una cédula con varios vehículos devuelve candidatos. |
+| `POST /parking/exit` | JWT; permiso `operations-dashboard` | Placa, ticket o documento después de la consulta | Confirma la salida, crea el registro `Exit`, pasa el ticket a `PENDING_PAYMENT` y devuelve métodos de pago habilitados. |
 | `POST /parking/jornada/cerrar` | JWT; permiso `operations-dashboard` | Sin body; usuario sale del JWT | `{fechaCierre, activosPendientes, salidasArchivadas, mensaje}`. |
 | `GET /parking` | JWT; cualquiera de `operations-dashboard`, `clients-management`, `settings-config` | Ninguna | Lista de sedes. |
 | `GET /parking/tickets/resumen` | JWT; permiso `operations-dashboard` | Ninguna | `{activos, cerrados}` con tickets y salidas asociadas cuando corresponda. |

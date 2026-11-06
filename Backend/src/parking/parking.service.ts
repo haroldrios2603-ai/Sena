@@ -22,12 +22,7 @@ import { TarifaConfigDto } from './dto/tarifa-config.dto';
 /**
  * Clase ParkingService que implementa la lógica principal de parking.
  */
-/**
- * Clase ParkingService que implementa la lógica principal de parking.
- */
-/**
- * Clase ParkingService que implementa la lógica principal de parking.
- */
+
 @Injectable()
 export class ParkingService {
   private readonly CONFIG_ID = 'configuracion-principal';
@@ -360,37 +355,57 @@ export class ParkingService {
    * pendiente de pago por una operación previa. Esto evita falsos 404 cuando el vehículo sigue existiendo
    * en el flujo operativo pero el estado del ticket ya fue actualizado.
    */
-  async registerExit(identificador: string) {
-    // ES: Para vehículos sin placa, el código del ticket es la credencial operativa
-    // que permite localizar la salida sin inventar una placa ni mezclar registros.
-    const ticket = await this.prisma.ticket.findFirst({
-      where: {
-        OR: [
-          { ticketCode: identificador },
-          { vehicle: { plate: identificador } },
-          { vehicle: { identificationCode: identificador } },
-        ],
-        status: {
-          in: ['ACTIVE', 'PENDING_PAYMENT'],
-        },
-      },
-      include: {
-        vehicle: true,
-        parking: {
-          include: { tariffs: true },
-        },
-        exit: true,
-      },
-      orderBy: {
-        entryTime: 'desc',
-      },
-    });
+  async consultExit(identificador?: string, documentNumber?: string) {
+    const tickets = await this.findExitCandidates(identificador, documentNumber);
 
-    if (!ticket) {
+    if (!tickets.length) {
       throw new NotFoundException(
-        'No se encontró un ticket activo para esta placa',
+        'No se encontró un vehículo activo para la placa, código o documento indicado.',
       );
     }
+
+    if (tickets.length > 1) {
+      return {
+        status: 'AMBIGUOUS' as const,
+        candidates: tickets.map((ticket) => ({
+          ticket,
+          exit: ticket.exit ?? this.calcularPrevisualizacionSalida(ticket),
+        })),
+        message:
+          'El documento tiene varios vehículos activos. Selecciona el ticket correcto antes de confirmar.',
+      };
+    }
+
+    const ticket = tickets[0];
+    return {
+      status: 'FOUND' as const,
+      ticket,
+      exit: ticket.exit ?? this.calcularPrevisualizacionSalida(ticket),
+      paymentOptions: await this.getPaymentOptions(),
+      message: ticket.exit
+        ? 'La salida ya fue registrada y está pendiente de pago o confirmación.'
+        : 'Vehículo localizado. Revisa los datos y confirma la salida para habilitar el pago.',
+    };
+  }
+
+  async registerExit(identificador?: string, documentNumber?: string) {
+    // ES: Para vehículos sin placa, la confirmación debe usar el ticket elegido
+    // o una cédula que identifique un único vehículo activo.
+    const tickets = await this.findExitCandidates(identificador, documentNumber);
+
+    if (!tickets.length) {
+      throw new NotFoundException(
+        'No se encontró un ticket activo para la placa, código o documento indicado.',
+      );
+    }
+
+    if (tickets.length > 1) {
+      throw new ConflictException(
+        'El documento corresponde a varios vehículos activos. Consulta primero y confirma usando el código del ticket correcto.',
+      );
+    }
+
+    const ticket = tickets[0];
 
     if (ticket.exit) {
       return {
@@ -441,6 +456,66 @@ export class ParkingService {
       exit,
       message: 'Salida registrada con éxito',
       paymentOptions,
+    };
+  }
+
+  private async findExitCandidates(
+    identificador?: string,
+    documentNumber?: string,
+  ) {
+    const normalizedIdentifier = identificador?.trim().toUpperCase();
+    const normalizedDocument = documentNumber?.trim();
+
+    if (!normalizedIdentifier && !normalizedDocument) {
+      throw new BadRequestException('Debes indicar una placa, código de ticket o documento.');
+    }
+
+    return this.prisma.ticket.findMany({
+      where: {
+        status: { in: ['ACTIVE', 'PENDING_PAYMENT'] },
+        ...(normalizedDocument
+          ? { vehicle: { ownerDocumentNumber: normalizedDocument } }
+          : {
+              OR: [
+                { ticketCode: normalizedIdentifier },
+                { vehicle: { plate: normalizedIdentifier } },
+                { vehicle: { identificationCode: normalizedIdentifier } },
+              ],
+            }),
+      },
+      include: {
+        vehicle: true,
+        parking: { include: { tariffs: true } },
+        exit: true,
+      },
+      orderBy: { entryTime: 'desc' },
+    });
+  }
+
+  private calcularPrevisualizacionSalida(ticket: any) {
+    const exitTime = new Date();
+    const durationMinutes = Math.max(
+      1,
+      Math.ceil((exitTime.getTime() - ticket.entryTime.getTime()) / (1000 * 60)),
+    );
+    const tariff = ticket.parking.tariffs.find(
+      (item: { vehicleType: string; baseRate: number; hourlyRate: number }) =>
+        item.vehicleType === ticket.vehicle.type,
+    );
+    const baseRate = tariff ? tariff.baseRate : ticket.parking.baseRate;
+    const hourlyRate = tariff ? tariff.hourlyRate : 0;
+
+    return {
+      id: null,
+      ticketId: ticket.id,
+      exitTime,
+      durationMinutes,
+      totalAmount: this.calcularMonto(
+        tariff ?? null,
+        durationMinutes,
+        baseRate,
+        hourlyRate,
+      ),
     };
   }
 

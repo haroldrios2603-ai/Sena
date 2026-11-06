@@ -173,12 +173,38 @@ export class ParkingController {
   @RequireScreenPermission('operations-dashboard')
   async registerExit(@Body() data: ExitDto, @Request() req: any) {
     const identificador = data.identificador ?? data.placa ?? data.ticketCode;
-    const result = await this.parkingService.registerExit(identificador!);
+    const result = await this.parkingService.registerExit(
+      identificador,
+      data.documentNumber,
+    );
     this.auditService.log({
       operation: AuditOperation.UPDATE,
       entity: 'parking_exit',
       newValues: { identificador, exitId: result?.exit?.id },
       result: AuditResult.SUCCESS,
+      context: this.auditService.buildContextFromRequest(req),
+    });
+    return result;
+  }
+
+  /** Consulta una salida sin crearla; la confirmación ocurre en POST /parking/exit. */
+  @Post('exit/consult')
+  @RequireScreenPermission('operations-dashboard')
+  async consultExit(@Body() data: ExitDto, @Request() req: any) {
+    const identificador = data.identificador ?? data.placa ?? data.ticketCode;
+    const result = await this.parkingService.consultExit(
+      identificador,
+      data.documentNumber,
+    );
+    this.auditService.log({
+      operation: AuditOperation.VIEW,
+      entity: 'parking_exit_consultation',
+      result: AuditResult.SUCCESS,
+      metadata: {
+        identificador,
+        documentNumber: data.documentNumber,
+        status: result.status,
+      },
       context: this.auditService.buildContextFromRequest(req),
     });
     return result;

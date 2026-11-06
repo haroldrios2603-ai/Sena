@@ -2,7 +2,7 @@
  * Data Transfer Object que define la forma y validaciones del payload para dto.
  */
 import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, TransformFnParams } from 'class-transformer';
 
 /**
  * DTO para registrar la salida de un vehículo.
@@ -37,8 +37,18 @@ export class ExitDto {
   @MaxLength(80)
   ticketCode?: string;
 
+  /** Documento del responsable para localizar vehículos sin placa. */
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(20)
+  @Transform(({ value }: TransformFnParams) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  documentNumber?: string;
+
   /** Permite que el cliente envíe una sola clave sin romper clientes antiguos. */
-  @ValidateIf((data: ExitDto) => !data.placa && !data.ticketCode)
+  @ValidateIf((data: ExitDto) => !data.placa && !data.ticketCode && !data.documentNumber)
   @IsNotEmpty({ message: 'Debes ingresar una placa o el código del ticket' })
   identificador?: string;
 }
